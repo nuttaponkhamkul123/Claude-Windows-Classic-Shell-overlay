@@ -1,0 +1,61 @@
+/* Install-skill dialog (features-skillinstall.js). Dark by default; light for Windows 7 / XP; dark again for Vista Dark. */
+.sk-overlay {
+  --sk-bg: #141a28; --sk-panel: #1c2433; --sk-text: #e2e8f0; --sk-dim: #94a3b8; --sk-line: #34405a;
+  --sk-input: #0f1420; --sk-accent: #3b82f6; --sk-warn: #f5b942; --sk-ok: #4ade80; --sk-err: #f87171;
+  position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.45); padding: 10px;
+}
+body.theme-aero .sk-overlay {
+  --sk-bg: #f5f8fc; --sk-panel: #ffffff; --sk-text: #1a1a1a; --sk-dim: #5d6b7a; --sk-line: #a9b9cf;
+  --sk-input: #ffffff; --sk-accent: #2f7fd0; --sk-warn: #9a5b00; --sk-ok: #1f7f1f; --sk-err: #b3261a;
+}
+body.theme-aero.theme-vista .sk-overlay {
+  --sk-bg: #1c2027; --sk-panel: #15181d; --sk-text: #e9eef5; --sk-dim: #9fb2cc; --sk-line: #3a424d;
+  --sk-input: #101318; --sk-accent: #4aa3ea; --sk-warn: #f5b942; --sk-ok: #4ade80; --sk-err: #f87171;
+}
+.sk-dialog {
+  width: 100%; max-width: 470px; max-height: 100%; display: flex; flex-direction: column;
+  background: var(--sk-bg); color: var(--sk-text); border: 1px solid var(--sk-line); border-radius: 4px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); font: 12px "Segoe UI", Tahoma, sans-serif;
+}
+.sk-head { display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; border-bottom: 1px solid var(--sk-line); }
+.sk-title { font-size: 13px; font-weight: 600; }
+.sk-x { width: 22px; height: 22px; padding: 0; cursor: pointer; color: var(--sk-text); background: none; border: 1px solid transparent; border-radius: 3px; }
+.sk-x:hover { border-color: var(--sk-line); background: var(--sk-panel); }
+.sk-body { padding: 10px; overflow-y: auto; }
+.sk-label { margin: 0 0 4px; font-size: 11px; color: var(--sk-dim); }
+.sk-inst-head { margin-top: 14px; padding-top: 8px; border-top: 1px solid var(--sk-line); }
+.sk-row { display: flex; gap: 6px; }
+.sk-pick { margin-top: 6px; }
+.sk-input { flex: 1; min-width: 0; height: 26px; padding: 0 8px; color: var(--sk-text); background: var(--sk-input); border: 1px solid var(--sk-line); border-radius: 3px; outline: none; font: inherit; }
+.sk-input:focus { border-color: var(--sk-accent); }
+.sk-btn { height: 26px; padding: 0 10px; cursor: pointer; font: inherit; color: var(--sk-text); background: var(--sk-panel); border: 1px solid var(--sk-line); border-radius: 3px; white-space: nowrap; }
+.sk-btn:hover:not(:disabled) { border-color: var(--sk-accent); }
+.sk-btn:disabled { opacity: 0.5; cursor: default; }
+.sk-btn.primary { color: #fff; background: var(--sk-accent); border-color: var(--sk-accent); }
+.sk-btn.wide { width: 100%; margin-top: 10px; height: 30px; }
+.sk-btn.small { height: 22px; padding: 0 8px; font-size: 11px; }
+.sk-btn.danger { color: #fff; background: var(--sk-err); border-color: var(--sk-err); }
+.sk-status { min-height: 16px; margin: 8px 0 2px; color: var(--sk-dim); }
+.sk-status.err { color: var(--sk-err); }
+.sk-status.ok { color: var(--sk-ok); }
+.sk-list { margin-top: 6px; border: 1px solid var(--sk-line); border-radius: 3px; background: var(--sk-panel); max-height: 220px; overflow-y: auto; }
+.sk-item { display: flex; gap: 8px; padding: 6px 8px; cursor: pointer; border-bottom: 1px solid var(--sk-line); }
+.sk-item:last-child { border-bottom: 0; }
+.sk-item.bad { opacity: 0.6; cursor: default; }
+.sk-item input { margin-top: 2px; flex: none; }
+.sk-item-main { min-width: 0; flex: 1; }
+.sk-item-top { display: flex; align-items: baseline; gap: 8px; }
+.sk-meta, .sk-scope-tag { font-size: 10.5px; color: var(--sk-dim); }
+.sk-desc { margin-top: 1px; color: var(--sk-dim); font-size: 11.5px; overflow-wrap: anywhere; }
+.sk-warn { margin-top: 3px; color: var(--sk-warn); font-size: 11px; overflow-wrap: anywhere; }
+.sk-note { margin-top: 3px; font-size: 11px; color: var(--sk-dim); font-style: italic; }
+.sk-trust { margin-top: 8px; font-size: 11px; color: var(--sk-dim); }
+.sk-scope { display: flex; flex-direction: column; gap: 3px; margin-top: 8px; }
+.sk-radio.off { opacity: 0.5; }
+.sk-installed { border: 1px solid var(--sk-line); border-radius: 3px; background: var(--sk-panel); max-height: 160px; overflow-y: auto; }
+.sk-inst-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-bottom: 1px solid var(--sk-line); }
+.sk-inst-row:last-child { border-bottom: 0; }
+.sk-inst-info { flex: 1; min-width: 0; }
+.sk-empty { padding: 8px; color: var(--sk-dim); }
+.fx-skill-install { margin-left: auto; height: 20px; padding: 0 8px; font-size: 11px; cursor: pointer; }

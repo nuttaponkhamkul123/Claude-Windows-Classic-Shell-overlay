@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Snip</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; cursor: crosshair; user-select: none; }
+  #shot { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+  /* dim everything; the selection "cuts a hole" with a giant box-shadow */
+  #dim { position: fixed; inset: 0; background: rgba(255, 255, 255, 0.35); }
+  #sel {
+    position: fixed; display: none;
+    border: 1px solid #ff3030;
+    box-shadow: 0 0 0 99999px rgba(255, 255, 255, 0.35);
+  }
+  body.selecting #dim { display: none; }
+  #size {
+    position: fixed; display: none; padding: 1px 5px;
+    font: 11px "Segoe UI", sans-serif; color: #fff; background: rgba(0, 0, 0, 0.7); border-radius: 2px;
+  }
+  #hint {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+    padding: 6px 14px; font: 12px "Segoe UI", sans-serif; color: #1e395b;
+    background: linear-gradient(180deg, #ffffff 0%, #e9f1fa 100%);
+    border: 1px solid #8eaacb; border-radius: 3px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  }
+  body.selecting #hint { display: none; }
+</style>
+</head>
+<body>
+  <img id="shot" alt="" />
+  <div id="dim"></div>
+  <div id="sel"></div>
+  <div id="size"></div>
+  <div id="hint">Drag to snip an area · Esc or right-click to cancel</div>
+<script>
+  const shot = document.getElementById('shot');
+  const sel = document.getElementById('sel');
+  const size = document.getElementById('size');
+  let start = null, rect = null;
+
+  window.snipAPI.onImage((url) => { shot.src = url; });
+
+  function norm(a, b) {
+    return { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), width: Math.abs(a.x - b.x), height: Math.abs(a.y - b.y) };
+  }
+  window.addEventListener('mousedown', (e) => {
+    if (e.button === 2) { window.snipAPI.done(null); return; }
+    if (e.button !== 0) return;
+    start = { x: e.clientX, y: e.clientY };
+    rect = { x: start.x, y: start.y, width: 0, height: 0 };
+    document.body.classList.add('selecting');
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!start) return;
+    rect = norm(start, { x: e.clientX, y: e.clientY });
+    Object.assign(sel.style, {
+      display: 'block', left: rect.x + 'px', top: rect.y + 'px', width: rect.width + 'px', height: rect.height + 'px',
+    });
+    const dpr = window.devicePixelRatio || 1;
+    size.textContent = `${Math.round(rect.width * dpr)} × ${Math.round(rect.height * dpr)}`;
+    Object.assign(size.style, { display: 'block', left: rect.x + 'px', top: Math.max(0, rect.y - 20) + 'px' });
+  });
+  window.addEventListener('mouseup', (e) => {
+    if (e.button !== 0 || !start) return;
+    start = null;
+    window.snipAPI.done(rect && rect.width >= 3 && rect.height >= 3 ? rect : null);
+  });
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape') window.snipAPI.done(null); });
+  window.addEventListener('contextmenu', (e) => e.preventDefault());
+</script>
+</body>
+</html>

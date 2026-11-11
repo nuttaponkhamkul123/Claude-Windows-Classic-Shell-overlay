@@ -1,0 +1,22 @@
+{
+  "name": "ovly-claude",
+  "version": "1.0.0",
+  "description": "Desktop Overlay HUD for Claude Code & Antigravity",
+  "main": "main.js",
+  "scripts": {
+    "start": "node run.js"
+  },
+  "keywords": [
+    "claude",
+    "antigravity",
+    "overlay",
+    "hud",
+    "electron"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "chokidar": "^4.0.3",
+    "electron": "^39.2.8"
+  }
+}

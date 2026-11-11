@@ -1,0 +1,348 @@
+/* =====================================================================
+   Windows XP theme: MSN Messenger 7 contact list + Luna window chrome.
+   Loaded last; every rule is scoped by body.theme-xp #listView / .list-open so it wins
+   over the Aero and Vista Dark themes and leaves the conversation view alone.
+   - blue title bar, beige frame, "My Status" header, "new e-mail" strip
+   - white contact sheet, collapsible blue group headers "Folder (1/3)"
+   - one-line contacts:  avatar  Name: title — latest message  (Status)
+   ===================================================================== */
+
+/* ---- window frame: Luna blue title bar + beige body ---- */
+body.theme-xp #overlayCard .pill-header {
+  background: linear-gradient(180deg, #0997ff 0%, #0053ee 9%, #0050ee 45%, #0066ff 88%, #0055d4 100%);
+  border-bottom: 1px solid #0831d9;
+  color: #fff;
+}
+body.theme-xp #overlayCard .pill-header .status-title,
+body.theme-xp #overlayCard .pill-header .badge-count {
+  color: #fff; text-shadow: 1px 1px 0 #0a1f6b; font-family: Tahoma, "Segoe UI", sans-serif;
+}
+body.theme-xp #overlayCard .popup-body {
+  padding: 10px 12px 14px; /* the conversation toolbar cancels this with negative margins */
+  background: #ece9d8;
+  margin: 0; border: 0; border-radius: 0; box-shadow: none; /* the card already has the blue frame */
+  font-family: Tahoma, "Segoe UI", Verdana, sans-serif;
+}
+body.theme-xp #listView.view-panel { gap: 0; }
+body.theme-xp #listView { color: #1b1b1b; }
+
+/* ---- My Status + mail strip ---- */
+body.theme-xp #listView .msn-top { flex: none; }
+body.theme-xp #listView .msn-me {
+  display: flex; align-items: center; gap: 9px; padding: 7px 10px 6px;
+  background: linear-gradient(180deg, #fff 0%, #e3ecfb 100%);
+  border-bottom: 1px solid #b8c8e6;
+}
+body.theme-xp #listView .msn-ava {
+  flex: none; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 22px;
+  border: 1px solid #6f8bbb; border-radius: 4px; color: #0a3fb5;
+  background: radial-gradient(circle at 35% 30%, #fff, #bcd3f5);
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3px #9fb6dd;
+}
+body.theme-xp #listView .msn-text { min-width: 0; }
+body.theme-xp #listView .msn-label { font-size: 10px; color: #8a8a8a; }
+body.theme-xp #listView .msn-line { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.theme-xp #listView .msn-line b { color: #000; }
+body.theme-xp #listView #msnState { color: #555; }
+body.theme-xp #listView .msn-mail {
+  display: block; width: calc(100% - 16px); margin: 5px 8px 0; padding: 3px 8px 3px 22px; text-align: left; cursor: pointer;
+  background: #b3b78e url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14'><rect x='1' y='3' width='12' height='8' fill='%23fff' stroke='%23555'/><path d='M1 3l6 5 6-5' fill='none' stroke='%23555'/></svg>") 5px 50% no-repeat;
+  border: 1px solid #8c906a; border-radius: 2px; color: #fff; font: 11px Tahoma, "Segoe UI", sans-serif; text-decoration: underline;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+}
+body.theme-xp #listView .msn-mail:hover { filter: brightness(1.06); }
+body.theme-xp #listView .msn-mail.alert { background-color: #d9a62a; border-color: #a97d10; font-weight: 700; }
+
+/* ---- filter tabs: small XP buttons ---- */
+body.theme-xp #listView > .tabs-bar {
+  flex: none; gap: 3px; padding: 6px 8px 5px; margin: 0; border: 0;
+}
+body.theme-xp #listView .tab-btn {
+  flex: 1; padding: 2px 4px; cursor: pointer; font: 11px Tahoma, "Segoe UI", sans-serif; color: #000;
+  background: linear-gradient(180deg, #fff 0%, #ecebe5 70%, #d6d0c5 100%);
+  border: 1px solid #003c74; border-radius: 3px; box-shadow: none; text-shadow: none;
+}
+body.theme-xp #listView .tab-btn:hover { box-shadow: inset 0 0 0 2px #f8b636; background: linear-gradient(180deg, #fff 0%, #ecebe5 70%, #d6d0c5 100%); color: #000; }
+body.theme-xp #listView .tab-btn.active { background: linear-gradient(180deg, #d6d0c5, #f0eee8); font-weight: 700; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3); color: #000; }
+
+/* ---- the contact sheet ---- */
+body.theme-xp #listView .sessions-container {
+  flex: 1; min-height: 0; margin: 0 8px; padding: 4px 3px; overflow-y: auto;
+  background: #fff; border: 1px solid #7f9db9; border-radius: 0; box-shadow: none;
+}
+body.theme-xp #listView .sessions-container::-webkit-scrollbar { width: 16px; }
+body.theme-xp #listView .sessions-container::-webkit-scrollbar-track { background: #f3f1e8; }
+body.theme-xp #listView .sessions-container::-webkit-scrollbar-thumb { background: linear-gradient(90deg, #c5d6fb, #8ab0f2); border: 1px solid #7c9bd6; border-radius: 2px; }
+body.theme-xp #listView .sessions-container > div[style] { color: #6d7a93 !important; }
+
+/* group header: [−] Folder (1/3) */
+body.theme-xp #listView .workspace-group { gap: 0; }
+body.theme-xp #listView .workspace-header {
+  display: flex; align-items: center; gap: 4px; padding: 1px 2px; margin: 3px 0 1px; border-radius: 0;
+  color: #0a3fb5; font: 700 11px Tahoma, "Segoe UI", sans-serif; text-shadow: none;
+}
+body.theme-xp #listView .workspace-header:hover { background: #eef3fb; color: #0a3fb5; }
+body.theme-xp #listView .workspace-header:hover .workspace-name { text-decoration: none; }
+body.theme-xp #listView .workspace-header::after { display: none; }
+body.theme-xp #listView .workspace-caret {
+  flex: none; position: relative; width: 13px; height: 13px; font-size: 0; transform: none !important;
+  border: 1px solid #7f9db9; border-radius: 2px; background: linear-gradient(180deg, #fff, #dbe6f8);
+}
+body.theme-xp #listView .workspace-caret::before { content: ""; position: absolute; left: 3px; top: 5px; width: 5px; height: 1px; background: #1b3f94; }
+body.theme-xp #listView .workspace-group.collapsed .workspace-caret::after { content: ""; position: absolute; left: 5px; top: 3px; width: 1px; height: 5px; background: #1b3f94; }
+body.theme-xp #listView .workspace-name { flex: 0 1 auto; color: #0a3fb5; font-weight: 700; }
+body.theme-xp #listView .workspace-stats { order: 0; }
+body.theme-xp #listView .ws-count { color: #0a3fb5; font-size: 11px; font-weight: 400; padding: 0; }
+body.theme-xp #listView .ws-stat.attention { color: #c0291b; font-size: 11px; }
+body.theme-xp #listView .workspace-body { padding: 0 0 2px 15px; border: 0; border-radius: 0; background: none; gap: 0; box-shadow: none; }
+
+/* a contact: one line */
+body.theme-xp #listView .session-row {
+  align-items: center; gap: 6px; min-height: 26px; padding: 1px 24px 1px 3px;
+  border: 1px solid transparent; border-radius: 0; background: none;
+}
+body.theme-xp #listView .session-row + .session-row { border-top: 1px solid transparent; }
+body.theme-xp #listView .session-row:hover { background: #e8f0fd; border-color: #b6ccf0; }
+body.theme-xp #listView .session-row.state-attention { background: #fff4cf; border-color: #e7cf86; }
+body.theme-xp #listView .session-row.state-attention:hover { background: #ffeeb0; }
+
+/* little avatar, ring colour = status (green online, orange needs you) */
+body.theme-xp #listView .row-orb.has-robot,
+body.theme-xp #listView .src-claude .row-orb.has-robot {
+  width: 24px; height: 24px; padding: 1px; border-radius: 3px;
+  border: 1px solid #8c9fb3; background: #fff; box-shadow: none; animation: none;
+}
+body.theme-xp #listView .state-running .row-orb.has-robot { border-color: #3a9a2a; box-shadow: 0 0 0 1px #8ddc6c; animation: none; background: #f2ffe9; }
+body.theme-xp #listView .state-attention .row-orb.has-robot { border-color: #c25e00; box-shadow: 0 0 0 1px #ffb04d; animation: none; background: #fff6e6; }
+
+body.theme-xp #listView .row-main { flex-direction: row; align-items: center; gap: 4px; flex-wrap: nowrap; }
+body.theme-xp #listView .row-line1 { flex: 1; min-width: 0; align-items: baseline; gap: 4px; white-space: nowrap; overflow: hidden; }
+body.theme-xp #listView .row-agent {
+  flex: none; padding: 0; border: 0; background: none; color: #000; font: 700 11px Tahoma, "Segoe UI", sans-serif; text-shadow: none;
+}
+body.theme-xp #listView .row-agent::after { content: ":"; }
+body.theme-xp #listView .row-title { color: #000; font: 11px Tahoma, "Segoe UI", sans-serif; }
+body.theme-xp #listView .session-row.state-attention .row-title { font-weight: 700; }
+body.theme-xp #listView .row-preview { color: #777; font: 11px Tahoma, "Segoe UI", sans-serif; font-style: normal; }
+body.theme-xp #listView .row-line1 .row-preview::before { content: "- "; color: #777; }
+body.theme-xp #listView .row-time { display: none; }
+body.theme-xp #listView .row-meta { flex: none; margin: 0; font: 11px Tahoma, "Segoe UI", sans-serif; color: #777; }
+body.theme-xp #listView .row-meta > * + *::before { content: ""; margin: 0 2px; }
+body.theme-xp #listView .row-status::before { content: "("; }
+body.theme-xp #listView .row-status::after { content: ")"; }
+body.theme-xp #listView .state-running .row-status { color: #1f7f1f; }
+body.theme-xp #listView .state-attention .row-status { color: #c0291b; font-weight: 700; }
+body.theme-xp #listView .row-model { color: #6a5acd; }
+body.theme-xp #listView .row-ctxbar { display: none; }
+body.theme-xp #listView .row-ctxbar.warning, body.theme-xp #listView .row-ctxbar.critical { display: block; flex: none; width: 34px; margin: 0; }
+body.theme-xp #listView .row-dismiss { right: 3px; }
+
+/* ---- footer ---- */
+body.theme-xp #listView .popup-footer { flex: none; padding: 3px 10px 5px; background: #ece9d8; border-top: 1px solid #fff; }
+body.theme-xp #listView .source-label { color: #555; font: 10px Tahoma, "Segoe UI", sans-serif; }
+
+/* =====================================================================
+   Windows XP chrome for the rest of the window (title bar, frame, buttons)
+   ===================================================================== */
+/* the Windows 7 Explorer bar is replaced by the XP title bar + the plain search box */
+body.theme-xp .explorer-bar { display: none !important; }
+body.theme-xp.has-explorer-bar .fx-search { display: block; }
+body.theme-xp #overlayCard {
+  border: 3px solid #0054e3; border-top: 0; border-radius: 8px 8px 0 0;
+  background: #ece9d8; box-shadow: 0 0 0 1px #0831d9, 4px 5px 10px rgba(0, 0, 40, 0.45);
+}
+body.theme-xp #overlayCard::before, body.theme-xp #overlayCard::after { display: none; } /* Aero glass streaks */
+body.theme-xp #overlayCard .pill-header .agent-badge { filter: none; }
+body.theme-xp #overlayCard .pill-header .status-sub { color: #cfe0ff; }
+/* caption buttons: little blue squares, red close */
+body.theme-xp #overlayCard .pill-header .controls { gap: 2px; background: none; border: 0; box-shadow: none; }
+body.theme-xp #overlayCard .pill-header .controls .btn-icon {
+  width: 21px; height: 21px; min-width: 0; padding: 0; margin: 0; border: 1px solid #fff; border-radius: 3px; color: #fff;
+  font-size: 11px; line-height: 1; text-shadow: none; filter: none;
+  background: radial-gradient(circle at 30% 25%, #7fb1ff, #2a62e3 60%, #1747b8);
+}
+body.theme-xp #overlayCard .pill-header .controls .btn-icon:last-child { background: radial-gradient(circle at 30% 25%, #f59a80, #d8452a 60%, #b72c14); }
+body.theme-xp #overlayCard .pill-header .controls .btn-icon:hover { filter: brightness(1.12); }
+body.theme-xp #overlayCard .pill-header .controls .btn-icon svg { stroke: #fff; }
+/* XP buttons + inputs in the conversation view and footers */
+body.theme-xp .tb-btn, body.theme-xp .btn-action, body.theme-xp .btn-action.primary {
+  color: #000; font-family: Tahoma, "Segoe UI", sans-serif; text-shadow: none;
+  background: linear-gradient(180deg, #fff 0%, #ecebe5 70%, #d6d0c5 100%);
+  border: 1px solid #003c74; border-radius: 3px; box-shadow: none;
+}
+body.theme-xp .tb-btn:hover, body.theme-xp .btn-action:hover { box-shadow: inset 0 0 0 2px #f8b636; }
+body.theme-xp .fx-search-input, body.theme-xp textarea, body.theme-xp input[type="text"] {
+  background: #fff; color: #000; border: 1px solid #7f9db9; border-radius: 0; font-family: Tahoma, "Segoe UI", sans-serif;
+}
+body.theme-xp #detailView { background: #ece9d8; }
+
+/* =====================================================================
+   Windows 7 (Aero) flavour of the same header: glass "My Status" strip
+   (the Win7 contact list itself is the Windows Live Messenger 2009 look in theme-aero.css)
+   ===================================================================== */
+.msn-top { display: none; }
+body.theme-xp #listView .msn-top { display: block; }
+body.theme-aero:not(.theme-xp) #listView .msn-top { display: block; padding: 2px 2px 4px; }
+body.theme-aero:not(.theme-xp) #listView .msn-me { display: flex; align-items: center; gap: 9px; padding: 3px 4px 5px; }
+body.theme-aero:not(.theme-xp) #listView .msn-ava {
+  flex: none; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #1d6fb8;
+  border: 1px solid #8c9fb3; border-radius: 5px;
+  background: linear-gradient(180deg, #ffffff 0%, #e4edf6 100%);
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 2px rgba(190, 206, 222, 0.9), 0 1px 3px rgba(0, 40, 90, 0.25);
+}
+body.theme-aero:not(.theme-xp) #listView .msn-label { font-size: 10.5px; color: #5d6b7a; }
+body.theme-aero:not(.theme-xp) #listView .msn-line { font-size: 13px; color: #1e395b; }
+body.theme-aero:not(.theme-xp) #listView .msn-line b { font-weight: 600; }
+body.theme-aero:not(.theme-xp) #listView .msn-mail { display: none; }
+body.theme-aero:not(.theme-xp) #listView .msn-mail.alert {
+  display: block; width: 100%; margin: 0 0 4px; padding: 3px 8px; text-align: left; cursor: pointer; font-size: 11.5px;
+  color: #5a3a00; border: 1px solid #f3c97a; border-radius: 3px;
+  background: linear-gradient(180deg, #fffaf0 0%, #ffe9b8 100%);
+}
+
+/* contact list fills the frame edge to edge; other views keep the padding */
+body.theme-xp.list-open #overlayCard .popup-body { padding: 0; }
+/* conversation toolbar: flat XP toolbar strip, items highlight like menu entries */
+body.theme-xp .convo-toolbar {
+  height: 26px; padding: 0 6px; background: #ece9d8; border: 0; border-bottom: 1px solid #c9c5b0; box-shadow: inset 0 1px 0 #fff; border-radius: 0;
+}
+body.theme-xp .convo-toolbar .tb-btn, body.theme-xp .convo-toolbar .btn-mcp {
+  background: none; border: 1px solid transparent; border-radius: 2px; box-shadow: none; color: #000; padding: 2px 7px;
+}
+body.theme-xp .convo-toolbar .tb-btn:hover, body.theme-xp .convo-toolbar .btn-mcp:hover { background: #316ac5; color: #fff; border-color: #316ac5; box-shadow: none; }
+
+body.theme-xp.in-detail #overlayCard .popup-body, body.theme-xp.usage-open #overlayCard .popup-body { border: 0; }
+
+/* XP: the contact-list toolbar is a flat beige strip with menu-style items */
+body.theme-xp #listView .list-toolbar { margin: 0; height: 24px; padding: 0 4px; background: #ece9d8; border: 0; border-bottom: 1px solid #c9c5b0; box-shadow: inset 0 1px 0 #fff; border-radius: 0; }
+body.theme-xp #listView .list-toolbar .tb-btn { background: none; border: 1px solid transparent; border-radius: 2px; box-shadow: none; color: #000; padding: 2px 7px; }
+body.theme-xp #listView .list-toolbar .tb-btn:hover, body.theme-xp #listView .list-toolbar .tb-btn.open { background: #316ac5; color: #fff; border-color: #316ac5; }
+body.theme-xp #listView .list-toolbar .settings-panel { background: #fff; border: 1px solid #7f9db9; border-radius: 0; }
+body.theme-xp .settings-panel .set-row { color: #000; font-family: Tahoma, "Segoe UI", sans-serif; }
+body.theme-xp .settings-panel .set-row:hover { background: #316ac5; color: #fff; border-color: #316ac5; }
+body.theme-xp .settings-panel .set-row:hover .set-val, body.theme-xp .settings-panel .set-row:hover .set-check { color: #fff; }
+
+/* ---- Vista Dark: dark status header + dark toolbar (selectors out-rank the Windows 7 ones above) ---- */
+body.theme-aero.theme-vista:not(.theme-xp) #listView .msn-ava { color: #9fd0ff; background: linear-gradient(180deg, #2c3f5a, #1a2638); border-color: #4b6485; box-shadow: 0 0 0 2px rgba(255,255,255,0.08), 0 1px 3px #000; }
+body.theme-aero.theme-vista:not(.theme-xp) #listView .msn-label { color: #9fb2cc; }
+body.theme-aero.theme-vista:not(.theme-xp) #listView .msn-line, body.theme-aero.theme-vista:not(.theme-xp) #listView .msn-line b, body.theme-aero.theme-vista:not(.theme-xp) #listView #msnState { color: #e6eefb; }
+body.theme-aero.theme-vista:not(.theme-xp) #listView #msnState { color: #aebccb; }
+body.theme-aero.theme-vista:not(.theme-xp) #listView .msn-mail.alert { color: #ffe2a0; background: linear-gradient(180deg, #5a4515, #3d2f0c); border-color: #8a6a22; }
+body.theme-aero.theme-vista:not(.theme-xp) .list-toolbar {
+  background: linear-gradient(180deg, #3e434b 0%, #2c3037 48%, #1b1e23 50%, #22262c 100%);
+  border-bottom: 1px solid #000; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+body.theme-aero.theme-vista:not(.theme-xp) .list-toolbar .tb-btn { color: #e9eef5; background: none; border-color: transparent; text-shadow: 0 1px 1px #000; }
+body.theme-aero.theme-vista:not(.theme-xp) .list-toolbar .tb-btn:hover,
+body.theme-aero.theme-vista:not(.theme-xp) .list-toolbar .tb-btn.open { color: #fff; border-color: #000; background: var(--vd-gel-hover); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2), var(--vd-glow); }
+body.theme-aero.theme-vista:not(.theme-xp) .list-toolbar .settings-panel { background: #1c2027; border: 1px solid #3a424d; }
+
+/* ---- "My Status" picture: clickable, custom image / robot ---- */
+#listView .msn-ava.my-ava-trigger { cursor: pointer; overflow: hidden; }
+#listView .msn-ava.my-ava-trigger:hover { filter: brightness(1.07); }
+.my-avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+#dpUser .dp-img.has-photo { padding: 0; overflow: hidden; }
+#dpUser .dp-img.has-photo .my-avatar-img { border-radius: inherit; }
+.my-ava-menu {
+  position: fixed; z-index: 200; min-width: 190px; padding: 3px; display: none;
+  background: #f5f8fc; border: 1px solid #979797; box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.3);
+  font: 12px "Segoe UI", Tahoma, sans-serif; color: #1a1a1a;
+}
+.mam-head { padding: 2px 6px 3px; font-size: 10.5px; color: #5d6b7a; }
+.mam-sub { padding: 5px 6px 2px; }
+.mam-row { display: block; width: 100%; height: 26px; padding: 0 8px; text-align: left; font: inherit; color: inherit; background: none; border: 1px solid transparent; border-radius: 3px; cursor: pointer; }
+.mam-row:hover { border-color: #a8d8f8; background: linear-gradient(180deg, #f2f9fe, #d6eefd); }
+.mam-swatches { display: flex; flex-wrap: wrap; gap: 4px; padding: 3px 6px 6px; }
+.mam-sw { width: 20px; height: 20px; padding: 0; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px #6b7a8c; cursor: pointer; }
+.mam-sw:hover { box-shadow: 0 0 0 2px #3d7bad; }
+.mam-sw.on { box-shadow: 0 0 0 2px #1d6fb8; }
+body.theme-vista .my-ava-menu { background: #1c2027; border-color: #3a424d; color: #e9eef5; }
+body.theme-vista .mam-head { color: #9fb2cc; }
+body.theme-vista .mam-row:hover { border-color: #000; background: var(--vd-gel-hover); }
+body.theme-vista .mam-sw { border-color: #1c2027; }
+body.theme-xp .my-ava-menu { background: #fff; border-color: #7f9db9; border-radius: 0; font-family: Tahoma, "Segoe UI", sans-serif; }
+body.theme-xp .mam-row:hover { background: #316ac5; color: #fff; border-color: #316ac5; }
+
+/* ---- personal status message (Messenger "<Type a personal message>") ---- */
+.msn-msg {
+  display: block; width: 100%; max-width: 100%; margin-top: 1px; padding: 0 2px; height: 16px;
+  font: italic 11px Tahoma, "Segoe UI", sans-serif; color: #5d6b7a;
+  background: transparent; border: 1px solid transparent; border-radius: 2px; outline: none;
+}
+.msn-msg:hover { border-color: #b6ccf0; }
+.msn-msg:focus { border-color: #316ac5; background: #fff; color: #000; font-style: normal; }
+.msn-msg::placeholder { color: #8a96a3; }
+body.theme-vista .msn-msg { color: #aebccb; }
+body.theme-vista .msn-msg:hover { border-color: #4b6485; }
+body.theme-vista .msn-msg:focus { background: #15181d; color: #e9eef5; border-color: #4aa3ea; }
+body.theme-xp .msn-msg { color: #555; }
+body.theme-xp .msn-text { flex: 1; }
+.msn-text { flex: 1; min-width: 0; }
+body.theme-xp input.msn-msg { background: transparent; border: 1px solid transparent; border-radius: 2px; }
+body.theme-xp input.msn-msg:hover { border-color: #b6ccf0; }
+body.theme-xp input.msn-msg:focus { background: #fff; border-color: #316ac5; }
+
+/* =====================================================================
+   Classic file-folder tabs on the contact list (All / Running / Idle / Needs Input):
+   the active tab is raised and joined to the list panel under it.
+   The search box moves above the tabs so the tabs sit right on the panel.
+   ===================================================================== */
+body.theme-aero #listView > .list-toolbar { order: 0; }
+body.theme-aero #listView > .msn-top { order: 1; }
+body.theme-aero #listView > .fx-search { order: 2; }
+body.theme-aero #listView > .tabs-bar { order: 3; }
+body.theme-aero #listView > .sessions-container { order: 4; }
+body.theme-aero #listView > .popup-footer { order: 5; }
+
+body.theme-aero #listView > .tabs-bar {
+  display: flex; align-items: flex-end; gap: 1px; flex: none;
+  padding: 6px 6px 0; margin: 0 0 -1px; border: 0; position: relative; z-index: 2;
+}
+body.theme-aero #listView .tab-btn {
+  flex: none; margin-top: 3px; padding: 2px 8px; border-radius: 0; cursor: pointer;
+  font: 12px "Segoe UI", Tahoma, sans-serif; color: #000; text-shadow: none; box-shadow: none;
+  background: #ececec; border: 1px solid #919191;
+}
+body.theme-aero #listView .tab-btn:hover { background: #f6f6f6; color: #000; box-shadow: none; }
+body.theme-aero #listView .tab-btn.active {
+  margin-top: 0; padding-top: 5px; position: relative; z-index: 3;
+  background: #fff; color: #000; border-bottom-color: #fff; font-weight: 400; box-shadow: none;
+}
+body.theme-aero #listView .fx-compact-btn {
+  margin: 0 0 1px auto; height: 20px; padding: 0 6px; border-radius: 0; box-shadow: none;
+  background: #ececec; border: 1px solid #919191; color: #000;
+}
+body.theme-aero #listView .fx-compact-btn.active { background: #fff; box-shadow: inset 0 1px 2px rgba(0,0,0,.25); }
+
+/* the panel the tabs belong to */
+body.theme-aero #listView .sessions-container {
+  margin: 0 6px; border: 1px solid #919191; border-radius: 0; background: #fff; box-shadow: none;
+}
+
+/* Vista Dark */
+body.theme-aero.theme-vista #listView .tab-btn { background: #2a2f38; color: #e9eef5; border-color: #4a5160; }
+body.theme-aero.theme-vista #listView .tab-btn:hover { background: #343a45; color: #fff; }
+body.theme-aero.theme-vista #listView .tab-btn.active { background: #1c2027; border-bottom-color: #1c2027; color: #fff; }
+body.theme-aero.theme-vista #listView .fx-compact-btn { background: #2a2f38; color: #e9eef5; border-color: #4a5160; }
+body.theme-aero.theme-vista #listView .fx-compact-btn.active { background: #1c2027; }
+body.theme-aero.theme-vista #listView .sessions-container { background: #1c2027; border-color: #4a5160; }
+
+/* Windows 7 / Vista Dark: the list view's 8px flex gap pushed the tabs away from the panel */
+body.theme-aero #listView.view-panel { gap: 0; }
+body.theme-aero:not(.theme-xp) #listView > .msn-top { margin-bottom: 4px; }
+body.theme-aero:not(.theme-xp) #listView > .sessions-container { margin-bottom: 6px; }
+
+/* Windows 7 / Vista Dark: agent name = quiet text with a small source dot instead of a coloured pill */
+body.theme-aero:not(.theme-xp) #listView .row-agent {
+  display: inline-flex; align-items: center; gap: 5px; flex: none;
+  padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none;
+  font: 500 11.5px "Segoe UI", Tahoma, sans-serif; color: #5d6b7a; text-shadow: none;
+}
+body.theme-aero:not(.theme-xp) #listView .row-agent::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%; flex: none;
+  background: #e07a1a; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+body.theme-aero:not(.theme-xp) #listView .row-agent.antigravity::before { background: #6f6cf0; }
+body.theme-aero:not(.theme-xp) #listView .row-agent::after { content: "·"; margin-left: 1px; color: #9aa8b6; }
+body.theme-aero.theme-vista #listView .row-agent { color: #aebccb; }
+body.theme-aero.theme-vista #listView .row-agent::after { color: #6b7a8b; }

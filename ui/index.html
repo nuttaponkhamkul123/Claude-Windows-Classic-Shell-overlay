@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multi-AI Session Overlay HUD</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="theme-aero.css" />
+  <link rel="stylesheet" href="features.css" />
+  <link rel="stylesheet" href="theme-vista-dark.css" />
+  <link rel="stylesheet" href="theme-msn.css" />
+  <link rel="stylesheet" href="skill-install.css" />
+</head>
+<body class="theme-aero">
+  <!-- Mini tab shown while the HUD is docked to a screen edge.
+       Click = open the full HUD, drag = move along / off the edge. -->
+  <div id="miniDock" class="mini-dock ready" title="Click to open · drag to move">
+    <div class="mini-orb">
+      <span class="mini-icon">✦</span>
+      <span id="miniDot" class="mini-dot"></span>
+    </div>
+    <span id="miniCount" class="mini-count" style="display: none;"></span>
+    <!-- A tool is waiting for approval: answer it right here (✓ allow · ✕ deny) -->
+    <div id="miniApprove" class="mini-approve" style="display: none;">
+      <div class="mini-detail">
+        <div id="miniDetHead" class="md-head"></div>
+        <div id="miniDetCmd" class="md-cmd"></div>
+        <div id="miniDetMeta" class="md-meta"></div>
+      </div>
+      <div class="mini-btns">
+        <button id="miniAllow" class="mini-btn allow" title="Allow">✓</button>
+        <button id="miniDeny" class="mini-btn deny" title="Deny">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="overlayCard" class="overlay-card ready">
+    <!-- Header Pill (Always visible & draggable) -->
+    <div class="pill-header">
+      <!-- Session Chips / Main Badge -->
+      <div id="headerLeft" class="header-left">
+        <div id="primaryBadge" class="agent-badge multi" title="Active AI Sessions">
+          <span id="badgeIcon">✦</span>
+          <div id="primaryDot" class="status-indicator ready"></div>
+        </div>
+        <div class="header-info">
+          <div class="title-row">
+            <span id="mainTitle" class="status-title">AI HUD</span>
+            <span id="badgeCount" class="badge-count">0 AIs</span>
+            <span id="headerModel" class="model-chip" style="display: none;"></span>
+          </div>
+          <div id="mainSub" class="status-sub">Listening for activity</div>
+        </div>
+      </div>
+
+      <!-- While the session list is open, the filter tabs are moved in here -->
+      <div id="headerTabsSlot" class="header-tabs-slot"></div>
+
+      <!-- Quick Session Pills (Shows mini indicators for each active session) -->
+      <div id="quickChips" class="quick-chips"></div>
+
+      <!-- Controls -->
+      <div class="controls">
+        <button id="btnClose" class="btn-icon" title="Close">✕</button>
+      </div>
+    </div>
+
+    <!-- Collapsed view: one small card per running session, under the title bar -->
+    <div id="runningStrip" class="running-strip"></div>
+
+    <!-- Tool-approval notifications (Allow / Deny / Open) — never switch the view -->
+    <div id="approvalToasts" class="approval-toasts empty"></div>
+
+    <!-- Expanded Multi-Session Drawer -->
+    <div id="popupBody" class="popup-body" style="display: flex;">
+      <!-- VIEW 1: Multi-Session List View -->
+      <div id="listView" class="view-panel active">
+        <!-- Toolbar on the contact list: Settings dropdown + quick New chat -->
+        <div id="listToolbar" class="list-toolbar">
+          <button id="lbSettings" class="tb-btn" title="Theme, chime, always on top">Settings ▾</button>
+          <button id="lbNewChat" class="tb-btn" title="Start a new conversation in any folder">New chat</button>
+          <button id="lbGroup" class="tb-btn" title="Group the contact list by folder or by status">Group: Folder</button>
+        </div>
+        <!-- MSN Messenger style header: My Status + "new e-mail" strip (filled in app.js) -->
+        <div class="msn-top">
+          <div class="msn-me">
+            <div class="msn-ava">✦</div>
+            <div class="msn-text">
+              <div class="msn-label">My Status:</div>
+              <div class="msn-line"><b id="msnName">All quiet</b> <span id="msnState">(Away)</span></div>
+              <input id="msnMsg" class="msn-msg" type="text" maxlength="80" placeholder="‹Type a personal message›" spellcheck="false" />
+            </div>
+          </div>
+          <button id="msnMail" class="msn-mail" title="Show the sessions that are waiting for you">No sessions need you</button>
+        </div>
+        <!-- Filter Tabs -->
+        <div class="tabs-bar">
+          <button class="tab-btn active" data-filter="all">All (<span id="countAll">0</span>)</button>
+          <button class="tab-btn" data-filter="running">Running (<span id="countRunning">0</span>)</button>
+          <button class="tab-btn" data-filter="idle">Idle (<span id="countIdle">0</span>)</button>
+          <button class="tab-btn" data-filter="attention">Needs Input (<span id="countAttention">0</span>)</button>
+        </div>
+
+        <!-- Session Cards Scroll Container -->
+        <div id="sessionsContainer" class="sessions-container">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Bottom Bar -->
+        <div class="popup-footer">
+          <span class="source-label">Click any card to open conversation & reply</span>
+          <div class="action-buttons">
+            <button id="btnTestNudge" class="btn-action dismiss" title="Shake the HUD as if a session just finished">Test Nudge</button>
+            <button id="btnTest" class="btn-action dismiss">Test Alert</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 2: Conversation window (Messenger layout)
+           ┌ toolbar: ‹ Contacts  Model  Effort  New chat ………… MCP ┐
+           │ [agent DP] │ Name (status)  · personal message         │
+           │            │ [yellow info bar]                          │
+           │            │ X said (time):                             │
+           │            │    message…                                │
+           │ [your DP]  │ [input box] + toolbar                      │ -->
+      <div id="detailView" class="view-panel">
+        <div class="detail-header convo-toolbar">
+          <button id="tbModel" class="tb-btn" title="Choose model, then effort">Model ▾</button>
+          <button id="tbNewChat" class="tb-btn" title="Start a new conversation in this or another folder (/clear)">New chat</button>
+          <button id="tbSettings" class="tb-btn" title="Theme, chime, always on top">Settings ▾</button>
+          <span class="tb-spacer"></span>
+          <button id="btnMcp" class="tb-btn btn-mcp" title="MCP servers for this workspace">MCP ▾</button>
+
+          <!-- Legacy identity elements (hidden; kept so existing code can update them) -->
+          <div class="detail-identity" hidden>
+            <div id="detailLogo" class="card-logo claude">C</div>
+            <span id="detailProject" class="detail-project">project-name</span>
+            <span id="detailModel" class="model-chip" style="display: none;"></span>
+            <span id="detailStatusPill" class="status-pill running"></span>
+          </div>
+
+          <!-- Settings dropdown (theme / chime / always on top) -->
+          <div id="settingsPanel" class="settings-panel" style="display: none;">
+            <button id="btnTheme" class="set-row" title="Switch theme (Windows 7 / Windows XP / Vista Dark / Dark)">
+              <span class="set-ico">🎨</span><span class="set-label">Theme</span><span id="setThemeVal" class="set-val">Windows 7</span>
+            </button>
+            <button id="btnSound" class="set-row active" title="Toggle chime">
+              <span class="set-ico">🔔</span><span class="set-label">Chime</span><span class="set-check"></span>
+            </button>
+            <button id="btnPin" class="set-row active" title="Always on Top">
+              <span class="set-ico">📌</span><span class="set-label">Always on top</span><span class="set-check"></span>
+            </button>
+            <div class="set-sep"></div>
+            <button id="btnRestartApp" class="set-row" title="Close and reopen the HUD (reloads all code)">
+              <span class="set-ico">🔄</span><span class="set-label">Restart app</span><span class="set-val"></span>
+            </button>
+          </div>
+
+          <!-- MCP servers dropdown (from `claude mcp list`) -->
+          <div id="mcpPanel" class="mcp-panel" style="display: none;">
+            <div class="mcp-panel-head">
+              <span>MCP servers</span>
+              <button id="btnMcpRefresh" class="mcp-refresh" title="Re-check">↻</button>
+            </div>
+            <div id="mcpList" class="mcp-list"></div>
+          </div>
+        </div>
+
+        <div class="convo-body">
+          <!-- Display pictures: agent (top) and you (bottom) -->
+          <div class="convo-side">
+            <div id="dpAgent" class="dp-frame state-idle" title="Claude">
+              <div id="dpAgentImg" class="dp-img dp-claude">C</div>
+            </div>
+            <div id="dpUser" class="dp-frame dp-you" title="You">
+              <div class="dp-img dp-user-img">
+                <svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="15" r="8"/><path d="M5 38c1.5-9 7.5-13 15-13s13.5 4 15 13z"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="convo-main">
+            <!-- Contact header: name (status) + personal message -->
+            <div class="convo-contact">
+              <div class="convo-name-row">
+                <span id="convoName" class="convo-name">Claude</span>
+                <span id="convoStatus" class="convo-status">(Idle)</span>
+                <span id="convoModel" class="model-chip" style="display: none;"></span>
+              </div>
+              <div id="convoPersonal" class="convo-personal"></div>
+              <!-- Context window meter (Claude Code) -->
+              <div id="convoContext" class="convo-context" style="display: none;">
+                <div class="ctx-track"><div id="ctxFill" class="ctx-fill"></div><div class="ctx-zone" title="Auto-compact zone"></div></div>
+                <span id="ctxLabel" class="ctx-label"></span>
+              </div>
+            </div>
+
+            <!-- Yellow info bar (needs input / notices). While the AI is working
+                 it is moved down to sit just above the input box. -->
+            <div id="infoBarHomeTop" class="infobar-home"></div>
+            <div id="convoInfoBar" class="convo-infobar" style="display: none;">
+              <span id="convoInfoIcon" class="infobar-icon">i</span>
+              <span id="convoInfoText" class="infobar-text"></span>
+            </div>
+
+            <!-- Transcript -->
+            <div id="chatStream" class="chat-stream"></div>
+
+            <!-- Reply area -->
+            <div class="reply-section">
+          <!-- Usage dropdown (pops up above the input box; chat stays as it is) -->
+          <div id="usagePanel" class="usage-panel" style="display: none;">
+            <div class="mcp-panel-head usage-panel-head">
+              <span>Usage · last 7 days</span>
+              <button id="btnUsageRefresh" class="mcp-refresh" title="Re-check">↻</button>
+            </div>
+            <div id="usageBody" class="usage-body"></div>
+            <div id="usageTooltip" class="usage-tooltip" style="display: none;"></div>
+          </div>
+
+          <!-- Info bar slot while the AI is working -->
+          <div id="infoBarHomeBottom" class="infobar-home"></div>
+
+          <!-- Activity line: exactly what the agent is doing right now -->
+          <div id="activityRow" class="activity-row" style="display: none;">
+            <span class="infobar-icon busy"></span>
+            <span id="activityVerb" class="activity-verb"></span>
+            <span id="activityTarget" class="activity-target"></span>
+            <span id="activityMeta" class="activity-meta"></span>
+          </div>
+
+          <!-- Attachments tray: one chip per image / file (any number) -->
+          <div id="imagePreviewBar" class="attach-tray" style="display: none;"></div>
+
+          <!-- Overrides for the next reply (/model, /effort, /clear) -->
+          <div id="replyOptions" class="reply-options" style="display: none;"></div>
+
+          <!-- Slash-command autocomplete (type "/") -->
+          <div id="slashMenu" class="slash-menu" style="display: none;"></div>
+
+          <!-- Input box with a toolbar underneath (Messenger style) -->
+          <div class="reply-box">
+            <input type="file" id="fileInput" multiple style="display: none;" />
+            <textarea id="replyTextarea" class="reply-textarea" placeholder="Type a message… ( / for commands · 📎, drop or Ctrl+V to attach files)" rows="2"></textarea>
+            <div class="reply-toolbar">
+              <button id="btnAttachImg" class="rt-btn" title="Attach images or files — pick several, drop them here, or paste (Ctrl+V)">📎</button>
+              <button id="btnSlash" class="rt-btn rt-slash" title="Commands (/)">/</button>
+              <button id="btnSnip" class="rt-btn rt-snip" title="Quick snip — drag over any part of the screen to attach a screenshot">✂</button>
+              <button id="tbUsage" class="rt-btn rt-text rt-usage" title="Plan limits & token usage">Usage ▴</button>
+              <span id="replyStatusMsg" class="reply-status-msg"></span>
+              <span class="tb-spacer"></span>
+              <button id="btnCopyOnly" class="rt-btn rt-text" title="Copy to clipboard only">Copy</button>
+              <button id="btnSendReply" class="btn-action primary btn-send" title="Send (Enter)">Send</button>
+            </div>
+          </div>
+        </div>
+          </div><!-- /.convo-main -->
+        </div><!-- /.convo-body -->
+      </div>
+    </div>
+
+    <!-- Drag to Resize Corner Handle -->
+    <div id="resizeGrip" class="resize-grip" title="Drag corner to resize">
+      <svg width="10" height="10" viewBox="0 0 10 10">
+        <path d="M8 2L2 8M8 5L5 8M8 8L8 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+
+  <script src="marked.min.js"></script>
+  <script src="sound.js"></script>
+  <script src="robot-outfits.js"></script>
+  <script src="app.js"></script>
+  <script src="features.js"></script>
+  <script src="features-toolbar.js"></script>
+  <script src="features-git.js"></script>
+  <script src="features-names.js"></script>
+  <script src="features-workspace.js"></script>
+  <script src="features-dressup.js"></script>
+  <script src="features-explorer.js"></script>
+  <script src="features-myavatar.js"></script>
+  <script src="features-quote.js"></script>
+  <script src="features-plan.js"></script>
+  <script src="features-ask.js"></script>
+  <script src="features-rules.js"></script>
+  <script src="features-quick.js"></script>
+  <script src="features-compact.js"></script>
+  <script src="pin-prompt.js"></script>
+  <script src="features-skillinstall.js"></script>
+</body>
+</html>

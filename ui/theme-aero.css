@@ -1,0 +1,1643 @@
+/* =====================================================================
+   Aero theme — glossy "Frutiger Aero" look (sky-blue glass, white sheen,
+   bubbly gel buttons, glowing presence orbs). Everything is scoped under
+   body.theme-aero so the classic dark theme still works when toggled off.
+   ===================================================================== */
+
+body.theme-aero {
+  --aero-text: #1e395b;
+  --aero-text-soft: #4a6a8c;
+  --aero-text-faint: #7d97b3;
+  --aero-border: #8fb5da;
+  --aero-border-soft: rgba(110, 160, 210, 0.45);
+  --aero-sky-1: #e9f6ff;
+  --aero-sky-2: #cbe8fb;
+  --aero-sky-3: #9fd2f5;
+  --aero-blue: #1f7fd4;
+  --aero-blue-deep: #0f5fa8;
+  --aero-green: #3cc23c;
+  --aero-orange: #ff9a1f;
+  --aero-cyan: #1ea7e8;
+  --aero-gloss: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.55) 48%, rgba(255,255,255,0) 50%);
+}
+
+body.theme-aero * {
+  font-family: "Segoe UI", "Frutiger", "Myriad Pro", Tahoma, Verdana, sans-serif;
+}
+
+/* ---------- Window frame ---------- */
+body.theme-aero .overlay-card {
+  color: var(--aero-text);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse 120% 70% at 85% 120%, rgba(120, 220, 120, 0.35), transparent 60%), /* soft grass glow */
+    radial-gradient(ellipse 80% 60% at 0% 0%, rgba(255, 255, 255, 0.9), transparent 60%),      /* sun sheen */
+    linear-gradient(180deg, #f4fbff 0%, #dcf0fd 45%, #c3e3f9 100%);
+  box-shadow:
+    0 0 0 1px var(--aero-border),
+    inset 0 1px 0 #ffffff,
+    0 10px 30px rgba(20, 70, 130, 0.45);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+}
+
+body.theme-aero .overlay-card.attention {
+  animation: aero-attention 2s infinite ease-in-out;
+}
+@keyframes aero-attention {
+  0%, 100% { box-shadow: 0 0 0 1px #f0a640, inset 0 1px 0 #fff, 0 10px 30px rgba(20, 70, 130, 0.45), 0 0 10px rgba(255, 154, 31, 0.35); }
+  50%      { box-shadow: 0 0 0 1px #ff9a1f, inset 0 1px 0 #fff, 0 10px 30px rgba(20, 70, 130, 0.45), 0 0 22px rgba(255, 154, 31, 0.75); }
+}
+
+/* ---------- Title bar (glossy sky band) ---------- */
+/* NOTE: no overlay pseudo-elements here — in Electron an overlay inside the
+   -webkit-app-region: drag header swallows clicks on the no-drag buttons.
+   The light "swoosh" is painted as extra background layers instead. */
+body.theme-aero .pill-header {
+  background:
+    radial-gradient(ellipse 60% 140% at 78% -30%, rgba(255, 255, 255, 0.45), transparent 60%),
+    radial-gradient(ellipse 40% 90% at 20% 130%, rgba(160, 240, 255, 0.35), transparent 70%),
+    var(--aero-gloss),
+    linear-gradient(180deg, #8fd0fb 0%, #4fa9ea 52%, #2f8fdc 100%);
+  border-bottom: 1px solid #2a78bf;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.35);
+}
+
+body.theme-aero .status-title {
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(10, 60, 120, 0.6);
+}
+body.theme-aero .status-sub {
+  color: #eaf6ff;
+  text-shadow: 0 1px 1px rgba(10, 60, 120, 0.45);
+}
+body.theme-aero .badge-count {
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: #ffffff;
+  text-shadow: 0 1px 1px rgba(10, 60, 120, 0.5);
+}
+
+/* Main badge → glossy glass orb */
+body.theme-aero .agent-badge,
+body.theme-aero .agent-badge.multi,
+body.theme-aero .agent-badge.claude,
+body.theme-aero .agent-badge.antigravity {
+  border-radius: 50%;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 50, 100, 0.6);
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.25) 38%, transparent 40%),
+    radial-gradient(circle at 50% 110%, #b9f3ff 0%, #39b6f0 45%, #1166c4 100%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 2px 6px rgba(10, 60, 120, 0.5), inset 0 -2px 4px rgba(0, 40, 100, 0.35);
+}
+
+/* Presence orbs (status dots) */
+body.theme-aero .status-indicator {
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 40, 90, 0.5);
+}
+body.theme-aero .status-indicator.ready {
+  background: radial-gradient(circle at 35% 30%, #eaffea 0%, #6fe06f 35%, #229c22 100%);
+}
+body.theme-aero .status-indicator.thinking,
+body.theme-aero .status-indicator.tool {
+  background: radial-gradient(circle at 35% 30%, #e6f8ff 0%, #5cc8f5 35%, #0f78c8 100%);
+}
+body.theme-aero .status-indicator.attention {
+  background: radial-gradient(circle at 35% 30%, #fff4e0 0%, #ffbf55 35%, #e07b00 100%);
+}
+
+/* Title-bar icon buttons */
+body.theme-aero .btn-icon {
+  color: #ffffff;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  text-shadow: 0 1px 1px rgba(0, 40, 90, 0.5);
+}
+body.theme-aero .btn-icon:hover {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.75);
+  background: var(--aero-gloss), linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.1));
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+}
+body.theme-aero #btnClose:hover {
+  border-color: #8c1d1d;
+  background: var(--aero-gloss), linear-gradient(180deg, #f08c7c 0%, #d1402c 55%, #b72b1a 100%);
+}
+body.theme-aero .btn-icon.active { color: #ffffff; filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8)); }
+
+/* Quick chips in the title bar */
+body.theme-aero .quick-chip {
+  color: var(--aero-text);
+  background: var(--aero-gloss), linear-gradient(180deg, #ffffff, #dff1fd);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 1px 3px rgba(10, 60, 120, 0.35);
+}
+body.theme-aero .quick-chip:hover { background: var(--aero-gloss), linear-gradient(180deg, #ffffff, #c9e7fb); }
+body.theme-aero .quick-chip.active {
+  color: #0b3f74;
+  border-color: #ffffff;
+  box-shadow: 0 0 0 1px #5aa9e6, 0 0 8px rgba(255, 255, 255, 0.9);
+  background: var(--aero-gloss), linear-gradient(180deg, #ffffff, #b6defa);
+}
+body.theme-aero .quick-chip.attention {
+  color: #7a3f00;
+  background: var(--aero-gloss), linear-gradient(180deg, #fff6e6, #ffd699);
+  border-color: #ffffff;
+}
+body.theme-aero .chip-dot { width: 8px; height: 8px; box-shadow: 0 0 0 1px rgba(255,255,255,0.9); }
+body.theme-aero .chip-dot.ready { background: radial-gradient(circle at 35% 30%, #eaffea, #3cc23c 60%, #1d8a1d); }
+body.theme-aero .chip-dot.thinking,
+body.theme-aero .chip-dot.tool { background: radial-gradient(circle at 35% 30%, #e6f8ff, #1ea7e8 60%, #0d62b0); }
+body.theme-aero .chip-dot.attention { background: radial-gradient(circle at 35% 30%, #fff4e0, #ff9a1f 60%, #c86a00); }
+
+/* ---------- Drawer / body ---------- */
+/* no white line between the title bar and the command bar in a conversation */
+body.theme-aero.in-detail .popup-body { border-top: none; }
+
+body.theme-aero .popup-body {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.2) 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.9);
+}
+
+/* Tabs → glossy gel buttons */
+body.theme-aero .tab-btn {
+  color: var(--aero-text);
+  background: var(--aero-gloss), linear-gradient(180deg, #ffffff 0%, #e3f1fb 100%);
+  border: 1px solid var(--aero-border);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(10, 60, 120, 0.2);
+}
+body.theme-aero .tab-btn:hover {
+  color: var(--aero-text);
+  background: var(--aero-gloss), linear-gradient(180deg, #ffffff 0%, #c8e6fa 100%);
+  box-shadow: 0 0 6px rgba(80, 170, 240, 0.6);
+}
+body.theme-aero .tab-btn.active {
+  color: #ffffff;
+  border-color: #1b6cb5;
+  text-shadow: 0 1px 1px rgba(0, 40, 90, 0.6);
+  background: var(--aero-gloss), linear-gradient(180deg, #6cc0f7 0%, #2b8de0 55%, #1a72c4 100%);
+}
+
+/* Scrollbars */
+body.theme-aero .sessions-container::-webkit-scrollbar,
+body.theme-aero .chat-stream::-webkit-scrollbar,
+body.theme-aero .reply-textarea::-webkit-scrollbar { width: 8px; }
+body.theme-aero .sessions-container::-webkit-scrollbar-thumb,
+body.theme-aero .chat-stream::-webkit-scrollbar-thumb,
+body.theme-aero .reply-textarea::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #ffffff, #b9dbf5);
+  border: 1px solid var(--aero-border);
+  border-radius: 6px;
+}
+
+/* Workspace groups */
+body.theme-aero .workspace-header { color: var(--aero-blue-deep); }
+body.theme-aero .workspace-header:hover { background: rgba(255, 255, 255, 0.6); color: var(--aero-blue-deep); }
+body.theme-aero .ws-stat.running { color: var(--aero-cyan); }
+body.theme-aero .ws-stat.attention { color: #d97800; }
+body.theme-aero .ws-count {
+  color: var(--aero-text);
+  background: linear-gradient(180deg, #ffffff, #d6ecfb);
+  border: 1px solid var(--aero-border-soft);
+}
+body.theme-aero .workspace-body { border-left: 1px dotted var(--aero-border); }
+
+/* Session rows → Messenger contact list: one white panel per workspace */
+body.theme-aero .workspace-body {
+  border: 1px solid var(--aero-border);
+  border-left: 1px solid var(--aero-border);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 2px rgba(10, 60, 120, 0.12);
+}
+body.theme-aero .session-row + .session-row { border-top: 1px solid #e3edf6; }
+body.theme-aero .session-row:hover { background: linear-gradient(180deg, #f3f9ff, #e2f0fc); }
+body.theme-aero .session-row.state-attention { background: #fff7e8; }
+body.theme-aero .session-row.state-attention:hover { background: #ffefd3; }
+
+body.theme-aero .row-orb {
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 2px rgba(0, 40, 90, 0.35);
+  background: radial-gradient(circle at 50% 15%, rgba(255,255,255,0.9) 0%, transparent 45%),
+              radial-gradient(circle at 50% 110%, #c9c8ff, #6f6cf0 55%, #3b37b8);
+}
+body.theme-aero .src-claude .row-orb {
+  background: radial-gradient(circle at 50% 15%, rgba(255,255,255,0.9) 0%, transparent 45%),
+              radial-gradient(circle at 50% 110%, #ffd08a, #f08a1c 55%, #b85a00);
+}
+body.theme-aero .row-orb::after {
+  border: 1.5px solid #ffffff;
+  background: radial-gradient(circle at 35% 30%, #eaffea, #3cc23c 60%, #1d8a1d);
+}
+body.theme-aero .state-running .row-orb::after { background: radial-gradient(circle at 35% 30%, #e6f8ff, #1ea7e8 60%, #0d62b0); }
+body.theme-aero .state-attention .row-orb::after { background: radial-gradient(circle at 35% 30%, #fff4e0, #ff9a1f 60%, #c86a00); }
+
+/* robot avatars in rows: glossy picture frame instead of the letter orb */
+body.theme-aero .row-orb.has-robot,
+body.theme-aero .src-claude .row-orb.has-robot {
+  border: 1px solid #9fb6cc;
+  background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.95), transparent 60%),
+              linear-gradient(180deg, #f2f9ff 0%, #cfe4f6 100%);
+  box-shadow: 0 1px 2px rgba(0, 40, 90, 0.25), inset 0 1px 0 #ffffff;
+  text-shadow: none;
+}
+
+body.theme-aero .row-title { color: var(--aero-text); }
+body.theme-aero .row-time { color: var(--aero-text-faint); }
+body.theme-aero .row-preview { color: #5d6b7a; font-style: italic; }
+body.theme-aero .row-meta { color: var(--aero-text-faint); }
+body.theme-aero .row-meta > * + *::before { color: #b5c6d8; }
+body.theme-aero .state-running .row-status { color: #0b6fb8; }
+body.theme-aero .state-attention .row-status { color: #c25e00; }
+
+body.theme-aero .row-dismiss { color: var(--aero-text-faint); }
+body.theme-aero .row-dismiss:hover { color: #ffffff; background: linear-gradient(180deg, #f08c7c, #c9361f); }
+
+/* Session cards → white glass panels */
+body.theme-aero .session-card {
+  color: var(--aero-text);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 249, 255, 0.85) 100%);
+  border: 1px solid var(--aero-border-soft);
+  border-left: 4px solid #9db8d3;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(10, 60, 120, 0.18), inset 0 1px 0 #ffffff;
+}
+body.theme-aero .session-card:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #e4f4ff 100%);
+  border-color: #6fb2ea;
+  box-shadow: 0 0 0 1px rgba(111, 178, 234, 0.4), 0 3px 10px rgba(30, 127, 212, 0.25);
+}
+body.theme-aero .session-card.running { border-left-color: var(--aero-cyan); }
+body.theme-aero .session-card.idle { border-left-color: var(--aero-green); }
+body.theme-aero .session-card.attention {
+  border-left-color: var(--aero-orange);
+  background: linear-gradient(180deg, #fffaf0 0%, #ffefd1 100%);
+  box-shadow: 0 0 10px rgba(255, 154, 31, 0.35);
+}
+
+body.theme-aero .card-title,
+body.theme-aero .card-project,
+body.theme-aero .detail-project { color: var(--aero-text); }
+
+body.theme-aero .card-logo {
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 2px rgba(0, 40, 90, 0.35);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+}
+body.theme-aero .card-logo.claude {
+  background: radial-gradient(circle at 50% 15%, rgba(255,255,255,0.9) 0%, transparent 45%),
+              radial-gradient(circle at 50% 110%, #ffd08a, #f08a1c 55%, #b85a00);
+}
+body.theme-aero .card-logo.antigravity {
+  background: radial-gradient(circle at 50% 15%, rgba(255,255,255,0.9) 0%, transparent 45%),
+              radial-gradient(circle at 50% 110%, #c9c8ff, #6f6cf0 55%, #3b37b8);
+}
+
+body.theme-aero .card-detail {
+  color: var(--aero-text-soft);
+  background: rgba(225, 241, 252, 0.7);
+  border: 1px solid rgba(160, 200, 235, 0.45);
+}
+body.theme-aero .card-bottom { color: var(--aero-text-faint); }
+
+body.theme-aero .btn-card-dismiss,
+body.theme-aero .btn-back,
+body.theme-aero .btn-action.dismiss {
+  color: var(--aero-text);
+  background: var(--aero-gloss), linear-gradient(180deg, #ffffff 0%, #dcedf9 100%);
+  border: 1px solid var(--aero-border);
+  box-shadow: 0 1px 2px rgba(10, 60, 120, 0.2);
+}
+body.theme-aero .btn-card-dismiss:hover,
+body.theme-aero .btn-back:hover,
+body.theme-aero .btn-action.dismiss:hover {
+  color: var(--aero-text);
+  background: var(--aero-gloss), linear-gradient(180deg, #ffffff 0%, #c4e3f9 100%);
+  box-shadow: 0 0 6px rgba(80, 170, 240, 0.6);
+}
+
+/* Status pills */
+body.theme-aero .status-pill { border-radius: 10px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.8); }
+body.theme-aero .status-pill.running {
+  color: #0b5c99;
+  background: linear-gradient(180deg, #f0faff, #c7e9fb);
+  border: 1px solid #7cc4ec;
+}
+body.theme-aero .status-pill.idle {
+  color: #1d6b1d;
+  background: linear-gradient(180deg, #f2fff2, #cdf2cd);
+  border: 1px solid #86d386;
+}
+body.theme-aero .status-pill.attention {
+  color: #8a4600;
+  background: linear-gradient(180deg, #fff8ec, #ffe0ac);
+  border: 1px solid #f2b25a;
+}
+body.theme-aero .dot-running { background: radial-gradient(circle at 35% 30%, #e6f8ff, #1ea7e8 60%, #0d62b0); box-shadow: 0 0 4px #1ea7e8; }
+body.theme-aero .dot-idle { background: radial-gradient(circle at 35% 30%, #eaffea, #3cc23c 60%, #1d8a1d); box-shadow: 0 0 3px #3cc23c; }
+body.theme-aero .dot-attention { background: radial-gradient(circle at 35% 30%, #fff4e0, #ff9a1f 60%, #c86a00); box-shadow: 0 0 5px #ff9a1f; }
+
+/* Model chip (light variants) */
+body.theme-aero .model-chip {
+  color: #8a4b00;
+  background: linear-gradient(180deg, #fffaf2, #ffe6c2);
+  border: 1px solid #f0c27a;
+}
+body.theme-aero .model-chip.effort-low { color: #3d5470; background: linear-gradient(180deg, #ffffff, #e3ebf3); border-color: #b5c6d8; }
+body.theme-aero .model-chip.effort-high { color: #5b2a9b; background: linear-gradient(180deg, #fbf7ff, #e6d7fb); border-color: #c4a6ef; }
+body.theme-aero .model-chip.effort-xhigh,
+body.theme-aero .model-chip.effort-max { color: #9b1f5c; background: linear-gradient(180deg, #fff6fa, #fbd3e6); border-color: #ee9cc3; }
+/* the header chip sits on the blue title bar */
+body.theme-aero .pill-header .model-chip { box-shadow: 0 1px 2px rgba(0, 40, 90, 0.3); }
+
+/* ---------- Conversation view ---------- */
+body.theme-aero .detail-header { border-bottom: 1px solid rgba(143, 181, 218, 0.6); }
+
+body.theme-aero .chat-stream {
+  background: #ffffff;
+  border: 1px solid var(--aero-border);
+  border-radius: 6px;
+  box-shadow: inset 0 1px 3px rgba(10, 60, 120, 0.15);
+}
+
+/* Messenger transcript — exactly like WLM 2009:
+     Claude said (13m ago):
+        message text, indented
+   No bubbles, everyone on the left, plain white page. */
+body.theme-aero .chat-stream {
+  gap: 0;
+  padding: 6px 10px 10px;
+  border-radius: 2px;
+  border: 1px solid #b7cde3;
+  box-shadow: inset 0 1px 2px rgba(10, 60, 120, 0.08);
+}
+
+body.theme-aero .chat-bubble,
+body.theme-aero .chat-bubble.assistant,
+body.theme-aero .chat-bubble.user {
+  align-self: stretch;
+  max-width: 100%;
+  padding: 3px 0 1px;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  font-size: 12.5px;
+  line-height: 1.42;
+  color: #1a1a1a;
+}
+
+body.theme-aero .bubble-meta,
+body.theme-aero .chat-bubble.user .bubble-meta {
+  display: block;
+  margin: 0;
+  color: #5e5e5e;
+  font-size: 12px;
+  font-weight: normal;
+}
+body.theme-aero .bubble-meta .meta-name::after { content: " said"; }
+body.theme-aero .bubble-meta .meta-time { color: #5e5e5e; font-size: 12px; }
+body.theme-aero .bubble-meta .meta-time::before { content: " ("; }
+body.theme-aero .bubble-meta .meta-time::after { content: "):"; }
+
+body.theme-aero .bubble-content { padding-left: 14px; }
+body.theme-aero .chat-bubble.assistant .bubble-content,
+body.theme-aero .chat-bubble.user .bubble-content { color: #1a1a1a; }
+body.theme-aero .chat-bubble .chat-bubble-image { margin-left: 14px; }
+
+/* consecutive messages from the same sender share one "said" line */
+body.theme-aero .chat-bubble.assistant + .chat-bubble.assistant:not(#streamingBubble) .bubble-meta,
+body.theme-aero .chat-bubble.user + .chat-bubble.user .bubble-meta { display: none; }
+
+/* ---------- Conversation window chrome ---------- */
+/* toolbar strip (Photos · Files · Call … in WLM) */
+/* Windows 7 command bar (as in Explorer): pale gradient strip, dark text,
+   items get a soft blue rounded box on hover / press */
+body.theme-aero .convo-toolbar {
+  height: 26px;
+  padding: 0 6px;
+  margin: -10px -12px 0;          /* flush under the blue title bar, full width */
+  gap: 1px;
+  background: linear-gradient(180deg, #fbfdff 0%, #eef4fb 48%, #e1eaf6 52%, #dbe6f4 100%);
+  border: none;
+  border-bottom: 1px solid #c3d1e4;
+  border-radius: 0;
+  box-shadow: inset 0 1px 0 #ffffff;
+}
+body.theme-aero .tb-btn,
+body.theme-aero .convo-toolbar .btn-mcp {
+  height: 22px;
+  margin: 0;
+  padding: 0 8px;
+  color: #1e395b;
+  font-size: 11.5px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  text-shadow: none;
+  box-shadow: none;
+}
+body.theme-aero .tb-btn:hover,
+body.theme-aero .convo-toolbar .btn-mcp:hover {
+  color: #1e395b;
+  border-color: #a9c7ea;
+  background: linear-gradient(180deg, #f5faff 0%, #e4f0fd 50%, #d7e8fc 51%, #cfe3fb 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+}
+body.theme-aero .tb-btn:active,
+body.theme-aero .convo-toolbar .btn-mcp:active {
+  border-color: #7da2ce;
+  background: linear-gradient(180deg, #d6e6fa 0%, #c4dcf8 100%);
+  box-shadow: inset 0 1px 2px rgba(30, 60, 110, 0.25);
+}
+
+/* display picture frames: glossy, green = online/idle, blue = working, orange = needs you */
+body.theme-aero .dp-frame {
+  padding: 5px;
+  border-radius: 9px;
+  border: 1px solid #9fb6cc;
+  background: linear-gradient(180deg, #ffffff 0%, #e5eef6 100%);
+  box-shadow: 0 1px 3px rgba(0, 40, 90, 0.3), inset 0 1px 0 #fff;
+}
+body.theme-aero .dp-frame.state-idle,
+body.theme-aero .dp-frame.dp-you {
+  border-color: #3a9c2a;
+  background: linear-gradient(180deg, #d9f7c8 0%, #79d65a 45%, #3faa23 100%);
+  box-shadow: 0 0 8px rgba(80, 200, 40, 0.55), inset 0 1px 0 rgba(255,255,255,0.8);
+}
+body.theme-aero .dp-frame.state-running {
+  border-color: #1f6fb8;
+  background: linear-gradient(180deg, #d6efff 0%, #63b8f0 45%, #2b86d6 100%);
+  box-shadow: 0 0 8px rgba(40, 150, 240, 0.55), inset 0 1px 0 rgba(255,255,255,0.8);
+}
+body.theme-aero .dp-frame.state-attention {
+  border-color: #c96f00;
+  background: linear-gradient(180deg, #fff0cf 0%, #ffbf55 45%, #f08a00 100%);
+  box-shadow: 0 0 10px rgba(255, 154, 31, 0.6), inset 0 1px 0 rgba(255,255,255,0.8);
+}
+body.theme-aero .dp-img {
+  border-radius: 5px;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.55), transparent 55%),
+              linear-gradient(160deg, #b9b8ff, #5e5be6 60%, #3b37b8);
+}
+body.theme-aero .dp-img.dp-claude {
+  background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.55), transparent 55%),
+              linear-gradient(160deg, #ffd9a1, #f08a1c 60%, #b85a00);
+}
+body.theme-aero .dp-user-img {
+  background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.7), transparent 60%),
+              linear-gradient(180deg, #d8e6f3, #a9c1d8);
+}
+body.theme-aero .dp-user-img svg { fill: #6f8aa6; }
+
+/* contact header: big name, (status), personal message */
+body.theme-aero .convo-name { color: #1e395b; font-size: 18px; }
+body.theme-aero .convo-status { color: #5e5e5e; }
+body.theme-aero .convo-personal { color: #333333; }
+
+/* yellow info bar */
+body.theme-aero .convo-infobar {
+  color: #1a1a1a;
+  background: #ffffe1;
+  border: 1px solid #e3d47c;
+  border-radius: 2px;
+}
+body.theme-aero .convo-infobar.warn { background: #fff4d6; border-color: #f0c060; }
+body.theme-aero .infobar-icon {
+  background: radial-gradient(circle at 50% 25%, #8fc6ff, #1d6fd1 70%);
+  box-shadow: 0 0 0 1px #fff;
+}
+
+/* input box + toolbar underneath (emoticons / fonts row in WLM) */
+body.theme-aero .reply-box {
+  background: #ffffff;
+  border: 1px solid #8fb5da;
+  border-radius: 4px;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.6), inset 0 1px 2px rgba(10, 60, 120, 0.1);
+}
+body.theme-aero .reply-box .reply-textarea,
+body.theme-aero .reply-box .reply-textarea:focus {
+  background: transparent;
+  color: #1a1a1a;
+  border: none !important;
+  border-radius: 0;
+  box-shadow: none !important;
+}
+body.theme-aero .reply-box:focus-within { border-color: #3d9be6; }
+body.theme-aero .reply-toolbar {
+  border-top: 1px solid #dbe7f2;
+  background: linear-gradient(180deg, #f7fbff, #e7f1fa);
+}
+body.theme-aero .rt-btn { color: #3d5f82; }
+body.theme-aero .rt-btn:hover {
+  color: #1e395b;
+  border-color: #9cc3e6;
+  background: linear-gradient(180deg, #ffffff, #d6eafa);
+}
+
+/* live reply → "Claude is typing a message..." */
+body.theme-aero #streamingBubble .bubble-meta .meta-name::after { content: " is typing a message..."; }
+body.theme-aero #streamingBubble .bubble-meta { font-style: italic; }
+body.theme-aero #streamingBubble .bubble-meta .meta-time { display: none; }
+
+/* display-picture frame for the agent in the conversation header */
+body.theme-aero #detailLogo {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  font-size: 14px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  box-shadow:
+    0 0 0 1px #ffffff,
+    0 0 0 3px #3cc23c,               /* green "online" frame */
+    0 1px 5px 3px rgba(20, 110, 20, 0.35);
+}
+
+body.theme-aero .chat-bubble-image { border: 1px solid var(--aero-border); }
+
+body.theme-aero .chat-bubble.assistant h1,
+body.theme-aero .chat-bubble.assistant h2,
+body.theme-aero .chat-bubble.assistant h3 { color: var(--aero-blue-deep); }
+body.theme-aero .chat-bubble.assistant a { color: var(--aero-blue); }
+body.theme-aero .chat-bubble.assistant blockquote { border-left-color: #6fb2ea; color: var(--aero-text-soft); }
+body.theme-aero .chat-bubble.assistant code {
+  color: #a3330f;
+  background: #f3f7fb;
+  border: 1px solid #dde7f0;
+}
+body.theme-aero .chat-bubble.assistant pre {
+  background: #f7fbff;
+  border: 1px solid #c4ddf2;
+}
+body.theme-aero .chat-bubble.assistant pre code {
+  color: #1e2f45;
+  background: transparent;
+  border: none;
+}
+
+/* Reply area */
+body.theme-aero .reply-section { border-top: 1px solid rgba(143, 181, 218, 0.6); }
+
+body.theme-aero .btn-quick-reply {
+  color: var(--aero-text);
+  background: var(--aero-gloss), linear-gradient(180deg, #ffffff 0%, #dcedf9 100%);
+  border: 1px solid var(--aero-border);
+}
+body.theme-aero .btn-quick-reply:hover {
+  color: var(--aero-text);
+  border-color: #5aa9e6;
+  background: var(--aero-gloss), linear-gradient(180deg, #ffffff 0%, #c4e3f9 100%);
+  box-shadow: 0 0 6px rgba(80, 170, 240, 0.6);
+}
+body.theme-aero .btn-quick-reply.highlight {
+  color: #ffffff;
+  border-color: #2b8a2b;
+  text-shadow: 0 1px 1px rgba(0, 60, 0, 0.5);
+  background: var(--aero-gloss), linear-gradient(180deg, #8ee28e 0%, #43b943 55%, #2f9a2f 100%);
+}
+body.theme-aero .btn-quick-reply.danger {
+  color: #ffffff;
+  border-color: #a8281a;
+  text-shadow: 0 1px 1px rgba(80, 0, 0, 0.5);
+  background: var(--aero-gloss), linear-gradient(180deg, #f5a093 0%, #db4a36 55%, #bd3522 100%);
+}
+
+body.theme-aero .image-preview-bar {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px dashed #6fb2ea;
+}
+body.theme-aero .attached-img-thumb { border: 1px solid var(--aero-border); }
+body.theme-aero .attached-img-name { color: var(--aero-text-soft); }
+
+body.theme-aero .btn-attach {
+  color: var(--aero-text);
+  background: var(--aero-gloss), linear-gradient(180deg, #ffffff 0%, #dcedf9 100%);
+  border: 1px solid var(--aero-border);
+  text-shadow: none;
+}
+body.theme-aero .btn-attach:hover {
+  color: var(--aero-text);
+  background: var(--aero-gloss), linear-gradient(180deg, #ffffff 0%, #c4e3f9 100%);
+  border-color: #5aa9e6;
+}
+
+body.theme-aero .reply-textarea {
+  color: var(--aero-text);
+  background: #ffffff;
+  border: 1px solid var(--aero-border);
+  border-radius: 4px;
+  box-shadow: inset 0 1px 2px rgba(10, 60, 120, 0.15);
+}
+body.theme-aero .reply-textarea::placeholder { color: var(--aero-text-faint); }
+body.theme-aero .reply-textarea:focus {
+  border-color: #3d9be6;
+  box-shadow: inset 0 1px 2px rgba(10, 60, 120, 0.15), 0 0 6px rgba(61, 155, 230, 0.6);
+}
+
+body.theme-aero .btn-action { border-radius: 12px; }
+body.theme-aero .btn-action.primary {
+  color: #ffffff;
+  border: 1px solid #1b6cb5;
+  text-shadow: 0 1px 1px rgba(0, 40, 90, 0.6);
+  background: var(--aero-gloss), linear-gradient(180deg, #6cc0f7 0%, #2b8de0 55%, #1a72c4 100%);
+  box-shadow: 0 1px 3px rgba(10, 60, 120, 0.35);
+}
+body.theme-aero .btn-action.primary:hover {
+  background: var(--aero-gloss), linear-gradient(180deg, #8fd3fb 0%, #3fa0ec 55%, #2283d6 100%);
+  box-shadow: 0 0 8px rgba(80, 180, 250, 0.8);
+}
+
+body.theme-aero .reply-footer-row,
+body.theme-aero .auto-paste-label,
+body.theme-aero .source-label { color: var(--aero-text-faint); }
+body.theme-aero .auto-paste-label strong { color: var(--aero-text-soft); }
+body.theme-aero .reply-status-msg { color: #23901f; }
+
+body.theme-aero .popup-footer { border-top: 1px solid rgba(143, 181, 218, 0.6); }
+
+/* Empty-state message (inline-styled in app.js) */
+body.theme-aero .sessions-container > div[style] { color: var(--aero-text-faint) !important; }
+
+/* ---------- MCP panel, slash menu, approvals ---------- */
+body.theme-aero .btn-mcp {
+  color: var(--aero-text);
+  background: var(--aero-gloss), linear-gradient(180deg, #ffffff 0%, #dcedf9 100%);
+  border: 1px solid var(--aero-border);
+}
+body.theme-aero .btn-mcp:hover { color: var(--aero-text); background: var(--aero-gloss), linear-gradient(180deg, #ffffff 0%, #c4e3f9 100%); }
+
+body.theme-aero .usage-panel { background: linear-gradient(180deg, #f7fbff 0%, #e6f1fb 100%); }
+body.theme-aero .tb-btn.open {
+  border-color: #7da2ce;
+  background: linear-gradient(180deg, #d6e6fa 0%, #c4dcf8 100%);
+  box-shadow: inset 0 1px 2px rgba(30, 60, 110, 0.25);
+}
+
+body.theme-aero .mcp-panel,
+body.theme-aero .usage-panel,
+body.theme-aero .slash-menu {
+  background: #ffffff;
+  border: 1px solid var(--aero-border);
+  box-shadow: 0 6px 18px rgba(20, 70, 130, 0.3);
+}
+body.theme-aero .mcp-panel-head {
+  color: #ffffff;
+  text-shadow: 0 1px 1px rgba(0, 40, 90, 0.5);
+  background: var(--aero-gloss), linear-gradient(180deg, #8fd0fb 0%, #4fa9ea 52%, #2f8fdc 100%);
+  border-bottom: 1px solid #2a78bf;
+}
+body.theme-aero .mcp-refresh { color: #ffffff; }
+body.theme-aero .mcp-row + .mcp-row { border-top: 1px solid #e3edf6; }
+body.theme-aero .mcp-name { color: var(--aero-text); }
+body.theme-aero .mcp-status,
+body.theme-aero .mcp-empty,
+body.theme-aero .mcp-hint { color: var(--aero-text-faint); }
+body.theme-aero .mcp-hint { border-top-color: #e3edf6; }
+body.theme-aero .mcp-dot { box-shadow: 0 0 0 1px #fff, 0 1px 2px rgba(0,0,0,0.3); }
+body.theme-aero .mcp-connected .mcp-dot { background: radial-gradient(circle at 35% 30%, #eaffea, #3cc23c 60%, #1d8a1d); }
+body.theme-aero .mcp-auth .mcp-dot { background: radial-gradient(circle at 35% 30%, #fff4e0, #ff9a1f 60%, #c86a00); }
+body.theme-aero .mcp-failed .mcp-dot { background: radial-gradient(circle at 35% 30%, #ffe3e0, #e5483a 60%, #a8261a); }
+
+body.theme-aero .slash-item.active,
+body.theme-aero .slash-item:hover { background: linear-gradient(180deg, #f3f9ff, #d6ebfb); }
+body.theme-aero .slash-name { color: var(--aero-blue-deep); }
+body.theme-aero .slash-args { color: var(--aero-text-faint); }
+body.theme-aero .slash-desc { color: var(--aero-text-soft); }
+body.theme-aero .slash-tag { background: #eef4fa; color: var(--aero-text-faint); border: 1px solid #d5e3f0; }
+body.theme-aero .slash-tag.tag-hud { color: var(--aero-blue); }
+
+body.theme-aero .slash-sub-head { border-bottom: 1px solid #e3edf6; }
+body.theme-aero .slash-back { color: var(--aero-blue); }
+body.theme-aero .slash-sub-desc { color: var(--aero-text-faint); }
+body.theme-aero .slash-check { color: #2f9a2f; }
+body.theme-aero .slash-option.selected .slash-name { color: #237a23; }
+
+body.theme-aero .reply-options { color: var(--aero-text-faint); }
+body.theme-aero .reply-option-chip {
+  color: var(--aero-blue-deep);
+  background: linear-gradient(180deg, #ffffff, #d8edfc);
+  border: 1px solid var(--aero-border);
+}
+
+body.theme-aero .chat-note { color: #8a8a8a; font-style: italic; }
+
+body.theme-aero .perm-card {
+  color: #5a3300;
+  background: linear-gradient(180deg, #fffaf0 0%, #ffefd1 100%);
+  border: 1px solid #f2b25a;
+  box-shadow: 0 1px 3px rgba(150, 90, 0, 0.2);
+}
+body.theme-aero .perm-head strong { color: #b35400; }
+body.theme-aero .perm-input { color: #1e2f45; background: #ffffff; border: 1px solid #f0d3a2; }
+body.theme-aero .perm-result { color: #8a6a40; }
+
+/* ---------- Context meter (Windows 7 progress-bar look) ---------- */
+body.theme-aero .ctx-track {
+  height: 8px;
+  border-radius: 2px;
+  border: 1px solid #b2c4d8;
+  background: linear-gradient(180deg, #f0f0f0, #dedede);
+}
+body.theme-aero .ctx-fill {
+  border-radius: 1px;
+  background: linear-gradient(180deg, #8ee28e 0%, #3cb83c 50%, #2fa52f 51%, #5ccb5c 100%);
+}
+body.theme-aero .ctx-fill.warning { background: linear-gradient(180deg, #ffe08a 0%, #f5b326 50%, #e8a00c 51%, #f8c64a 100%); }
+body.theme-aero .ctx-fill.critical { background: linear-gradient(180deg, #f9a59a 0%, #e0442f 50%, #cc3320 51%, #ea6b5a 100%); }
+body.theme-aero .ctx-fill.compacting {
+  background: repeating-linear-gradient(-45deg, #3d9be6 0 8px, #a9d6fb 8px 16px);
+  background-size: 22px 22px;
+}
+body.theme-aero .ctx-label { color: var(--aero-text-faint); }
+body.theme-aero .row-ctx.warning { color: #c27a00; }
+body.theme-aero .row-ctx.critical { color: #c0301c; }
+body.theme-aero .convo-infobar.compacting::after { background: #2b86d6; }
+
+/* ---------- Collapsed view: running-session cards ---------- */
+body.theme-aero .run-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(236, 246, 255, 0.9) 100%);
+  border: 1px solid var(--aero-border);
+  box-shadow: 0 1px 2px rgba(10, 60, 120, 0.15), inset 0 1px 0 #ffffff;
+}
+body.theme-aero .run-card:hover { background: linear-gradient(180deg, #ffffff 0%, #dff0fc 100%); border-color: #6fb2ea; }
+body.theme-aero .run-pic { border: 1px solid #9fb6cc; }
+body.theme-aero .run-pic::after {
+  border: 1.5px solid #ffffff;
+  background: radial-gradient(circle at 35% 30%, #e6f8ff, #1ea7e8 60%, #0d62b0);
+}
+body.theme-aero .run-title { color: var(--aero-text); }
+body.theme-aero .run-status { color: #0b6fb8; }
+body.theme-aero .run-more { color: var(--aero-text-soft); }
+
+/* ---------- Usage view ---------- */
+body.theme-aero.usage-open .popup-body { border-top: none; }
+body.theme-aero .usage-title { color: #1e395b; }
+body.theme-aero .usage-empty,
+body.theme-aero .usage-footnote { color: var(--aero-text-faint); }
+body.theme-aero .usage-section {
+  --series: #f08a1c;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--aero-border);
+  box-shadow: 0 1px 2px rgba(10, 60, 120, 0.12);
+}
+body.theme-aero .usage-section.usage-antigravity { --series: #6f6cf0; }
+body.theme-aero .usage-h { color: #1e395b; font-size: 14px; font-weight: normal; }
+body.theme-aero .usage-tile {
+  background: linear-gradient(180deg, #ffffff 0%, #eef5fc 100%);
+  border: 1px solid #c9dbee;
+}
+body.theme-aero .tile-label,
+body.theme-aero .usage-caption { color: #4a6a8c; }
+body.theme-aero .tile-value { color: #1e395b; }
+body.theme-aero .tile-sub { color: var(--aero-text-faint); }
+body.theme-aero .bar-col.hover { background: #eef5fc; }
+body.theme-aero .bar-value { color: #1e395b; }
+body.theme-aero .bar-plot { border-bottom-color: #c3d1e4; }
+body.theme-aero .bar-label { color: #4a6a8c; }
+body.theme-aero .usage-tooltip {
+  color: #1e395b;
+  background: linear-gradient(180deg, #ffffff 0%, #eef5fc 100%);
+  border: 1px solid #8fb5da;
+  box-shadow: 0 4px 12px rgba(20, 70, 130, 0.3);
+}
+body.theme-aero .tt-title { color: #4a6a8c; }
+body.theme-aero .tt-row { color: #1e395b; }
+body.theme-aero .usage-row .row-name { color: #1e395b; }
+body.theme-aero .row-track { background: #e6eef6; }
+body.theme-aero .row-project { color: var(--aero-text-faint); }
+body.theme-aero .row-num { color: #1e395b; }
+
+body.theme-aero .usage-limits { --series: #2b86d6; }
+body.theme-aero .usage-note,
+body.theme-aero .limit-reset { color: var(--aero-text-faint); }
+body.theme-aero .limit-label,
+body.theme-aero .limit-pct { color: #1e395b; }
+/* Windows 7 progress-bar look */
+body.theme-aero .limit-track {
+  height: 10px;
+  border-radius: 3px;
+  border: 1px solid #b2c4d8;
+  background: linear-gradient(180deg, #f0f0f0, #dedede);
+}
+body.theme-aero .limit-fill {
+  border-radius: 2px;
+  background: linear-gradient(180deg, #8fd0fb 0%, #3d9be6 50%, #2a86d6 51%, #4fb0f0 100%);
+}
+body.theme-aero .limit-fill.warning { background: linear-gradient(180deg, #ffe08a 0%, #f5b326 50%, #e8a00c 51%, #f8c64a 100%); }
+body.theme-aero .limit-fill.critical { background: linear-gradient(180deg, #f9a59a 0%, #e0442f 50%, #cc3320 51%, #ea6b5a 100%); }
+
+/* ---------- Mini edge tab (docked) ---------- */
+body.theme-aero.docked .mini-dock {
+  background:
+    var(--aero-gloss),
+    linear-gradient(180deg, #8fd0fb 0%, #4fa9ea 52%, #2f8fdc 100%);
+  border: 1px solid #2a78bf;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 3px 12px rgba(20, 70, 130, 0.45);
+}
+body.theme-aero.dock-left .mini-dock { border-left: none; }
+body.theme-aero.dock-right .mini-dock { border-right: none; }
+
+body.theme-aero .mini-orb {
+  text-shadow: 0 1px 2px rgba(0, 50, 100, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.25) 38%, transparent 40%),
+    radial-gradient(circle at 50% 110%, #b9f3ff 0%, #39b6f0 45%, #1166c4 100%);
+  box-shadow: 0 2px 6px rgba(10, 60, 120, 0.5), inset 0 -2px 4px rgba(0, 40, 100, 0.35);
+}
+body.theme-aero .mini-dot { border: 1.5px solid #ffffff; background: radial-gradient(circle at 35% 30%, #eaffea 0%, #6fe06f 35%, #229c22 100%); }
+body.theme-aero .mini-dock.running .mini-dot { background: radial-gradient(circle at 35% 30%, #e6f8ff 0%, #5cc8f5 35%, #0f78c8 100%); }
+body.theme-aero .mini-dock.attention .mini-dot { background: radial-gradient(circle at 35% 30%, #fff4e0 0%, #ffbf55 35%, #e07b00 100%); }
+body.theme-aero .mini-dock.attention {
+  background: var(--aero-gloss), linear-gradient(180deg, #ffd38a 0%, #ffa832 52%, #f08a00 100%);
+  border-color: #c96f00;
+}
+body.theme-aero .mini-count {
+  border: 1px solid #ffffff;
+  background: radial-gradient(circle at 50% 20%, #8ad8ff, #1e8fe0 70%);
+}
+body.theme-aero .mini-dock.attention .mini-count { background: radial-gradient(circle at 50% 20%, #ffd08a, #e86f00 70%); }
+
+body.theme-aero .resize-grip { color: rgba(30, 95, 160, 0.45); }
+body.theme-aero .resize-grip:hover { color: rgba(30, 95, 160, 0.9); }
+
+/* =====================================================================
+   Windows 7 Aero Glass title bar
+   The window body no longer paints under the title bar, so the desktop
+   shows through a pale blue-tinted glass band with the diagonal light
+   streaks of Win7, a white inner edge and dark caption text with a halo.
+   ===================================================================== */
+body.theme-aero .overlay-card {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    0 0 0 1px rgba(30, 60, 100, 0.55),
+    0 10px 30px rgba(20, 50, 90, 0.45);
+}
+
+/* the window body (everything under the glass) keeps the sky backdrop */
+body.theme-aero .running-strip,
+body.theme-aero .popup-body {
+  background:
+    radial-gradient(ellipse 120% 70% at 85% 120%, rgba(120, 220, 120, 0.35), transparent 60%),
+    linear-gradient(180deg, #f4fbff 0%, #dcf0fd 45%, #c3e3f9 100%);
+}
+body.theme-aero .running-strip:empty { background: none; }
+body.theme-aero .popup-body { border-top: 1px solid rgba(60, 90, 130, 0.55); }
+
+body.theme-aero .pill-header {
+  background:
+    /* Win7 glass streaks: soft diagonal bands of light */
+    repeating-linear-gradient(115deg,
+      rgba(255, 255, 255, 0) 0px, rgba(255, 255, 255, 0) 38px,
+      rgba(255, 255, 255, 0.10) 46px, rgba(255, 255, 255, 0.10) 58px,
+      rgba(255, 255, 255, 0) 68px, rgba(255, 255, 255, 0) 120px),
+    /* top sheen */
+    linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.12) 45%, rgba(255, 255, 255, 0) 100%),
+    /* glass tint (default Win7 "Sky" colour) */
+    linear-gradient(180deg, rgba(150, 195, 235, 0.62) 0%, rgba(110, 165, 220, 0.58) 100%);
+  border-bottom: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 1px 0 0 rgba(255, 255, 255, 0.45),
+    inset -1px 0 0 rgba(255, 255, 255, 0.45);
+}
+
+/* caption text: black with the white glow Win7 puts behind titles on glass */
+body.theme-aero .pill-header .status-title {
+  color: #0b1a2b;
+  text-shadow: 0 0 6px #fff, 0 0 10px rgba(255, 255, 255, 0.9), 0 0 2px #fff;
+}
+body.theme-aero .pill-header .status-sub {
+  color: #1d3550;
+  text-shadow: 0 0 5px #fff, 0 0 2px #fff;
+}
+body.theme-aero .pill-header .badge-count {
+  color: #0b1a2b;
+  background: rgba(255, 255, 255, 0.45);
+  border-color: rgba(255, 255, 255, 0.8);
+  text-shadow: none;
+}
+
+/* caption buttons: transparent until hovered, then a lit glass pane */
+body.theme-aero .pill-header .btn-icon {
+  color: #10233a;
+  text-shadow: 0 0 4px #fff, 0 0 2px #fff;
+}
+body.theme-aero .pill-header .btn-icon:hover {
+  color: #0b1a2b;
+  border-color: rgba(40, 70, 110, 0.55);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.35) 49%, rgba(200,230,255,0.25) 50%, rgba(170,215,255,0.55) 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7), 0 0 6px rgba(160, 215, 255, 0.9);
+}
+body.theme-aero .pill-header .btn-icon.active { color: #10233a; filter: none; }
+body.theme-aero .pill-header #btnClose:hover {
+  color: #ffffff;
+  text-shadow: 0 0 3px #5a0c00;
+  border-color: #6b1a12;
+  background: linear-gradient(180deg, #f2a493 0%, #e2604a 49%, #c7351c 50%, #d8553a 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 220, 210, 0.7), 0 0 8px rgba(255, 110, 80, 0.8);
+}
+
+/* docked mini tab gets the same glass */
+body.theme-aero.docked .mini-dock {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0) 100%),
+    linear-gradient(180deg, rgba(150, 195, 235, 0.7) 0%, rgba(110, 165, 220, 0.66) 100%);
+  border: 1px solid rgba(30, 60, 100, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+/* ---------- Usage button next to "/" (opens upward) ---------- */
+body.theme-aero .rt-btn.open {
+  color: #1e395b;
+  border-color: #7da2ce;
+  background: linear-gradient(180deg, #d6e6fa 0%, #c4dcf8 100%);
+  box-shadow: inset 0 1px 2px rgba(30, 60, 110, 0.25);
+}
+
+/* ---------- Info bar while working (above the input box) ---------- */
+body.theme-aero .convo-infobar.working { align-items: center; }
+
+/* =====================================================================
+   Windows 7 glass frame on left / right / bottom
+   The whole window is now one sheet of glass: the title bar is simply the
+   top of it, and the content area is an inset "client" panel with a thin
+   dark edge, leaving a 7px glass border around the sides and bottom.
+   ===================================================================== */
+body.theme-aero {
+  --glass-tint:
+    repeating-linear-gradient(115deg,
+      rgba(255, 255, 255, 0) 0px, rgba(255, 255, 255, 0) 38px,
+      rgba(255, 255, 255, 0.10) 46px, rgba(255, 255, 255, 0.10) 58px,
+      rgba(255, 255, 255, 0) 68px, rgba(255, 255, 255, 0) 120px),
+    linear-gradient(180deg, rgba(150, 195, 235, 0.62) 0%, rgba(110, 165, 220, 0.6) 100%);
+}
+body.theme-aero .overlay-card {
+  background: var(--glass-tint);
+  border-radius: 8px;                       /* Win7 window corners */
+  border: 1px solid rgba(20, 40, 70, 0.75); /* dark outer line */
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55),  /* white inner highlight all round */
+    0 8px 26px rgba(10, 30, 60, 0.5);
+}
+/* the top sheen now lives on the title bar only; its own tint is the card's */
+body.theme-aero .pill-header {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.12) 45%, rgba(255, 255, 255, 0) 100%);
+  box-shadow: none;
+}
+
+/* client area inset in the glass */
+body.theme-aero .popup-body {
+  margin: 0 7px 7px;
+  border: 1px solid rgba(30, 50, 80, 0.7);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45);   /* light rim between glass and client */
+}
+body.theme-aero.in-detail .popup-body,
+body.theme-aero.usage-open .popup-body { border-top: 1px solid rgba(30, 50, 80, 0.7); }
+
+/* collapsed: the running-session cards sit directly on the glass */
+body.theme-aero .running-strip { background: none; }
+
+/* ---------- Settings dropdown (next to "New chat") ---------- */
+body.theme-aero .settings-panel {
+  background: #f5f8fc;
+  border: 1px solid #979797;
+  box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.3);
+}
+body.theme-aero .set-row { color: #1a1a1a; }
+body.theme-aero .set-row:hover {
+  border-color: #a8d8f8;
+  background: linear-gradient(180deg, #f2f9fe 0%, #d6eefd 100%);
+}
+body.theme-aero .set-val { color: #4a6a8c; }
+body.theme-aero .set-row.active .set-check { color: #1f6fb8; }
+body.theme-aero .tb-btn.open { color: #1e395b; }
+
+/* ---------- Tool-approval toast (Win7 / WLM "toast" look) ---------- */
+body.theme-aero .perm-toast {
+  color: #1a1a1a;
+  background: linear-gradient(180deg, #fffdf2 0%, #fff4cf 100%);
+  border: 1px solid #d9a93a;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8) inset, 0 4px 12px rgba(20, 50, 90, 0.35);
+}
+body.theme-aero .toast-ico {
+  background: radial-gradient(circle at 50% 25%, #ffd27a, #e88a00 70%);
+  box-shadow: 0 0 0 1px #fff;
+}
+body.theme-aero .toast-proj { color: #6b5a2a; opacity: 1; }
+body.theme-aero .toast-cmd { color: #3d3d3d; opacity: 1; }
+body.theme-aero .toast-btn {
+  color: #1a1a1a;
+  border: 1px solid #707070;
+  background: linear-gradient(180deg, #f2f2f2 0%, #ebebeb 49%, #dddddd 50%, #cfcfcf 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+}
+body.theme-aero .toast-btn:hover {
+  border-color: #3c7fb1;
+  background: linear-gradient(180deg, #eaf6fd 0%, #d9f0fc 49%, #bee6fd 50%, #a7d9f5 100%);
+}
+body.theme-aero .toast-btn.allow { border-color: #3c7fb1; }
+body.theme-aero .toast-more { color: #10233a; text-shadow: 0 0 4px #fff; }
+
+/* ---------- Activity line (Win7 status-bar look) ---------- */
+body.theme-aero .activity-row {
+  color: #1e395b;
+  background: linear-gradient(180deg, #f7fbff 0%, #e4effa 100%);
+  border: 1px solid #a9c7ea;
+  box-shadow: inset 0 1px 0 #fff;
+}
+body.theme-aero .activity-target {
+  color: #1a1a1a;
+  background: #ffffff;
+  border: 1px solid #cfdcea;
+}
+body.theme-aero .activity-meta { color: #4a6a8c; opacity: 1; }
+body.theme-aero .activity-row.kind-compacting {
+  background: linear-gradient(180deg, #fffdf2 0%, #fff4cf 100%);
+  border-color: #e3c46a;
+}
+
+/* activity line: Win7 progress-dialog look */
+body.theme-aero .activity-row {
+  color: #1e395b;
+  background: linear-gradient(180deg, #f5faff 0%, #e4f0fd 50%, #d7e8fc 51%, #e6f1fc 100%);
+  border: 1px solid #a9c7ea;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+}
+body.theme-aero .activity-target { color: #2b2b2b; background: rgba(255, 255, 255, 0.85); border: 1px solid #d3e2f2; }
+body.theme-aero .activity-meta { color: #4a6a8c; opacity: 1; }
+body.theme-aero .activity-row.kind-compacting { background: linear-gradient(180deg, #fffdf2, #fff1c4); border-color: #e3c46a; }
+
+/* attachments: Win7 Explorer-style chips */
+body.theme-aero .attach-chip {
+  color: #1a1a1a;
+  background: linear-gradient(180deg, #ffffff 0%, #eef5fc 100%);
+  border: 1px solid #b8d0e8;
+}
+body.theme-aero .attach-chip:hover { border-color: #7eb4ea; background: linear-gradient(180deg, #f2f9fe, #d6eefd); }
+body.theme-aero .attach-thumb { border: 1px solid #c5d5e5; }
+body.theme-aero .attach-ico { background: linear-gradient(180deg, #8fb3d6, #4f7fae); }
+body.theme-aero .attach-clear { color: #1f6fb8; }
+body.theme-aero .chat-bubble-images { margin-left: 14px; }
+body.theme-aero .chat-bubble-files { margin-left: 14px; }
+body.theme-aero .bubble-file { color: #1e395b; background: #f0f6fc; border-color: #c9dbee; }
+body.theme-aero .chat-bubble-images .chat-bubble-image { margin-left: 0; }
+
+/* ---------- Send / Copy → genuine Windows 7 push buttons ----------
+   Grey two-tone glass face, #707070 frame, white inner bevel; hover lights
+   up pale blue, pressed goes deeper blue. Send is the "default" button, so it
+   carries the soft blue focus ring Win7 gives the dialog's default button. */
+body.theme-aero .reply-toolbar .btn-send,
+body.theme-aero .reply-toolbar #btnCopyOnly {
+  height: 23px;
+  min-width: 64px;
+  padding: 0 12px;
+  border-radius: 3px;
+  border: 1px solid #707070;
+  color: #000000;
+  font: 12px "Segoe UI", Tahoma, sans-serif;
+  font-weight: normal;
+  text-shadow: none;
+  letter-spacing: 0;
+  background: linear-gradient(180deg, #f2f2f2 0%, #ebebeb 49%, #dddddd 50%, #cfcfcf 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.75);
+  transition: none;
+  transform: none;
+  cursor: default;
+}
+body.theme-aero .reply-toolbar .btn-send {
+  border-color: #3c7fb1;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.75), 0 0 0 1px rgba(60, 127, 177, 0.25);
+  background: linear-gradient(180deg, #f2f8fc 0%, #e6f1f8 49%, #d4e7f3 50%, #c5dfef 100%);
+}
+body.theme-aero .reply-toolbar .btn-send:hover,
+body.theme-aero .reply-toolbar #btnCopyOnly:hover {
+  border-color: #3c7fb1;
+  background: linear-gradient(180deg, #eaf6fd 0%, #d9f0fc 49%, #bee6fd 50%, #a7d9f5 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.75);
+  transform: none;
+  filter: none;
+}
+body.theme-aero .reply-toolbar .btn-send:active,
+body.theme-aero .reply-toolbar #btnCopyOnly:active {
+  border-color: #2c628b;
+  background: linear-gradient(180deg, #e5f4fc 0%, #c4e5f6 49%, #98d1ef 50%, #68b3db 100%);
+  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.25);
+  transform: none;
+}
+body.theme-aero .reply-toolbar .btn-send:disabled {
+  color: #838383;
+  border-color: #adb2b5;
+  background: #f4f4f4;
+  box-shadow: none;
+}
+
+/* ---------- MCP + Usage dropdowns: Win7 menu/dialog look (no blue title bar) ---------- */
+body.theme-aero .mcp-panel,
+body.theme-aero .usage-panel {
+  background: #f5f8fc;
+  border: 1px solid #979797;
+  border-radius: 3px;
+  box-shadow: 2px 3px 8px rgba(0, 0, 0, 0.3);
+}
+body.theme-aero .mcp-panel-head,
+body.theme-aero .usage-panel-head {
+  color: #1e395b;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  font-weight: normal;
+  background: linear-gradient(180deg, #ffffff 0%, #f1f5fb 45%, #e3eaf3 46%, #dbe4ef 100%);
+  border-bottom: 1px solid #b6c3d3;
+  box-shadow: inset 0 1px 0 #ffffff;
+}
+body.theme-aero .mcp-refresh {
+  color: #1e395b;
+  width: 22px; height: 18px; line-height: 14px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+}
+body.theme-aero .mcp-refresh:hover {
+  color: #1e395b;
+  border-color: #3c7fb1;
+  background: linear-gradient(180deg, #eaf6fd 0%, #d9f0fc 45%, #bee6fd 50%, #a7d9f5 100%);
+}
+body.theme-aero .mcp-refresh:active {
+  border-color: #2c628b;
+  background: linear-gradient(180deg, #e5f4fc 0%, #c4e5f6 45%, #98d1ef 50%, #68b3db 100%);
+}
+body.theme-aero .mcp-row:hover {
+  background: linear-gradient(180deg, #f2f9fe 0%, #d6eefd 100%);
+}
+body.theme-aero .usage-section {
+  background: #ffffff;
+  border: 1px solid #ccd5e0;
+}
+
+/* ---------- Tell "You said" and "Claude said" apart at a glance ---------- */
+/* Your messages: soft blue-grey band with a slate accent bar */
+body.theme-aero .chat-bubble.user {
+  margin: 4px 0 2px;
+  padding: 4px 8px 5px;
+  background: linear-gradient(180deg, #f4f8fc 0%, #eaf1f8 100%);
+  border-left: 3px solid #8aa4c0;
+  border-radius: 0 3px 3px 0;
+}
+body.theme-aero .chat-bubble.user + .chat-bubble.user { margin-top: -2px; padding-top: 1px; }
+body.theme-aero .chat-bubble.user .bubble-meta .meta-name { color: #4a6582; font-weight: 600; }
+body.theme-aero .chat-bubble.user .bubble-content { padding-left: 6px; color: #2b3a4a; }
+body.theme-aero .chat-bubble.user .chat-bubble-image { margin-left: 6px; }
+
+/* Claude's / agent's messages: plain white page, name in the agent colour */
+body.theme-aero .chat-bubble.assistant { padding-left: 2px; }
+body.theme-aero .chat-bubble.assistant .bubble-meta .meta-name { color: #1f5fa8; font-weight: 600; }
+body.theme-aero .chat-bubble.assistant.claude .bubble-meta .meta-name { color: #b9532e; }
+/* a thin rule where the speaker changes from you to the agent */
+body.theme-aero .chat-bubble.user + .chat-bubble.assistant { margin-top: 4px; }
+
+/* ---------- Tool-approval card buttons: Win7 push buttons (Allow = default button) ---------- */
+body.theme-aero .perm-actions { gap: 6px; justify-content: flex-start; }
+body.theme-aero .perm-actions .btn-action,
+body.theme-aero .perm-actions .btn-action.primary,
+body.theme-aero .perm-actions .btn-action.dismiss {
+  min-width: 75px;
+  height: 23px;
+  padding: 0 12px;
+  border-radius: 3px;
+  border: 1px solid #707070;
+  font: 12px "Segoe UI", sans-serif;
+  font-weight: normal;
+  color: #000000;
+  text-shadow: none;
+  background: linear-gradient(180deg, #f2f2f2 0%, #ebebeb 45%, #dddddd 50%, #cfcfcf 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.85);
+  cursor: default;
+  transition: none;
+}
+/* Allow is the default button: blue focus ring like a Win7 dialog's OK */
+body.theme-aero .perm-actions .btn-action.primary {
+  border-color: #3c7fb1;
+  box-shadow: inset 0 0 0 1px #c9e6f7;
+}
+body.theme-aero .perm-actions .btn-action:hover,
+body.theme-aero .perm-actions .btn-action.primary:hover,
+body.theme-aero .perm-actions .btn-action.dismiss:hover,
+body.theme-aero .perm-actions .perm-deny:hover {
+  border-color: #3c7fb1;
+  color: #000000;
+  background: linear-gradient(180deg, #eaf6fd 0%, #d9f0fc 45%, #bee6fd 50%, #a7d9f5 100%) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+}
+body.theme-aero .perm-actions .btn-action:active {
+  border-color: #2c628b;
+  background: linear-gradient(180deg, #e5f4fc 0%, #c4e5f6 45%, #98d1ef 50%, #68b3db 100%) !important;
+  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+body.theme-aero .perm-actions .btn-action:disabled {
+  color: #838383;
+  border-color: #adb2b5;
+  background: #f4f4f4 !important;
+  box-shadow: none;
+}
+
+/* ---------- Session list: filter tabs sit inside the window (not in the title bar) ---------- */
+body.list-open .header-tabs-slot { display: none !important; }
+/* title bar shows a plain "AI HUD" caption instead */
+body.list-open .header-left { display: flex !important; align-items: center; min-width: 0; }
+body.list-open .header-left .agent-badge,
+body.list-open .header-left .status-sub,
+body.list-open .header-left #headerModel { display: none !important; }
+body.list-open .header-left .status-title { font-size: 12px; font-weight: normal; }
+body.theme-aero #listView > .tabs-bar {
+  padding: 2px 2px 6px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid #c5d6e8;
+}
+
+/* ---------- Pinned prompt: your latest message stays at the top once pushed out ---------- */
+.pinned-prompt {
+  position: absolute;
+  z-index: 5;
+  box-sizing: border-box;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 10px 5px;
+  font-size: 12px;
+  line-height: 1.35;
+  cursor: pointer;
+  color: #2b3a4a;
+  background: linear-gradient(180deg, #f4f8fc 0%, #e6eef7 100%);
+  border-left: 3px solid #8aa4c0;
+  border-bottom: 1px solid #c3d2e2;
+  box-shadow: 0 2px 4px rgba(30, 60, 100, 0.15);
+}
+.pinned-prompt:hover { background: linear-gradient(180deg, #f2f9fe 0%, #d6eefd 100%); }
+.pinned-prompt .pp-label { flex: none; color: #4a6582; font-weight: 600; }
+.pinned-prompt .pp-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+}
+.pinned-prompt .pp-images { flex: none; color: #4a6582; font-size: 11px; }
+.pinned-prompt .pp-images:empty { display: none; }
+
+/* Settings: divider above "Restart app" */
+.settings-panel .set-sep { height: 1px; margin: 3px 4px; background: #d5dde8; }
+
+/* =====================================================================
+   Session list → Windows Live Messenger 2009 contact list
+   - display-picture frame colour = status (green running, orange needs you)
+   - "Title — latest message" rows, Win7 list highlight, no boxed cards
+   - group headers "▾ name (running/total)" with a thin rule
+   ===================================================================== */
+body.theme-aero .workspace-group { gap: 2px; }
+body.theme-aero .workspace-header {
+  padding: 3px 2px 1px;
+  border-radius: 0;
+  color: #1e395b;
+  font-size: 12px;
+  font-weight: normal;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+body.theme-aero .workspace-header:hover { background: none; color: #0b4f9c; }
+body.theme-aero .workspace-header:hover .workspace-name { text-decoration: underline; }
+body.theme-aero .workspace-caret { color: #4a6582; font-size: 9px; }
+body.theme-aero .workspace-name { flex: 0 1 auto; letter-spacing: 0; }
+/* thin rule filling the rest of the header line */
+body.theme-aero .workspace-header::after {
+  content: ""; flex: 1; height: 1px; margin-left: 6px;
+  background: linear-gradient(90deg, rgba(30, 57, 91, 0.35), rgba(30, 57, 91, 0));
+}
+body.theme-aero .workspace-stats { order: 0; }
+body.theme-aero .ws-count {
+  padding: 0; border: none; background: none; border-radius: 0;
+  color: #5b6f86; font-size: 12px;
+}
+body.theme-aero .ws-stat.running { display: none; } /* shown in "(running/total)" */
+body.theme-aero .ws-stat.attention { color: #d97800; font-size: 11px; }
+
+/* rows sit on one soft white sheet per group — no boxed cards */
+body.theme-aero .workspace-body {
+  gap: 1px;
+  padding: 2px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: none;
+}
+body.theme-aero .session-row {
+  align-items: center;
+  gap: 8px;
+  padding: 4px 26px 4px 5px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+}
+body.theme-aero .session-row + .session-row { border-top: 1px solid transparent; }
+/* Win7 list hover / "needs you" highlight */
+body.theme-aero .session-row:hover {
+  border-color: #b8d6fb;
+  background: linear-gradient(180deg, #fafbfd 0%, #ebf3fd 100%);
+}
+body.theme-aero .session-row.state-attention {
+  border-color: #f3c97a;
+  background: linear-gradient(180deg, #fffaf0 0%, #fff0d4 100%);
+}
+body.theme-aero .session-row.state-attention:hover {
+  border-color: #e9a93c;
+  background: linear-gradient(180deg, #fff6e4 0%, #ffe6b8 100%);
+}
+
+/* ---- Display-picture frame = status ---- */
+body.theme-aero .row-orb.has-robot,
+body.theme-aero .src-claude .row-orb.has-robot {
+  width: 34px; height: 34px; padding: 2px;
+  border-radius: 5px;
+  border: 1px solid #8c9fb3;
+  background: linear-gradient(180deg, #ffffff 0%, #e4edf6 100%);
+  box-shadow: inset 0 1px 0 #ffffff, 0 0 0 2px rgba(190, 206, 222, 0.9), 0 1px 3px rgba(0, 40, 90, 0.25);
+}
+body.theme-aero .row-orb.has-robot::after { display: none; } /* the frame is the status */
+/* running: green glossy frame, slow glow */
+body.theme-aero .state-running .row-orb.has-robot {
+  border-color: #3f8f1f;
+  background: linear-gradient(180deg, #f2ffe9 0%, #c9efb0 100%);
+  box-shadow: inset 0 1px 0 #ffffff, 0 0 0 2px #7fd35a, 0 0 7px 1px rgba(90, 200, 50, 0.55);
+  animation: msn-frame-run 2.4s ease-in-out infinite;
+}
+@keyframes msn-frame-run {
+  0%, 100% { box-shadow: inset 0 1px 0 #fff, 0 0 0 2px #7fd35a, 0 0 4px 0 rgba(90, 200, 50, 0.35); }
+  50%      { box-shadow: inset 0 1px 0 #fff, 0 0 0 2px #9ae374, 0 0 10px 2px rgba(90, 200, 50, 0.7); }
+}
+/* needs your reply: orange frame that flashes like a contact signing in */
+body.theme-aero .state-attention .row-orb.has-robot {
+  border-color: #b36200;
+  background: linear-gradient(180deg, #fff6e6 0%, #ffd79a 100%);
+  box-shadow: inset 0 1px 0 #ffffff, 0 0 0 2px #ffa630, 0 0 8px 2px rgba(255, 150, 30, 0.6);
+  animation: msn-frame-attn 1.1s ease-in-out infinite;
+}
+@keyframes msn-frame-attn {
+  0%, 100% { box-shadow: inset 0 1px 0 #fff, 0 0 0 2px #ffa630, 0 0 4px 1px rgba(255, 150, 30, 0.4); }
+  50%      { box-shadow: inset 0 1px 0 #fff, 0 0 0 2px #ffc266, 0 0 12px 3px rgba(255, 150, 30, 0.8); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.theme-aero .state-running .row-orb.has-robot,
+  body.theme-aero .state-attention .row-orb.has-robot { animation: none; }
+}
+
+/* ---- Text ---- */
+body.theme-aero .row-line1 { align-items: baseline; gap: 5px; }
+body.theme-aero .row-title { color: #1a1a1a; font-size: 12px; font-weight: 600; }
+body.theme-aero .row-preview { color: #6b7a8a; font-style: normal; font-size: 11.5px; }
+body.theme-aero .row-line1 .row-preview::before { color: #9aa8b6; }
+body.theme-aero .row-time { color: #8a96a3; font-size: 10.5px; padding-left: 4px; }
+body.theme-aero .row-meta { font-size: 10.5px; margin-top: 1px; }
+body.theme-aero .state-running .row-status { color: #2f7d12; }
+body.theme-aero .state-attention .row-status { color: #c25e00; font-weight: 600; }
+body.theme-aero .row-model { color: #6a5acd; }
+
+/* ---- Context bar ---- */
+body.theme-aero .row-ctxbar { background: #dfe7f0; box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.08); }
+body.theme-aero .row-ctxfill { background: linear-gradient(180deg, #8ee06a, #3ea51c); }
+body.theme-aero .row-ctxbar.warning .row-ctxfill { background: linear-gradient(180deg, #ffd27a, #e59410); }
+body.theme-aero .row-ctxbar.critical .row-ctxfill { background: linear-gradient(180deg, #ff9a8c, #d4321e); }
+
+/* ---------- Pinned "You said:" bar → Windows 7 command-bar button ---------- */
+body.theme-aero .pinned-prompt {
+  margin: 0;
+  padding: 3px 26px 4px 8px;
+  border: 1px solid #a0afc3;
+  border-top-color: #ffffff;
+  border-left: 1px solid #a0afc3;
+  border-radius: 0 0 3px 3px;
+  color: #1e395b;
+  background: linear-gradient(180deg, #ffffff 0%, #f1f5fb 45%, #e3eaf3 46%, #dbe4ef 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 2px 4px rgba(20, 50, 90, 0.18);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+  cursor: default;
+}
+/* little "jump up" glyph on the right */
+body.theme-aero .pinned-prompt::after {
+  content: "▲";
+  position: absolute; right: 8px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 8px; color: #4a6582;
+}
+body.theme-aero .pinned-prompt .pp-label { color: #1e395b; font-weight: 600; }
+body.theme-aero .pinned-prompt .pp-text { color: #2b3a4a; }
+/* Win7 hover / pressed */
+body.theme-aero .pinned-prompt:hover {
+  border-color: #3c7fb1;
+  background: linear-gradient(180deg, #eaf6fd 0%, #d9f0fc 45%, #bee6fd 50%, #a7d9f5 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7), 0 2px 4px rgba(20, 50, 90, 0.2);
+}
+body.theme-aero .pinned-prompt:active {
+  border-color: #2c628b;
+  background: linear-gradient(180deg, #e5f4fc 0%, #c4e5f6 45%, #98d1ef 50%, #68b3db 100%);
+  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* ---------- Your messages → Windows 7 selected-list-item look ---------- */
+body.theme-aero .chat-bubble.user {
+  margin: 5px 0 3px;
+  padding: 4px 9px 6px;
+  border: 1px solid #b8d6fb;
+  border-left: 1px solid #b8d6fb;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #fafcff 0%, #eef5fd 55%, #e1edfb 100%);
+  box-shadow: inset 0 1px 0 #ffffff, 0 1px 2px rgba(30, 70, 120, 0.08);
+}
+body.theme-aero .chat-bubble.user + .chat-bubble.user {
+  margin-top: 2px; padding-top: 4px;
+}
+body.theme-aero .chat-bubble.user .bubble-meta .meta-name { color: #1e5aa0; font-weight: 600; }
+body.theme-aero .chat-bubble.user .bubble-meta .meta-time { color: #6b7f96; }
+body.theme-aero .chat-bubble.user .bubble-content { padding-left: 6px; color: #1a2633; }
+
+/* ---------- Live reply ("Claude is typing a message...") → its own Win7 box ---------- */
+body.theme-aero #streamingBubble,
+body.theme-aero .chat-bubble.assistant.live {
+  position: relative;
+  margin: 5px 0 3px;
+  padding: 5px 9px 7px;
+  border: 1px solid #c9d9ea;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f9fd 100%);
+  box-shadow: inset 0 1px 0 #ffffff, 0 1px 3px rgba(30, 70, 120, 0.1);
+  overflow: hidden;
+}
+/* thin Win7 "marquee" progress stripe along the top while it writes */
+body.theme-aero #streamingBubble::before,
+body.theme-aero .chat-bubble.assistant.live::before {
+  content: "";
+  position: absolute; left: 0; right: 0; top: 0; height: 2px;
+  background: linear-gradient(90deg, transparent 0%, #7fd35a 40%, #3ea51c 50%, #7fd35a 60%, transparent 100%) no-repeat;
+  background-size: 40% 100%;
+  animation: live-marquee 1.6s linear infinite;
+}
+@keyframes live-marquee {
+  from { background-position: -40% 0; }
+  to   { background-position: 140% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.theme-aero #streamingBubble::before,
+  body.theme-aero .chat-bubble.assistant.live::before { animation: none; background-position: 50% 0; }
+}
+body.theme-aero .chat-bubble.assistant.live .bubble-meta { font-style: italic; }
+body.theme-aero .chat-bubble.assistant.live .bubble-meta .meta-name::after { content: " is typing a message..."; }
+body.theme-aero .chat-bubble.assistant.live .bubble-meta .meta-time { display: none; }
+body.theme-aero #streamingBubble .bubble-content,
+body.theme-aero .chat-bubble.assistant.live .bubble-content { padding-left: 6px; }
+/* the box is not needed while the reply is still hidden (pending) */
+body.theme-aero #streamingBubble.pending { display: none; }
+
+/* Fix: messages in the chat must never be squashed. The chat is a flex column;
+   a child with overflow:hidden may shrink below its content (the live
+   "Claude is typing" box was collapsing to a thin strip). */
+.chat-stream > * { flex-shrink: 0; }
+body.theme-aero #streamingBubble,
+body.theme-aero .chat-bubble.assistant.live { overflow: visible; }
+
+/* =====================================================================
+   Filter tabs + footer "New chat" → genuine Windows 7 push buttons
+   (grey two-tone face, #707070 frame, white inner bevel; hover = pale blue,
+   pressed / selected = deeper blue). Vista Dark keeps its own black gel.
+   ===================================================================== */
+body.theme-aero:not(.theme-vista) .tab-btn,
+body.theme-aero:not(.theme-vista) .popup-footer .btn-action,
+body.theme-aero:not(.theme-vista) .popup-footer .btn-action.primary {
+  height: 23px;
+  padding: 0 11px;
+  border: 1px solid #707070;
+  border-radius: 3px;
+  color: #000000;
+  font: 12px "Segoe UI", Tahoma, sans-serif;
+  font-weight: normal;
+  text-shadow: none;
+  letter-spacing: 0;
+  background: linear-gradient(180deg, #f2f2f2 0%, #ebebeb 49%, #dddddd 50%, #cfcfcf 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.75);
+  transition: none;
+  transform: none;
+  cursor: default;
+}
+body.theme-aero:not(.theme-vista) .tab-btn:hover,
+body.theme-aero:not(.theme-vista) .popup-footer .btn-action:hover,
+body.theme-aero:not(.theme-vista) .popup-footer .btn-action.primary:hover {
+  color: #000000;
+  border-color: #3c7fb1;
+  background: linear-gradient(180deg, #eaf6fd 0%, #d9f0fc 49%, #bee6fd 50%, #a7d9f5 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.75);
+  transform: none;
+  filter: none;
+}
+/* selected filter = button held down */
+body.theme-aero:not(.theme-vista) .tab-btn.active,
+body.theme-aero:not(.theme-vista) .tab-btn:active,
+body.theme-aero:not(.theme-vista) .popup-footer .btn-action:active,
+body.theme-aero:not(.theme-vista) .popup-footer .btn-action.open {
+  color: #000000;
+  border-color: #2c628b;
+  text-shadow: none;
+  background: linear-gradient(180deg, #e5f4fc 0%, #c4e5f6 49%, #98d1ef 50%, #68b3db 100%);
+  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.25);
+}
+/* "New chat" is the default button → soft blue frame, like a Win7 dialog's OK */
+body.theme-aero:not(.theme-vista) .popup-footer .btn-action.primary:not(:hover):not(:active):not(.open) {
+  border-color: #3c7fb1;
+  background: linear-gradient(180deg, #f2f8fc 0%, #e6f1f8 49%, #d4e7f3 50%, #c5dfef 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.75), 0 0 0 1px rgba(60, 127, 177, 0.25);
+}
+/* the ☰ compact toggle next to the tabs: same push-button face */
+body.theme-aero:not(.theme-vista) .fx-compact-btn {
+  height: 23px;
+  border: 1px solid #707070;
+  border-radius: 3px;
+  color: #000000;
+  background: linear-gradient(180deg, #f2f2f2 0%, #ebebeb 49%, #dddddd 50%, #cfcfcf 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.75);
+}
+body.theme-aero:not(.theme-vista) .fx-compact-btn:hover {
+  border-color: #3c7fb1;
+  background: linear-gradient(180deg, #eaf6fd 0%, #d9f0fc 49%, #bee6fd 50%, #a7d9f5 100%);
+}
+body.theme-aero:not(.theme-vista) .fx-compact-btn.active {
+  border-color: #2c628b;
+  background: linear-gradient(180deg, #e5f4fc 0%, #c4e5f6 49%, #98d1ef 50%, #68b3db 100%);
+  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+/* =====================================================================
+   Windows 7 caption buttons: one group hanging from the top edge of the
+   window: glass expand button and a red close, square inner joins,
+   rounded outer corners.
+   ===================================================================== */
+body.theme-aero .pill-header { padding-right: 6px; }
+body.theme-aero .pill-header .controls {
+  align-self: flex-start;
+  gap: 0;
+  margin-top: -1px;
+}
+body.theme-aero .pill-header .controls .btn-icon {
+  width: 27px; height: 19px;
+  padding: 0;
+  font-size: 10px; line-height: 17px;
+  color: #ffffff;
+  text-shadow: 0 0 3px #0b1a2b, 0 0 1px #0b1a2b;
+  border: 1px solid rgba(20, 38, 64, 0.78);
+  border-top: none;
+  border-radius: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.28) 45%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.32) 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+  filter: none;
+}
+body.theme-aero .pill-header .controls .btn-icon:first-child { border-bottom-left-radius: 4px; }
+body.theme-aero .pill-header .controls .btn-icon:last-child { border-bottom-right-radius: 4px; }
+body.theme-aero .pill-header .controls .btn-icon + .btn-icon { border-left: none; }
+body.theme-aero .pill-header .controls .btn-icon:hover {
+  color: #ffffff;
+  border-color: rgba(20, 38, 64, 0.78);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, rgba(190, 228, 255, 0.65) 45%, rgba(70, 160, 235, 0.65) 50%, rgba(140, 210, 255, 0.85) 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55), 0 0 8px rgba(120, 200, 255, 0.85);
+}
+body.theme-aero .pill-header .controls #btnClose {
+  width: 45px;
+  font-size: 11px; font-weight: 700;
+  background: linear-gradient(180deg, #e9a493 0%, #d97761 45%, #c3432a 50%, #d2694f 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 210, 200, 0.55);
+}
+body.theme-aero .pill-header .controls #btnClose:hover {
+  border-color: rgba(70, 10, 0, 0.8);
+  background: linear-gradient(180deg, #f6b7a8 0%, #ea8a72 45%, #e04b2c 50%, #f07a5c 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 225, 215, 0.7), 0 0 10px rgba(255, 110, 70, 0.9);
+}
+body.theme-aero .pill-header .controls .btn-icon:active { box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45); }
+
+/* ---------- Contact-list toolbar (Settings ▾ · New chat) — Windows 7 command bar ---------- */
+.list-toolbar {
+  position: relative; flex: none; display: flex; align-items: center; gap: 1px;
+  height: 26px; padding: 0 6px; margin: -10px -12px 6px; /* flush edge to edge: cancels .popup-body padding (10px 12px) */
+}
+body.theme-aero .list-toolbar {
+  background: linear-gradient(180deg, #fbfdff 0%, #eef4fb 48%, #e1eaf6 52%, #dbe6f4 100%);
+  border-bottom: 1px solid #c3d1e4; box-shadow: inset 0 1px 0 #ffffff; border-radius: 0;
+}
+.list-toolbar .settings-panel { z-index: 60; }
