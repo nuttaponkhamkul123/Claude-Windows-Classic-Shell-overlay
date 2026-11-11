@@ -6,12 +6,6 @@
 //   in normal mode (auto-accept edits) on the execute model (default Sonnet).
 (function () {
   const api = window.electronAPI;
-  const el = (tag, cls, text) => {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text != null) n.textContent = text;
-    return n;
-  };
 
   const IMPLEMENT_MSG = 'The plan is approved. Go ahead and implement it now.';
   const APPROVED_NOTE = 'The user approved this plan in the HUD. Do not start implementing in this turn: ' +

@@ -6,12 +6,6 @@
   const header = document.querySelector('.detail-header');
   if (!api?.rulesList || !settings || !header) return;
 
-  const el = (tag, cls, text) => {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text != null) n.textContent = text;
-    return n;
-  };
 
   // Settings row
   const row = el('button', 'set-row');

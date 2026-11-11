@@ -8,12 +8,6 @@
   const api = window.electronAPI;
   const contact = document.querySelector('.convo-contact');
   if (!contact || !api.gitInfo) return;
-  const el = (tag, cls, text) => {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text != null) n.textContent = text;
-    return n;
-  };
 
   const box = el('div', 'git-box');
   box.style.display = 'none';

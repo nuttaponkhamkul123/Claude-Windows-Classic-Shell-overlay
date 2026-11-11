@@ -7,12 +7,6 @@
   const tbModel = document.getElementById('tbModel');
   const btnMcpEl = document.getElementById('btnMcp');
   if (!toolbar || !tbModel) return;
-  const el = (tag, cls, text) => {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text != null) n.textContent = text;
-    return n;
-  };
 
   // Shown for both Claude Code and Antigravity conversations
   const tbSkills = el('button', 'tb-btn', 'Skills ▾');

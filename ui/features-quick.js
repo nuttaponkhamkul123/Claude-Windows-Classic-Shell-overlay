@@ -4,12 +4,6 @@
 (function () {
   const box = document.querySelector('.reply-box');
   if (!box) return;
-  const el = (tag, cls, text) => {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text != null) n.textContent = text;
-    return n;
-  };
 
   const bar = el('div', 'quick-replies');
   bar.style.display = 'none';

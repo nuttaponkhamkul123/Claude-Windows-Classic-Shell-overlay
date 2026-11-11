@@ -10,13 +10,6 @@
 //   + copy-reply button, global hotkey focus, cost per card, export conversation
 (function () {
   const api = window.electronAPI;
-  const $ = (id) => document.getElementById(id);
-  const el = (tag, cls, text) => {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text != null) n.textContent = text;
-    return n;
-  };
 
   // -------------------------------------------------------------------------
   // Persistent settings (~/.ovly-claude/settings.json via main)

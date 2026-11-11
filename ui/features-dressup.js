@@ -7,12 +7,6 @@
   const CAT = window.ROBOT_OUTFIT_CATALOG;
   if (!dp || !CAT || typeof window.setRobotOutfit !== 'function') return;
 
-  const el = (tag, cls, text) => {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text != null) n.textContent = text;
-    return n;
-  };
   const KINDS = [['hat', 'Hat'], ['glasses', 'Glasses'], ['clothes', 'Clothes']];
 
   dp.classList.add('dress-trigger');

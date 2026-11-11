@@ -4,12 +4,6 @@
 // (Same mechanism as the Plan-ready card in features-plan.js: deny + a message.)
 (function () {
   const api = window.electronAPI;
-  const el = (tag, cls, text) => {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text != null) n.textContent = text;
-    return n;
-  };
 
   const pendingAsks = new Map(); // sessionId -> permission request (AskUserQuestion) or Antigravity pendingQuestion
   const answeredAgAsks = new Set(); // ag_ask_* ids already answered in this HUD session

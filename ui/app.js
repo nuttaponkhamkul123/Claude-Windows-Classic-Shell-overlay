@@ -2966,13 +2966,6 @@ function fmtTokens(n) {
 function fmtUSD(n) {
   return n >= 100 ? `$${n.toFixed(0)}` : `$${n.toFixed(2)}`;
 }
-function el(tag, cls, text) {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text != null) e.textContent = text;
-  return e;
-}
-
 function isUsagePanelOpen() {
   return usagePanel && usagePanel.style.display !== 'none';
 }

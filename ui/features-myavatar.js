@@ -9,12 +9,6 @@
   const defaultAvaHtml = ava.innerHTML;
   const defaultDpHtml = dpUserImg ? dpUserImg.innerHTML : '';
 
-  const el = (tag, cls, text) => {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text != null) n.textContent = text;
-    return n;
-  };
 
   let choice = null; // { type: 'image', data } | { type: 'robot', hue } | null
 

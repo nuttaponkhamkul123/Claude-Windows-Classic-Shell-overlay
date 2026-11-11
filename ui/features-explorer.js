@@ -8,12 +8,6 @@
   const header = card && card.querySelector('.pill-header');
   if (!header) return;
 
-  const el = (tag, cls, text) => {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text != null) n.textContent = text;
-    return n;
-  };
 
   const bar = el('div', 'explorer-bar');
   const nav = el('div', 'xb-nav');

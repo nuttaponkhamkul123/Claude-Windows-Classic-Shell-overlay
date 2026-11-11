@@ -7,12 +7,6 @@
   const api = window.electronAPI;
   if (!api || !api.skillScan) return;
 
-  const el = (tag, cls, text) => {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text != null) n.textContent = text;
-    return n;
-  };
   const folderName = (p) => String(p || '').split(/[\\/]/).filter(Boolean).pop() || '';
   const activeCwd = () => (typeof currentActiveSession !== 'undefined' && currentActiveSession && currentActiveSession.cwd) || '';
 
