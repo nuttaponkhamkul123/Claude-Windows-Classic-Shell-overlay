@@ -64,7 +64,10 @@ function placeNextToHud() {
   const main = getMain();
   if (!notesWin || notesWin.isDestroyed() || !main || main.isDestroyed()) return;
   const b = main.getBounds();
+  // HUD folded into its small edge tab: tuck the panel away until it opens again
+  if (b.width < 300) { if (notesWin.isVisible()) notesWin.hide(); return; }
   notesWin.setBounds({ x: Math.max(0, b.x - PANEL_W - GAP), y: b.y, width: PANEL_W, height: b.height });
+  if (!notesWin.isVisible() && main.isVisible() && !main.isMinimized()) notesWin.showInactive();
 }
 
 function openPanel(focusId) {
@@ -77,13 +80,16 @@ function openPanel(focusId) {
     return;
   }
   notesWin = new BrowserWindow({
+    // Owned by the HUD: stays on the HUD's virtual desktop and hides/minimizes with it.
+    // (No skipTaskbar: on Windows that makes a "tool window", which shows on EVERY desktop;
+    //  an owned window gets no taskbar button anyway.)
+    parent: main,
     width: PANEL_W,
     height: main.getBounds().height,
     frame: false,
     transparent: true,
     resizable: false,
     alwaysOnTop: true,
-    skipTaskbar: true,
     hasShadow: false,
     show: false,
     webPreferences: {
@@ -145,8 +151,12 @@ function register({ getWin }) {
   if (main) {
     main.on('move', placeNextToHud);
     main.on('resize', placeNextToHud);
-    main.on('minimize', () => notesWin && !notesWin.isDestroyed() && notesWin.hide());
-    main.on('restore', () => notesWin && !notesWin.isDestroyed() && notesWin.showInactive());
+    const hidePanel = () => notesWin && !notesWin.isDestroyed() && notesWin.hide();
+    const showPanel = () => { if (notesWin && !notesWin.isDestroyed()) { placeNextToHud(); notesWin.showInactive(); } };
+    main.on('minimize', hidePanel);
+    main.on('hide', hidePanel);
+    main.on('restore', showPanel);
+    main.on('show', showPanel);
     main.on('closed', closePanel);
   }
 
