@@ -53,6 +53,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getInitialSessions: () => ipcRenderer.invoke('get-initial-sessions'),
   copyToClipboard: (text) => ipcRenderer.send('copy-clipboard', text),
   notesToggle: () => ipcRenderer.invoke('notes:toggle'),
+  notesTheme: (theme) => ipcRenderer.send('notes:theme', theme),
   notesState: () => ipcRenderer.invoke('notes:state'),
   onNotesState: (cb) => ipcRenderer.on('notes:state', (_e, st) => cb(st)),
   readClipboard: () => ipcRenderer.invoke('read-clipboard'),

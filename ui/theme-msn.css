@@ -144,9 +144,38 @@ body.theme-xp #listView .source-label { color: #555; font: 10px Tahoma, "Segoe U
 /* =====================================================================
    Windows XP chrome for the rest of the window (title bar, frame, buttons)
    ===================================================================== */
-/* the Windows 7 Explorer bar is replaced by the XP title bar + the plain search box */
-body.theme-xp .explorer-bar { display: none !important; }
-body.theme-xp.has-explorer-bar .fx-search { display: block; }
+/* the Explorer bar in Windows XP dress: green round Back / Forward buttons,
+   an "Address" box and a plain search box (Back = to the contact list) */
+body.theme-xp .explorer-bar {
+  background: #ece9d8; border-bottom: 1px solid #aca899; box-shadow: inset 0 1px 0 #fff;
+  padding: 3px 6px; gap: 6px; margin: 0;
+}
+body.theme-xp .xb-nav { gap: 3px; }
+body.theme-xp .xb-orb, body.theme-xp .xb-fwd {
+  width: 23px; height: 23px; border-radius: 50%;
+  border: 1px solid #2c7a1f;
+  background: radial-gradient(circle at 50% 30%, #c9f5b2 0%, #5cc23f 45%, #2d9a1c 80%, #1f7a12 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 1px 1px rgba(0, 0, 0, .25);
+}
+body.theme-xp .xb-orb:hover:not(:disabled) { background: radial-gradient(circle at 50% 30%, #dcffc9 0%, #74d856 45%, #36ad22 80%, #24861a 100%); }
+body.theme-xp .xb-orb:active:not(:disabled) { background: radial-gradient(circle at 50% 50%, #3a9a26, #1f6e12); }
+body.theme-xp .xb-orb svg { stroke: #fff; stroke-width: 2.8; filter: drop-shadow(0 1px 0 rgba(0, 60, 0, .5)); }
+body.theme-xp .xb-orb:disabled { border-color: #b5b2a3; background: radial-gradient(circle at 50% 30%, #fbfbf8, #dcdad0); box-shadow: none; }
+body.theme-xp .xb-orb:disabled svg { stroke: #aca899; filter: none; }
+body.theme-xp .xb-address, body.theme-xp .xb-search {
+  height: 22px; border-radius: 0; border: 1px solid #7f9db9; background: #fff; box-shadow: none;
+  font: 11px Tahoma, "Segoe UI", sans-serif;
+}
+body.theme-xp .xb-address::before {
+  content: "Address"; flex: none; align-self: stretch; display: flex; align-items: center;
+  margin: -1px 5px -1px -5px; padding: 0 6px; color: #444; background: #ece9d8; border-right: 1px solid #aca899;
+}
+body.theme-xp .xb-address:hover, body.theme-xp .xb-search:hover, body.theme-xp .xb-search:focus-within { border-color: #316ac5; background: #fff; }
+body.theme-xp .xb-crumb { color: #000; font: 11px Tahoma, "Segoe UI", sans-serif; border-radius: 0; }
+body.theme-xp .xb-crumb:hover:not(:disabled) { background: #316ac5; color: #fff; border-color: #316ac5; }
+body.theme-xp .xb-sep { color: #444; }
+body.theme-xp .xb-refresh { color: #2d9a1c; }
+body.theme-xp .xb-search-input { font: 11px Tahoma, "Segoe UI", sans-serif; color: #000; }
 body.theme-xp #overlayCard {
   border: 3px solid #0054e3; border-top: 0; border-radius: 8px 8px 0 0;
   background: #ece9d8; box-shadow: 0 0 0 1px #0831d9, 4px 5px 10px rgba(0, 0, 40, 0.45);

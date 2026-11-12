@@ -11,4 +11,5 @@ contextBridge.exposeInMainWorld('notesAPI', {
   close: () => ipcRenderer.invoke('notes:close'),
   onChanged: (cb) => ipcRenderer.on('notes:changed', () => cb()),
   onFocus: (cb) => ipcRenderer.on('notes:focus', (_e, id) => cb(id)),
+  onTheme: (cb) => ipcRenderer.on('notes:theme', (_e, theme) => cb(theme)),
 });

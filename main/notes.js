@@ -160,6 +160,9 @@ function register({ getWin }) {
     main.on('closed', closePanel);
   }
 
+  ipcMain.on('notes:theme', (_e, theme) => {
+    if (notesWin && !notesWin.isDestroyed()) notesWin.webContents.send('notes:theme', String(theme || ''));
+  });
   ipcMain.handle('notes:list', () => listNotes());
   ipcMain.handle('notes:toggle', () => {
     if (notesWin && !notesWin.isDestroyed()) closePanel(); else openPanel();

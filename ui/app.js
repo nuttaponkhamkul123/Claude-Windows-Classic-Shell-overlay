@@ -522,6 +522,20 @@ detailView.addEventListener('drop', (e) => {
 });
 
 // Reply Submission (Displays user bubble immediately & sends directly to Claude / Antigravity)
+// After you send: jump to the bottom and stay there while the layout settles
+// (the activity card appears under the chat and makes it shorter; attached
+// images finish loading and make the bubble taller).
+function stickChatToBottom(bubble) {
+  const toBottom = () => { chatStream.scrollTop = chatStream.scrollHeight; };
+  toBottom();
+  requestAnimationFrame(toBottom);
+  const until = Date.now() + 1500;
+  const ro = new ResizeObserver(() => { if (Date.now() < until) toBottom(); });
+  ro.observe(chatStream);
+  setTimeout(() => ro.disconnect(), 1500);
+  bubble?.querySelectorAll?.('img').forEach((img) => img.addEventListener('load', () => { if (Date.now() < until + 3000) toBottom(); }, { once: true }));
+}
+
 function submitReply(text) {
   const reply = (text || replyTextarea.value || '').trim();
   const att = attachmentPayload();
@@ -559,7 +573,8 @@ function submitReply(text) {
   };
 
   // 1. Immediately append user message bubble to dialog & history!
-  appendBubble(userMsg);
+  const userBubble = appendBubble(userMsg);
+  stickChatToBottom(userBubble);
 
   if (currentActiveSession) {
     let history = sessionChatHistory.get(currentActiveSession.id);
@@ -762,6 +777,7 @@ if (resizeGrip) {
         theme = t;
         apply(theme);
         window.electronAPI.storeSet('theme', theme);
+        window.electronAPI.notesTheme?.(theme); // the pinned-notes panel follows right away
         mark();
         sub.hidden = true;
         btnTheme.classList.remove('open');
@@ -1342,6 +1358,21 @@ lbGroupBtn?.addEventListener('click', (e) => {
   window.electronAPI.storeSet('groupMode', groupMode);
   syncGroupBtn();
   renderSessionCards(true);
+});
+
+// Contact list as a List (rows) or a Grid (big avatar tiles) — remembered
+let listViewMode = window.electronAPI.settings?.listView === 'list' ? 'list' : 'grid'; // grid unless you picked list
+const lbViewBtn = document.getElementById('lbView');
+function applyListView() {
+  document.body.classList.toggle('list-grid', listViewMode === 'grid');
+  if (lbViewBtn) lbViewBtn.textContent = listViewMode === 'grid' ? 'View: Grid' : 'View: List';
+}
+applyListView();
+lbViewBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  listViewMode = listViewMode === 'grid' ? 'list' : 'grid';
+  window.electronAPI.storeSet('listView', listViewMode);
+  applyListView();
 });
 
 // Same folder => same group (case/slash-insensitive for Windows paths)
