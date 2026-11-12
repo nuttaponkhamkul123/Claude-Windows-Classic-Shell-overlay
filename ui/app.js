@@ -224,6 +224,58 @@ document.addEventListener('click', (e) => {
   if (a) handleHudLinkClick(e, a);
 }, true);
 
+// Typewriter: new reply text types itself out (with a blinking caret) instead of
+// appearing a block at a time. Re-renders the Markdown of the visible part each
+// frame; any backlog finishes in about 0.7 s, so it never falls far behind.
+// `before` = the text that was on screen until now ('' = a brand-new bubble), so
+// only the NEW part types out.
+function closeOpenMarks(t) {
+  if (((t.match(/^```/gm) || []).length % 2) === 1) return t + '\n```'; // inside a code block
+  const noCode = t.replace(/`[^`]*`/g, '');
+  if ((noCode.match(/`/g) || []).length % 2) t += '`';
+  if (((t.replace(/`[^`]*`/g, '').match(/\*\*/g) || []).length % 2) === 1) t += '**';
+  return t;
+}
+function typeInto(box, text, bubble, before) {
+  if (!box) return;
+  const render = (t, done) => {
+    box.innerHTML = window.marked ? window.marked.parse(t) : t;
+    if (!done) {
+      // caret at the very end of the text: the last paragraph / list item / heading
+      // (not inside a bold or code word that happens to come last)
+      let n = box.lastElementChild;
+      while (n && n.lastElementChild && /^(UL|OL|LI|BLOCKQUOTE|DIV)$/.test(n.tagName)) n = n.lastElementChild;
+      if (n && /^(STRONG|EM|CODE|A|B|I|SPAN)$/.test(n.tagName)) n = n.parentElement;
+      (n || box).insertAdjacentHTML('beforeend', '<span class="tw-caret"></span>');
+    } else if (bubble) attachCodeCopyHandlers(bubble);
+  };
+  text = String(text || '');
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || text.length > 30000) {
+    if (box._tw?.raf) clearTimeout(box._tw.raf);
+    box._tw = { shown: text.length, text };
+    render(text, true);
+    return;
+  }
+  const prev = String(before ?? text);
+  const st = box._tw || (box._tw = { shown: prev.length, text: prev, raf: 0 });
+  // keep what is already typed if the new text continues it; otherwise restart where they differ
+  let same = 0;
+  const lim = Math.min(st.shown, st.text.length, text.length);
+  while (same < lim && st.text.charCodeAt(same) === text.charCodeAt(same)) same++;
+  st.shown = same;
+  st.text = text;
+  if (st.raf) return; // already typing; it picks up the new target
+  const step = () => {
+    const left = st.text.length - st.shown;
+    if (left <= 0) { st.raf = 0; render(st.text, true); return; }
+    st.shown += Math.max(2, Math.ceil(left / 42));
+    render(closeOpenMarks(st.text.slice(0, st.shown)), false);
+    st.raf = setTimeout(step, 16);
+  };
+  // a timer, not requestAnimationFrame: keeps typing while the HUD is hidden/minimized
+  st.raf = setTimeout(step, 16);
+}
+
 function attachCodeCopyHandlers(container) {
   container.querySelectorAll('pre').forEach((pre) => {
     if (pre.dataset.copyBound) return;
@@ -522,6 +574,18 @@ detailView.addEventListener('drop', (e) => {
 });
 
 // Reply Submission (Displays user bubble immediately & sends directly to Claude / Antigravity)
+// Stick to the bottom: while you're at the bottom of the chat, anything that
+// appears (reply text, the "Edited N files" card, images loading, the activity
+// card resizing the chat) keeps you there. Scroll up to read and it stays put.
+let chatPinned = true;
+chatStream.addEventListener('scroll', () => {
+  chatPinned = chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight < 80;
+}, { passive: true });
+const keepPinned = () => { if (chatPinned) chatStream.scrollTop = chatStream.scrollHeight; };
+new MutationObserver(keepPinned).observe(chatStream, { childList: true, subtree: true, characterData: true });
+new ResizeObserver(keepPinned).observe(chatStream);
+chatStream.addEventListener('load', keepPinned, true); // images inside bubbles
+
 // After you send: jump to the bottom and stay there while the layout settles
 // (the activity card appears under the chat and makes it shorter; attached
 // images finish loading and make the bubble taller).
@@ -921,8 +985,15 @@ function renderModelChip(el, session) {
   const label = formatModelEffort(session);
   el.textContent = label;
   el.title = session?.model ? `Model: ${session.model}${session.effort ? `\nEffort: ${session.effort}` : ''}` : '';
-  el.className = `model-chip ${session?.effort ? 'effort-' + session.effort : ''}`;
+  const where = el.classList.contains('rt-model') ? ' rt-model' : ''; // the one in the input toolbar
+  el.className = `model-chip${where} ${session?.effort ? 'effort-' + session.effort : ''}`;
+  if (where && !label && session && (session.source === 'claude' || session.source === 'antigravity')) {
+    el.textContent = 'Model ▾'; // nothing known yet: still the way into the Model menu
+    el.style.display = '';
+    return;
+  }
   el.style.display = label ? '' : 'none';
+  if (where && label) el.textContent = label + ' ▾';
 }
 
 // Time ago
@@ -2270,17 +2341,15 @@ function syncLiveMessage(s) {
   if (last && last.role === 'assistant' && (last.live || last.fromStream) && last.el && last.el.isConnected) {
     // Update the live message in place (also a reply the HUD just streamed — no duplicate bubble)
     last.fromStream = false;
+    const shownBefore = last.text || '';
     last.text = s.fullContent;
     last.time = 'Just now';
-    const box = last.el.querySelector('.bubble-content');
-    if (box) {
-      box.innerHTML = window.marked ? window.marked.parse(s.fullContent) : s.fullContent;
-      attachCodeCopyHandlers(last.el);
-    }
+    typeInto(last.el.querySelector('.bubble-content'), s.fullContent, last.el, shownBefore);
   } else {
     const msg = { role: 'assistant', text: s.fullContent, time: 'Just now', source: s.source };
     history.push(msg);
     msg.el = appendBubble(msg);
+    typeInto(msg.el?.querySelector('.bubble-content'), s.fullContent, msg.el, '');
   }
   history[history.length - 1].live = stillWorking;
   // boxed "Claude is typing a message..." while it is still being written
@@ -2313,13 +2382,10 @@ if (window.electronAPI.onReplyStream) {
           time: 'Generating...',
           source: currentActiveSession.source
         });
+        typeInto(streamBubble?.querySelector('.bubble-content'), text, streamBubble, '');
       } else if (streamBubble && real) {
         streamBubble.classList.remove('pending');
-        const contentBox = streamBubble.querySelector('.bubble-content');
-        if (contentBox) {
-          contentBox.innerHTML = window.marked ? window.marked.parse(text) : text;
-          attachCodeCopyHandlers(streamBubble);
-        }
+        typeInto(streamBubble.querySelector('.bubble-content'), text, streamBubble);
       }
       if (real) chatStream.scrollTop = chatStream.scrollHeight;
     }
@@ -2351,11 +2417,7 @@ if (window.electronAPI.onReplyStatus) {
           setBubbleMeta(meta, agentName, 'Just now');
         }
         if (text) {
-          const contentBox = streamBubble.querySelector('.bubble-content');
-          if (contentBox) {
-            contentBox.innerHTML = window.marked ? window.marked.parse(text) : text;
-            attachCodeCopyHandlers(streamBubble);
-          }
+          typeInto(streamBubble.querySelector('.bubble-content'), text, streamBubble);
         }
       }
 

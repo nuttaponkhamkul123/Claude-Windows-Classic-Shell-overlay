@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Agent stage — visual design</title>
+<!-- Design mockup: robots doing a different activity per tool, and a "team stage"
+     where the main agent and its sub-agents work side by side. Open in a browser. -->
+<style>
+  body { margin: 0; padding: 18px 22px 30px; background: #1b1e23; color: #e6e9ef; font: 13px "Segoe UI", sans-serif; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  h2 { font-size: 14px; margin: 22px 0 8px; color: #a9c7ee; }
+  p.sub { margin: 0 0 6px; opacity: .7; }
+
+  /* ---------- the robot rig (same drawing as the HUD runner) ---------- */
+  .bot { position: relative; width: 60px; height: 78px; flex-shrink: 0; }
+  .bot svg { width: 100%; height: 100%; overflow: visible; display: block; }
+  .bot svg * { transform-box: view-box; }
+  .r-body { transform-origin: 20px 45px; }
+  .r-head { transform-origin: 20px 19px; }
+  .r-leg { transform-origin: 20px 31px; }
+  .r-shin { transform-origin: 20px 37px; }
+  .r-arm { transform-origin: 20px 22px; }
+  .r-fore { transform-origin: 20px 27px; transform: rotate(-75deg); }
+
+  /* RUN — thinking between steps */
+  .pose-run .r-body { animation: bob .25s ease-in-out infinite alternate; }
+  .pose-run .r-leg { animation: thigh .5s linear infinite; }
+  .pose-run .r-shin { animation: knee .5s linear infinite; }
+  .pose-run .r-arm { animation: armswing .5s ease-in-out infinite; }
+  .pose-run .r-fore { animation: elbow .5s ease-in-out infinite; }
+  .pose-run .r-leg-back, .pose-run .r-leg-back .r-shin, .pose-run .r-arm-front, .pose-run .r-arm-front .r-fore { animation-delay: -.25s; }
+  @keyframes elbow {
+    0%   { transform: rotate(-48deg); }
+    18%  { transform: rotate(-58deg); }
+    50%  { transform: rotate(-108deg); }
+    62%  { transform: rotate(-112deg); }
+    100% { transform: rotate(-48deg); }
+  }
+  @keyframes bob { from { transform: translateY(0) rotate(7deg); } to { transform: translateY(-2.5px) rotate(9deg); } }
+  @keyframes thigh { 0% { transform: rotate(-32deg); } 50% { transform: rotate(30deg); } 100% { transform: rotate(-32deg); } }
+  @keyframes knee { 0% { transform: rotate(8deg); } 35% { transform: rotate(0); } 55% { transform: rotate(35deg); } 75% { transform: rotate(80deg); } 100% { transform: rotate(8deg); } }
+  @keyframes armswing { 0% { transform: rotate(38deg); } 50% { transform: rotate(-42deg); } 100% { transform: rotate(38deg); } }
+
+  /* TYPE — Edit / Write: at a little desk, tapping the keyboard */
+  .pose-type .r-body { transform: rotate(4deg); }
+  .pose-type .r-arm-front { animation: tap .2s ease-in-out infinite alternate; }
+  .pose-type .r-arm-back { animation: tap .2s ease-in-out infinite alternate-reverse; }
+  .pose-type .r-fore { animation: keys .2s ease-in-out infinite alternate; }
+  .pose-type .r-arm-back .r-fore { animation-direction: alternate-reverse; }
+  @keyframes keys { from { transform: rotate(-40deg); } to { transform: rotate(-58deg); } }
+  .pose-type .r-head { animation: nod 1.4s ease-in-out infinite alternate; }
+  @keyframes tap { from { transform: rotate(-52deg); } to { transform: rotate(-62deg); } }
+  @keyframes nod { from { transform: rotate(4deg); } to { transform: rotate(10deg); } }
+  .pose-type .screen-glow { animation: glow 1.2s ease-in-out infinite alternate; }
+  @keyframes glow { from { opacity: .55; } to { opacity: 1; } }
+  .pose-type .code-line { animation: code 1.6s steps(1) infinite; }
+  .pose-type .code-line:nth-of-type(2) { animation-delay: -.5s; }
+  .pose-type .code-line:nth-of-type(3) { animation-delay: -1s; }
+  @keyframes code { 0% { opacity: 0; } 30% { opacity: 1; } }
+
+  /* READ — Read: holding a book, turning pages */
+  .pose-read .r-arm-front, .pose-read .r-arm-back { transform: rotate(-92deg); }
+  .pose-read .r-head { transform: rotate(9deg); animation: readnod 2.4s ease-in-out infinite; }
+  .pose-read .page { transform-origin: 30.5px 0; animation: flip 2.4s ease-in-out infinite; }
+  @keyframes readnod { 0%, 80% { transform: rotate(9deg); } 90% { transform: rotate(3deg); } 100% { transform: rotate(9deg); } }
+  @keyframes flip { 0%, 75% { transform: scaleX(1); } 88% { transform: scaleX(-1); } 100% { transform: scaleX(-1); opacity: 0; } }
+
+  /* SEARCH — Grep / Glob: slow walk with a magnifying glass */
+  .pose-search .r-body { animation: bob .5s ease-in-out infinite alternate; }
+  .pose-search .r-leg { animation: walk 1s ease-in-out infinite; }
+  .pose-search .r-leg-back { animation-delay: -.5s; }
+  .pose-search .r-arm-front { animation: scan 2s ease-in-out infinite; }
+  .pose-search .r-arm-back { animation: walkarm 1s ease-in-out infinite; }
+  .pose-search .r-arm-back .r-fore { animation: walkelbow 1s ease-in-out infinite; }
+  @keyframes walkarm { 0%, 100% { transform: rotate(22deg); } 50% { transform: rotate(-18deg); } }
+  @keyframes walkelbow { 0%, 100% { transform: rotate(-35deg); } 50% { transform: rotate(-70deg); } }
+  @keyframes walk { 0%, 100% { transform: rotate(-16deg); } 50% { transform: rotate(16deg); } }
+  @keyframes scan { 0%, 100% { transform: rotate(-80deg); } 50% { transform: rotate(-100deg); } }
+  .lens-glint { animation: glint 2s ease-in-out infinite; }
+  @keyframes glint { 0%, 60%, 100% { opacity: 0; } 70% { opacity: 1; } }
+
+  /* HAMMER — Bash: hammering the terminal block, sparks on impact */
+  .pose-hammer .r-arm-front { animation: hammer .55s cubic-bezier(.6,0,.9,.4) infinite; }
+  .pose-hammer .r-arm-back { transform: rotate(-30deg); }
+  .pose-hammer .r-arm-front .r-fore { animation: strike .55s cubic-bezier(.6,0,.9,.4) infinite; }
+  @keyframes strike { 0% { transform: rotate(-120deg); } 70% { transform: rotate(-20deg); } 100% { transform: rotate(-120deg); } }
+  .pose-hammer .r-body { animation: brace .55s ease-in infinite; }
+  @keyframes hammer { 0% { transform: rotate(-165deg); } 70% { transform: rotate(-58deg); } 100% { transform: rotate(-165deg); } }
+  @keyframes brace { 0%, 60% { transform: rotate(3deg); } 72% { transform: rotate(8deg) translateY(1px); } 100% { transform: rotate(3deg); } }
+  .spark { opacity: 0; animation: spark .55s linear infinite; }
+  @keyframes spark { 0%, 66% { opacity: 0; transform: scale(.3); } 72% { opacity: 1; transform: scale(1); } 90% { opacity: 0; transform: scale(1.4); } 100% { opacity: 0; } }
+
+  /* WEB — WebSearch / WebFetch: spinning a globe on one finger */
+  .pose-web .r-arm-front { transform: rotate(-158deg); }
+  .pose-web .r-arm-back { animation: tap 1s ease-in-out infinite alternate; }
+  .pose-web .globe-lines { animation: spin 1.2s linear infinite; transform-origin: 23.5px -4.5px; }
+  @keyframes spin { from { transform: scaleX(1); } 50% { transform: scaleX(-1); } to { transform: scaleX(1); } }
+
+  /* THINK — no tool yet: hand on chin, dots */
+  .pose-think .r-arm-front { transform: rotate(-128deg); }
+  .pose-think .r-head { transform: rotate(-6deg); }
+
+  /* WAIT — needs your approval: hand up, "!" */
+  .pose-wait .r-arm-front { animation: wave 1s ease-in-out infinite alternate; }
+  @keyframes wave { from { transform: rotate(-170deg); } to { transform: rotate(-150deg); } }
+  .pose-wait .r-body { animation: hop .5s ease-in-out infinite alternate; }
+  @keyframes hop { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+
+  /* DONE — hands the result over: wave + check */
+  .pose-done .r-arm-front { transform: rotate(-150deg); }
+  .pose-done .r-arm-front .r-fore { animation: forewave .35s ease-in-out infinite alternate; }
+  @keyframes forewave { from { transform: rotate(-10deg); } to { transform: rotate(-70deg); } }
+  @keyframes wavebye { from { transform: rotate(-175deg); } to { transform: rotate(-140deg); } }
+
+  /* bubbles over the head */
+  .bubble { position: absolute; left: 34px; top: -6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+    display: grid; place-items: center; font: 700 11px "Segoe UI", sans-serif; color: #1a2b57; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+  .bubble::after { content: ""; position: absolute; left: 3px; bottom: -4px; border: 4px solid transparent; border-top-color: #fff; border-left-width: 0; }
+  .bubble.warn { background: #ffb02e; color: #3b2a00; animation: pulse 1s infinite; }
+  .bubble.warn::after { border-top-color: #ffb02e; }
+  .bubble.ok { background: #3aa357; color: #fff; }
+  .bubble.ok::after { border-top-color: #3aa357; }
+  .dots i { display: inline-block; width: 3px; height: 3px; margin: 0 1px; border-radius: 50%; background: #1a2b57; animation: dot 1s infinite; }
+  .dots i:nth-child(2) { animation-delay: .2s; } .dots i:nth-child(3) { animation-delay: .4s; }
+  @keyframes dot { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-3px); } }
+  @keyframes pulse { 50% { transform: scale(1.12); } }
+
+  /* ---------- poses board ---------- */
+  .poses { display: grid; grid-template-columns: repeat(4, 150px); gap: 10px; }
+  .pose-card { background: #252a32; border: 1px solid #353c47; border-radius: 8px; padding: 10px 8px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .pose-card .stage { position: relative; width: 120px; height: 84px; display: flex; align-items: flex-end; justify-content: center; border-bottom: 2px solid #3a4250; }
+  .pose-card b { font-size: 12px; }
+  .pose-card span { font-size: 11px; opacity: .65; text-align: center; }
+
+  /* ---------- team stage (the activity card) ---------- */
+  .card { width: 760px; border-radius: 8px; padding: 10px 12px 8px; background: linear-gradient(180deg, #2c3138, #1f2329); border: 1px solid #000; box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
+  .card.light { background: linear-gradient(180deg, #f7fbff, #e6f1fb); border-color: #8fa8c4; color: #1a1a1a; }
+  .card-top { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .card-top .verb { font-weight: 700; }
+  .card-top .meta { margin-left: auto; opacity: .7; font-variant-numeric: tabular-nums; }
+  .card-top .stop { font: 11px "Segoe UI"; padding: 2px 9px; border-radius: 3px; border: 1px solid #14171c; background: linear-gradient(#3a414c, #2c323b); color: #e6e9ef; }
+  .light .card-top .stop { border-color: #a9b8c9; background: linear-gradient(#fdfdfd, #e9eef4); color: #1a1a1a; }
+  .floor { position: relative; display: flex; align-items: flex-end; gap: 22px; height: 132px; margin-top: 6px; padding: 0 6px;
+    background: linear-gradient(transparent 112px, rgba(127,140,160,.18) 112px, rgba(127,140,160,.18) 114px, transparent 114px); }
+  .agent.lead .bot { margin-top: 22px; }
+  .agent { position: relative; display: flex; flex-direction: column; align-items: center; width: 150px; }
+  .agent .tag { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 9px; background: #2f3d52; color: #a9c7ee; white-space: nowrap; }
+  .agent.lead .tag { background: #3b6fb0; color: #fff; }
+  .light .agent .tag { background: #e4eefa; color: #2d5a8a; } .light .agent.lead .tag { background: #2a86d6; color: #fff; }
+  .agent .task { font-size: 10.5px; opacity: .75; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+  .agent .bot { width: 64px; height: 84px; margin-top: 2px; }
+  .agent.sub .bot { width: 52px; height: 68px; }
+  /* dotted "hand-off" line from the lead to each sub-agent */
+  .handoff { position: absolute; top: 94px; height: 0; border-top: 2px dashed rgba(127,170,230,.45); }
+  .handoff::after { content: "📄"; position: absolute; top: -10px; font-size: 11px; animation: carry 2.4s linear infinite; }
+  @keyframes carry { from { left: 0; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } to { left: calc(100% - 12px); opacity: 0; } }
+  .steps { display: flex; gap: 5px; margin-top: 6px; font-size: 10.5px; }
+  .steps span { padding: 1px 8px; border-radius: 9px; background: rgba(58,163,87,.14); border: 1px solid rgba(58,163,87,.45); }
+
+  .legend { display: grid; grid-template-columns: 170px 1fr; gap: 3px 10px; font-size: 12px; max-width: 760px; }
+  .legend b { color: #a9c7ee; }
+</style>
+</head>
+<body>
+  <h1>Agent stage — what the robots do while they work</h1>
+  <p class="sub">Each tool gets its own activity. Sub-agents appear next to the lead robot, each with its own job.</p>
+
+  <h2>1 · Activities (one per kind of tool)</h2>
+  <div class="poses" id="poses"></div>
+
+  <h2>2 · Team stage — the activity card when the agent hands work to sub-agents</h2>
+  <div id="teams"></div>
+
+  <h2>3 · How it behaves</h2>
+  <div class="legend">
+    <b>Sub-agent starts</b><span>A new robot pops out of a smoke puff next to the lead; a page flies along the dashed line (the hand-off).</span>
+    <b>Each robot's activity</b><span>Follows its current tool: Read → book, Edit/Write → typing at a desk, Bash → hammer, Grep/Glob → magnifier, Web → globe, no tool → thinking, waiting for approval → hand up with “!”.</span>
+    <b>Sub-agent finishes</b><span>It waves with a ✓, walks the page back to the lead along the line, and poofs away.</span>
+    <b>Name + task</b><span>Each robot has a name tag (agent type) and its task underneath; hover = full task + current command.</span>
+    <b>Colours / outfits</b><span>Lead = the chat's robot (its colour + outfit). Sub-agents = smaller, each type with its own colour (Explore teal, Plan purple, general orange…).</span>
+    <b>Lots of agents</b><span>Up to 4 shown; more → “+3” chip that opens the full list.</span>
+  </div>
+
+<script>
+  // ---- colour helper (same idea as the HUD's shiftHexHue) ----
+  function shiftHexHue(hex, deg) {
+    const n = parseInt(hex.slice(1), 16); let r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let h = 0, s = 0; const l = (mx + mn) / 2;
+    if (mx !== mn) { const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn);
+      h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; }
+    h = (h + deg + 360) % 360;
+    const f = (p, q, t) => { t = (t + 1) % 1; return t < 1/6 ? p + (q - p) * 6 * t : t < 1/2 ? q : t < 2/3 ? p + (q - p) * (2/3 - t) * 6 : p; };
+    const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q, k = h / 360;
+    return '#' + [f(p, q, k + 1/3), f(p, q, k), f(p, q, k - 1/3)].map((v) => Math.round(v * 255).toString(16).padStart(2, '0')).join('');
+  }
+</script>
+<script src="../../ui/robot-runner.js"></script>
+<script>
+  // ---- props: drawn in the robot's own coordinates; hand items go inside the arm so they move with it ----
+  const PROPS = {
+    type: { body: `
+        <rect x="27" y="31" width="16" height="2" rx="1" fill="#8a5a3c" stroke="#3b2618" stroke-width=".6"/>
+        <rect x="29" y="33" width="1.6" height="12" fill="#6b4630"/><rect x="40" y="33" width="1.6" height="12" fill="#6b4630"/>
+        <path d="M29,31L42,31L42,30.2L29,30.2Z" fill="#c9d2dd"/>
+        <path d="M33,30.2L36.2,21.5L44,21.5L41,30.2Z" fill="#2b2f3a" stroke="#14171c" stroke-width=".6"/>
+        <path class="screen-glow" d="M34.2,29.3L36.9,22.4L42.8,22.4L40.2,29.3Z" fill="#5bc0ff"/>
+        <g fill="#fff"><rect class="code-line" x="37.6" y="23.6" width="3.6" height=".7"/><rect class="code-line" x="37" y="25.3" width="2.8" height=".7"/><rect class="code-line" x="36.4" y="27" width="3.4" height=".7"/></g>` },
+    read: { arm: `
+        <g transform="translate(23.2,27.5) rotate(92)"><rect x="-1" y="-4.6" width="9.5" height="9" rx="1" fill="#c0392b" stroke="#6b1d16" stroke-width=".6"/>
+        <rect x="-.2" y="-3.8" width="4" height="7.4" fill="#fffaf0"/><rect class="page" x="3.8" y="-3.8" width="4" height="7.4" fill="#f2ead8"/></g>` },
+    search: { arm: `
+        <g transform="translate(23.5,28)"><path d="M0,0L3,4" stroke="#6b4630" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="5" cy="7" r="3.6" fill="rgba(160,220,255,.35)" stroke="#c9a227" stroke-width="1.3"/>
+        <path class="lens-glint" d="M3.4,5.4A2.4,2.4 0 0 1 5.6,4.4" stroke="#fff" stroke-width=".8" fill="none"/></g>` },
+    hammer: { arm: `
+        <g transform="translate(23.6,28.4) rotate(-15)"><rect x="-.7" y="-1" width="1.5" height="9" rx=".6" fill="#8a5a3c"/>
+        <rect x="-3" y="7" width="6.5" height="3.6" rx=".8" fill="#9aa4b1" stroke="#4a5260" stroke-width=".6"/></g>`,
+      body: `
+        <rect x="30" y="38" width="11" height="7" rx="1" fill="#14171c" stroke="#3a414c" stroke-width=".7"/>
+        <path d="M31.6,40.4L33.2,41.6L31.6,42.8M34,42.8H36.6" stroke="#4fd06a" stroke-width=".8" fill="none"/>
+        <g class="spark" style="transform-origin:33px 37px"><path d="M33,37L30,33M33,37L34.5,32.5M33,37L37,34M33,37L29,36" stroke="#ffd34a" stroke-width=".9" stroke-linecap="round"/></g>` },
+    web: { arm: `
+        <g transform="translate(23.5,28.6)"><circle cx="0" cy="-33" r="0" fill="none"/></g>`,
+      body: `
+        <g><circle cx="23.5" cy="-4.5" r="5" fill="#2f6fd6" stroke="#1a3f80" stroke-width=".8"/>
+        <g class="globe-lines"><ellipse cx="23.5" cy="-4.5" rx="2.2" ry="5" fill="none" stroke="#9fe0ff" stroke-width=".7"/>
+        <path d="M18.6,-4.5H28.4M19.4,-7.2H27.6M19.4,-1.8H27.6" stroke="#9fe0ff" stroke-width=".6"/></g>
+        <path d="M21,-7.6A3.4,3.4 0 0 1 24,-8.6" stroke="#fff" stroke-width=".8" fill="none" opacity=".7"/></g>` },
+  };
+  const BUBBLE = {
+    think: '<div class="bubble dots"><i></i><i></i><i></i></div>',
+    wait: '<div class="bubble warn">!</div>',
+    done: '<div class="bubble ok">✓</div>',
+  };
+
+  function bot(pose, hue, outfit, size) {
+    const d = document.createElement('div');
+    d.className = `bot pose-${pose}`;
+    if (size) { d.style.width = size + 'px'; d.style.height = Math.round(size * 1.3) + 'px'; }
+    d.innerHTML = buildRunnerSvg(hue, outfit) + (BUBBLE[pose] || '');
+    const svg = d.querySelector('svg');
+    const p = PROPS[pose];
+    if (p?.body) svg.querySelector('.r-body').insertAdjacentHTML(pose === 'type' || pose === 'hammer' ? 'beforeend' : 'beforeend', p.body);
+    if (p?.arm) svg.querySelector('.r-arm-front').insertAdjacentHTML('beforeend', p.arm);
+    return d;
+  }
+
+  // ---- 1. poses board ----
+  const POSES = [
+    ['run', 'Thinking', 'between steps'],
+    ['type', 'Edit / Write', 'typing at a desk'],
+    ['read', 'Read', 'reading a book'],
+    ['search', 'Grep / Glob', 'magnifying glass'],
+    ['hammer', 'Bash', 'hammering the terminal'],
+    ['web', 'WebSearch / Fetch', 'spinning the globe'],
+    ['wait', 'Needs approval', 'hand up, “!”'],
+    ['done', 'Done', 'wave + ✓'],
+  ];
+  const posesEl = document.getElementById('poses');
+  POSES.forEach(([pose, name, what], i) => {
+    const c = document.createElement('div');
+    c.className = 'pose-card';
+    const st = document.createElement('div'); st.className = 'stage';
+    st.appendChild(bot(pose, [0, 160, 30, 300, 200, 100, 40, 260][i], i % 2 ? { hat: 'cap', hatColor: '#2f6fd6' } : null, 64));
+    c.append(st, Object.assign(document.createElement('b'), { textContent: name }), Object.assign(document.createElement('span'), { textContent: what }));
+    posesEl.appendChild(c);
+  });
+
+  // ---- 2. team stage ----
+  function team(light) {
+    const card = document.createElement('div');
+    card.className = 'card' + (light ? ' light' : '');
+    card.innerHTML = `<div class="card-top"><span class="verb">Headquarter + 2 helpers</span><span>running tests while helpers research</span>
+      <span class="meta">1:42 · 14 steps</span><button class="stop">■ Stop</button></div><div class="floor"></div>
+      <div class="steps"><span>✓ 📖 Read app.js</span><span>✓ ✏ Edit notes.js</span><span>✓ ⌨ npm test</span></div>`;
+    const floor = card.querySelector('.floor');
+    const agents = [
+      { cls: 'lead', name: 'Headquarter', task: 'npm test', pose: 'hammer', hue: 20, outfit: { hat: 'party', hatColor: '#2f6fd6', glasses: 'round', glassesColor: '#3a3f4b' }, size: 64 },
+      { cls: 'sub', name: 'Explore', task: 'Find every place that draws the runner', pose: 'read', hue: 150, outfit: null, size: 52 },
+      { cls: 'sub', name: 'Reviewer', task: 'grep "renderActivity"', pose: 'search', hue: 260, outfit: { glasses: 'nerd', glassesColor: '#1f2228' }, size: 52 },
+      { cls: 'sub', name: 'Plan', task: 'waiting for your OK', pose: 'wait', hue: 300, outfit: null, size: 52 },
+    ];
+    agents.forEach((a) => {
+      const el = document.createElement('div');
+      el.className = 'agent ' + a.cls;
+      el.innerHTML = `<span class="tag">${a.name}</span><span class="task">${a.task}</span>`;
+      el.appendChild(bot(a.pose, a.hue, a.outfit, a.size));
+      floor.appendChild(el);
+    });
+    requestAnimationFrame(() => {
+      const lead = floor.children[0].getBoundingClientRect(), fb = floor.getBoundingClientRect();
+      [...floor.children].slice(1).forEach((sub) => {
+        const r = sub.getBoundingClientRect();
+        const line = document.createElement('div');
+        line.className = 'handoff';
+        line.style.left = (lead.right - fb.left - 40) + 'px';
+        line.style.width = Math.max(10, r.left - lead.right + 70) + 'px';
+        
+        floor.prepend(line);
+      });
+    });
+    return card;
+  }
+  const teams = document.getElementById('teams');
+  teams.appendChild(team(false));
+  teams.appendChild(Object.assign(document.createElement('div'), { style: 'height:12px' }));
+  teams.appendChild(team(true));
+</script>
+</body>
+</html>

@@ -69,7 +69,7 @@
     return true;
   }
   document.addEventListener('click', (e) => {
-    if (e.target === tbSkills || e.target === tbRemote || e.target === tbNewChat || e.target === tbModel) return;
+    if (e.target === tbSkills || e.target === tbRemote || e.target === tbNewChat || e.target === tbModel || e.target.id === 'convoModel') return;
     if (![skillsPanel, remotePanel, newChatPanel, agyModelPanel, claudeModelPanel].some((p) => p.contains(e.target))) closeAll();
   });
 
@@ -112,8 +112,21 @@
     }
     claudeModelPanel.append(head, list);
   }
+  // Model menus pop up above the model text in the input box (the top button is hidden)
+  function placeAboveChip(panel) {
+    const chip = document.getElementById('convoModel');
+    if (!chip || panel.style.display === 'none') return;
+    const r = chip.getBoundingClientRect();
+    const reset = !panel.classList.contains('fx-at-chip');
+    panel.classList.add('fx-at-chip');
+    Object.assign(panel.style, { position: 'fixed', right: 'auto', bottom: 'auto' });
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    panel.style.left = Math.max(6, Math.min(r.left, window.innerWidth - w - 6)) + 'px';
+    panel.style.top = Math.max(6, r.top - h - 6) + 'px';
+    if (reset) new ResizeObserver(() => placeAboveChip(panel)).observe(panel); // content loads / steps change
+  }
   window.openClaudeModelMenu = function () {
-    if (togglePanel(claudeModelPanel, tbModel)) renderClaudeModel('model');
+    if (togglePanel(claudeModelPanel, tbModel)) { renderClaudeModel('model'); placeAboveChip(claudeModelPanel); }
   };
 
   // ---------------- Antigravity model + effort picker ----------------
@@ -198,7 +211,7 @@
   }
   window.openAgyModelMenu = function () {
     if (!tbModel) return;
-    if (togglePanel(agyModelPanel, tbModel)) renderAgyModels('model');
+    if (togglePanel(agyModelPanel, tbModel)) { renderAgyModels('model'); placeAboveChip(agyModelPanel); }
   };
 
   // ---------------- New chat: pick the folder + the agent ----------------

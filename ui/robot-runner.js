@@ -84,13 +84,22 @@
     const sleeve = fit.clothes && SLEEVES[fit.clothes];
     const armFront = sleeve ? clC : mid, armBack = sleeve ? shade(clC, -0.25) : dark;
 
+    // Limbs: the whole limb's OUTLINE is drawn first, then the fills on top, so
+    // elbows and knees show one smooth silhouette instead of a seam where the
+    // pieces overlap. (Moving parts are repeated in both layers; same classes →
+    // same animation, so they stay together.)
+    const line = (shape) => shape.replace('/>', ` fill="${o}" stroke="${o}" stroke-width="2" stroke-linejoin="round"/>`);
+    const fillOf = (shape, c) => shape.replace('/>', ` fill="${c}"/>`);
+    const UPPER = '<rect x="18.5" y="21" width="3" height="7" rx="1.5"/>';
+    const FORE = '<rect class="r-fore" x="18.5" y="26" width="3" height="6" rx="1.5"/>';
     const limb = (cls, upper, lower, fill) =>
-      `<g class="${cls}"><rect x="18.5" y="21" width="3" height="7" rx="1.5" fill="${upper}" stroke="${o}" stroke-width="1"/>` +
-      `<rect class="r-fore" x="18.5" y="26" width="3" height="6" rx="1.5" fill="${fill}" stroke="${o}" stroke-width="1"/></g>`;
+      `<g class="${cls}">${line(UPPER)}${line(FORE)}${fillOf(UPPER, upper)}${fillOf(FORE, fill)}</g>`;
+    const THIGH = '<rect x="18" y="30" width="4" height="8" rx="2"/>';
+    const SHIN = '<rect x="18" y="36" width="4" height="8" rx="2"/>';
+    const FOOT = '<rect x="17" y="42" width="7.5" height="3" rx="1.5"/>';
     const leg = (cls, fill) =>
-      `<g class="${cls}"><rect x="18" y="30" width="4" height="8" rx="2" fill="${fill}" stroke="${o}" stroke-width="1"/>` +
-      `<g class="r-shin"><rect x="18" y="36" width="4" height="8" rx="2" fill="${fill}" stroke="${o}" stroke-width="1"/>` +
-      `<rect x="17" y="42" width="7.5" height="3" rx="1.5" fill="${fill}" stroke="${o}" stroke-width="1"/></g></g>`;
+      `<g class="${cls}">${line(THIGH)}<g class="r-shin">${line(SHIN)}${line(FOOT)}</g>` +
+      `${fillOf(THIGH, fill)}<g class="r-shin">${fillOf(SHIN, fill)}${fillOf(FOOT, fill)}</g></g>`;
     const legBackFill = fit.clothes === 'overalls' ? shade(clC, -0.25) : dark;
     const legFrontFill = fit.clothes === 'overalls' ? clC : mid;
 

@@ -196,4 +196,4 @@ function cleanup() {
   closePanel();
 }
 
-module.exports = { register, cleanup, NOTES_DIR };
+module.exports = { register, cleanup, NOTES_DIR, getWin: () => notesWin };

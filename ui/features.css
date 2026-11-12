@@ -733,9 +733,9 @@ body.theme-vista .ctx-sep, body:not(.theme-aero) .ctx-sep { background: #4a5060;
 #activityRow .r-leg { transform-origin: 20px 31px; animation: r-thigh .5s linear infinite; }
 #activityRow .r-shin { transform-origin: 20px 37px; animation: r-knee .5s linear infinite; }
 #activityRow .r-arm { transform-origin: 20px 22px; animation: r-arm .5s ease-in-out infinite; }
-#activityRow .r-fore { transform-origin: 20px 27px; transform: rotate(-75deg); }
+#activityRow .r-fore { transform-origin: 20px 27px; transform: rotate(-75deg); animation: r-elbow .5s ease-in-out infinite; }
 /* the back limbs are half a stride behind */
-#activityRow .r-leg-back, #activityRow .r-leg-back .r-shin, #activityRow .r-arm-front { animation-delay: -.25s; }
+#activityRow .r-leg-back, #activityRow .r-leg-back .r-shin, #activityRow .r-arm-front, #activityRow .r-arm-front .r-fore { animation-delay: -.25s; }
 
 @keyframes r-thigh {          /* - = forward, + = back */
   0%   { transform: rotate(-32deg); }
@@ -839,3 +839,38 @@ body.theme-vista #activityRow .act-stack-ico, body:not(.theme-aero) #activityRow
 /* scarf tail flutters behind the runner */
 #activityRow .r-scarf-tail { transform-origin: 14px 21px; animation: r-flutter .25s ease-in-out infinite alternate; }
 @keyframes r-flutter { from { transform: rotate(-6deg) scaleY(.85); } to { transform: rotate(5deg) scaleY(1.1); } }
+
+/* ----- hot reload: "Update ready" bar + "Reloaded" toast ----- */
+.hot-bar {
+  position: fixed; left: 50%; top: 6px; transform: translateX(-50%); z-index: 10050;
+  display: flex; align-items: center; gap: 8px; max-width: calc(100vw - 24px);
+  padding: 5px 6px 5px 10px; border-radius: 6px; font: 12px "Segoe UI", sans-serif;
+  color: #3b2a00; background: linear-gradient(#fff6d5, #ffe9a3); border: 1px solid #d9b44a;
+  box-shadow: 0 3px 10px rgba(0,0,0,.25); -webkit-app-region: no-drag;
+}
+.hot-ico { font-size: 14px; }
+.hot-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hot-bar button { font: 11.5px "Segoe UI", sans-serif; padding: 2px 10px; border-radius: 3px; cursor: pointer; border: 1px solid #b8962f; background: linear-gradient(#fffdf5, #f3e2a8); color: #3b2a00; }
+.hot-bar .hot-go { font-weight: 600; background: linear-gradient(#5bb1ff, #2a86d6); border-color: #1a5f9e; color: #fff; }
+.hot-toast {
+  position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 10050;
+  padding: 5px 12px; border-radius: 12px; font: 11.5px "Segoe UI", sans-serif;
+  color: #fff; background: rgba(30, 40, 55, .88); transition: opacity .4s; pointer-events: none;
+}
+.hot-toast.out { opacity: 0; }
+
+/* typewriter caret at the end of a reply that is still typing */
+.tw-caret {
+  display: inline-block; width: 7px; height: 1.05em; margin-left: 2px; vertical-align: text-bottom;
+  background: currentColor; opacity: .7; border-radius: 1px; animation: tw-blink .9s steps(1) infinite;
+}
+@keyframes tw-blink { 50% { opacity: 0; } }
+
+/* elbows bend with the arm swing instead of a fixed L */
+@keyframes r-elbow {
+  0%   { transform: rotate(-48deg); }
+  18%  { transform: rotate(-58deg); }
+  50%  { transform: rotate(-108deg); }
+  62%  { transform: rotate(-112deg); }
+  100% { transform: rotate(-48deg); }
+}

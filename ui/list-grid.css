@@ -80,3 +80,26 @@ body.list-grid.theme-vista #listView .session-row:hover,
 body.list-grid:not(.theme-aero) #listView .session-row:hover { border-color: #4f6a94; }
 body.list-grid.theme-vista #listView .session-row.state-attention,
 body.list-grid:not(.theme-aero) #listView .session-row.state-attention { background: linear-gradient(180deg, #3a2f1c 0%, #2a2214 100%); border-color: #7a5a20; }
+
+/* Model / effort: plain muted text next to the status, not a coloured pill
+   ("Headquarter (Idle) · Opus 5.5 · medium"). #overlayCard beats every theme's chip style. */
+#overlayCard .model-chip,
+#overlayCard .model-chip[class*="effort-"] {
+  background: none; border: 0; box-shadow: none; border-radius: 0;
+  padding: 0; margin: 0 0 0 2px;
+  font: inherit; font-size: 12px; font-weight: 400; letter-spacing: 0;
+  color: inherit; opacity: .6; text-shadow: none;
+}
+#overlayCard .model-chip::before { content: "· "; }
+#overlayCard .pill-header .model-chip { font-size: 11px; }
+
+/* …shown in the input box toolbar next to Usage (click = Model menu) */
+#overlayCard .reply-toolbar .model-chip.rt-model {
+  align-self: center; margin: 0 2px 0 4px; padding: 1px 5px; border-radius: 3px;
+  font-size: 11px; opacity: .65; cursor: pointer; white-space: nowrap;
+}
+#overlayCard .reply-toolbar .model-chip.rt-model::before { content: ""; }
+#overlayCard .reply-toolbar .model-chip.rt-model:hover { opacity: 1; background: rgba(127, 140, 160, .16); }
+
+/* model menus opened from the input box: float above it */
+.mcp-panel.fx-at-chip { z-index: 10010; max-height: calc(100vh - 140px); overflow-y: auto; }
