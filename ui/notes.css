@@ -1,0 +1,71 @@
+/* Pinned-notes panel — Windows 7 look (light) / Vista Dark (dark) */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: transparent; font: 12px "Segoe UI", Tahoma, sans-serif; overflow: hidden; }
+.np {
+  position: absolute; inset: 4px; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden;
+}
+.np-head { display: flex; align-items: center; gap: 6px; padding: 7px 8px 7px 12px; -webkit-app-region: drag; }
+.np-title { font-weight: 600; font-size: 13px; flex: 1; }
+.np-count { font-size: 10.5px; padding: 0 6px; border-radius: 8px; }
+.np-count:empty { display: none; }
+.np-icon { -webkit-app-region: no-drag; width: 24px; height: 22px; border-radius: 3px; border: 1px solid transparent; background: none; cursor: pointer; font-size: 12px; color: inherit; }
+.np-filter { margin: 0 8px 6px; padding: 4px 8px; border-radius: 3px; font: inherit; outline: none; }
+.np-list { flex: 1; overflow-y: auto; padding: 2px 8px 10px; display: flex; flex-direction: column; gap: 7px; }
+
+.np-card { border-radius: 5px; padding: 7px 9px 6px; transition: box-shadow .3s, background .3s; }
+.np-card-top { display: flex; align-items: baseline; gap: 6px; cursor: pointer; }
+.np-caret { font-size: 9px; opacity: .6; width: 8px; flex-shrink: 0; }
+.np-card-title { font-weight: 600; font-size: 12.5px; line-height: 1.3; word-break: break-word; }
+.np-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 3px 0 0 14px; font-size: 10.5px; }
+.np-proj { padding: 0 6px; border-radius: 8px; }
+.np-tag { opacity: .7; }
+.np-when { margin-left: auto; opacity: .6; }
+.np-peek { margin: 4px 0 0 14px; font-size: 11px; opacity: .75; line-height: 1.35; }
+.np-body { margin: 6px 0 0 14px; font-size: 12px; line-height: 1.45; word-break: break-word; }
+.np-body > :first-child { margin-top: 0; }
+.np-body h1, .np-body h2, .np-body h3 { font-size: 13px; margin: 8px 0 4px; }
+.np-body p { margin: 4px 0; }
+.np-body ul, .np-body ol { margin: 4px 0; padding-left: 18px; }
+.np-body code { font: 11px Consolas, "Cascadia Mono", monospace; padding: 0 3px; border-radius: 3px; }
+.np-body pre { padding: 6px 8px; border-radius: 4px; overflow-x: auto; }
+.np-body pre code { padding: 0; background: none !important; }
+.np-body table { border-collapse: collapse; font-size: 11px; }
+.np-body th, .np-body td { border: 1px solid rgba(127,127,127,.35); padding: 2px 6px; }
+.np-body a { color: #2a86d6; }
+.np-acts { display: flex; gap: 5px; margin: 6px 0 0 14px; }
+.np-btn { font: 11px "Segoe UI", sans-serif; padding: 2px 8px; border-radius: 3px; cursor: pointer; }
+.np-btn.danger { color: #fff !important; background: #c0392b !important; border-color: #8e2a20 !important; }
+.np-card.flash { animation: np-flash 1.1s ease-in-out 2; }
+@keyframes np-flash { 50% { box-shadow: 0 0 0 3px rgba(255, 196, 0, .85); } }
+
+.np-empty { margin: auto; padding: 20px; text-align: center; max-width: 260px; line-height: 1.5; }
+.np-empty-ico { font-size: 28px; opacity: .6; }
+.np-empty p { opacity: .75; }
+
+/* ---- light (Windows 7 / XP) ---- */
+.np-light .np { background: linear-gradient(180deg, #f7fbff 0%, #e6f1fb 100%); border: 1px solid #8fa8c4; box-shadow: 0 0 0 1px rgba(255,255,255,.6) inset, 0 4px 14px rgba(0,0,0,.25); color: #1a1a1a; }
+.np-light .np-head { background: linear-gradient(180deg, #e9f2fc, #d3e3f6); border-bottom: 1px solid #a9c0da; }
+.np-light .np-count { background: #2a86d6; color: #fff; }
+.np-light .np-icon:hover { background: #fff; border-color: #a9c0da; }
+.np-light .np-filter { border: 1px solid #a9c0da; background: #fff; color: #1a1a1a; }
+.np-light .np-card { background: #fff; border: 1px solid #c9d8ea; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.np-light .np-card:hover { border-color: #8fb4e0; }
+.np-light .np-proj { background: #e4eefa; color: #2d5a8a; }
+.np-light .np-body code { background: #eef3f9; color: #b0306a; }
+.np-light .np-body pre { background: #f2f6fb; border: 1px solid #dbe5f0; }
+.np-light .np-btn { background: linear-gradient(#fdfdfd, #e9eef4); border: 1px solid #a9b8c9; color: #1a1a1a; }
+.np-light .np-btn:hover { background: linear-gradient(#f2f8fe, #d9eafb); border-color: #7da2ce; }
+
+/* ---- dark (Vista Dark / Dark) ---- */
+.np-dark .np { background: linear-gradient(180deg, #2a2f37 0%, #1d2127 100%); border: 1px solid #000; box-shadow: 0 0 0 1px rgba(255,255,255,.06) inset, 0 4px 14px rgba(0,0,0,.5); color: #e6e9ef; }
+.np-dark .np-head { background: linear-gradient(180deg, #353b45, #272c34); border-bottom: 1px solid #000; }
+.np-dark .np-count { background: #3b6fb0; color: #fff; }
+.np-dark .np-icon:hover { background: #3a414c; border-color: #4a5260; }
+.np-dark .np-filter { border: 1px solid #3a414c; background: #14171c; color: #e6e9ef; }
+.np-dark .np-card { background: #252a32; border: 1px solid #353c47; }
+.np-dark .np-card:hover { border-color: #4f6a94; }
+.np-dark .np-proj { background: #2f3d52; color: #a9c7ee; }
+.np-dark .np-body code { background: #14171c; color: #f0a0c0; }
+.np-dark .np-body pre { background: #14171c; border: 1px solid #2c323b; }
+.np-dark .np-btn { background: linear-gradient(#3a414c, #2c323b); border: 1px solid #14171c; color: #e6e9ef; }
+.np-dark .np-btn:hover { background: linear-gradient(#45505f, #343c48); }

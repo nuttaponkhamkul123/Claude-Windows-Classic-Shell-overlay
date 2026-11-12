@@ -1107,8 +1107,12 @@ class MultiAISessionWatcher extends EventEmitter {
       for (const e of entries) {
         const contentStr = typeof e.content === 'string' ? e.content : '';
         if (!rawModel && contentStr.includes('Model Selection')) {
-          const m = contentStr.match(/changed setting `Model Selection` from [^\r\n]+? to ([^\r\n.]+)\.?/i);
-          if (m && m[1] && !/^none$/i.test(m[1].trim())) rawModel = m[1].trim();
+          const m = contentStr.match(/changed setting `Model Selection` from [^\r\n]+? to ([^\r\n]+?)\.?$/im) ||
+                    contentStr.match(/changed setting `Model Selection` from [^\r\n]+? to ([^\r\n]+)/i);
+          if (m && m[1]) {
+            const cleaned = m[1].trim().replace(/\.\s[\s\S]*$/, '').replace(/\.$/, '');
+            if (!/^none$/i.test(cleaned)) rawModel = cleaned;
+          }
         }
         if (!projectCwd) {
           const wsMatch = contentStr.match(/Active Workspaces:\s*\r?\n-\s*([a-zA-Z]:\\[^\r\n]+|\/[^\r\n]+)/);
@@ -1153,8 +1157,12 @@ class MultiAISessionWatcher extends EventEmitter {
             if (cw) projectCwd = cw[1].replace(/\\\\/g, '\\').trim();
           }
           if (!rawModel) {
-            const ms = headStr.match(/changed setting `Model Selection` from [^\\"\r\n]+? to ([^\\"\r\n.]+)\.?/i);
-            if (ms && ms[1] && !/^none$/i.test(ms[1].trim())) rawModel = ms[1].trim();
+            const ms = headStr.match(/changed setting `Model Selection` from [^\\"\r\n]+? to ([^\\"\r\n]+?)\.?\\r?\\n/i) ||
+                       headStr.match(/changed setting `Model Selection` from [^\\"\r\n]+? to ([^\\"\r\n]+)/i);
+            if (ms && ms[1]) {
+              const cleaned = ms[1].trim().replace(/\.\s[\s\S]*$/, '').replace(/\.$/, '');
+              if (!/^none$/i.test(cleaned)) rawModel = cleaned;
+            }
           }
         } catch (e) {}
       }
@@ -1281,8 +1289,20 @@ class MultiAISessionWatcher extends EventEmitter {
 
           // Check if tool finished output (GENERIC step after planner)
           const isToolDone = latestEntry.step_index > plannerStep && latestEntry.type === 'GENERIC';
+          const toolErrText = isToolDone && latestEntry.status === 'ERROR'
+            ? String(latestEntry.error || latestEntry.content || '')
+            : '';
+          const isCmdDenied = /user denied permission to run command:/i.test(toolErrText);
+          const entryTs = Date.parse(latestEntry.created_at) || mtime;
 
-          if (isToolDone) {
+          if (isToolDone && isCmdDenied && (Date.now() - entryTs > 3000)) {
+            status = 'idle';
+            statusLabel = 'Idle (Command needs approval)';
+            state = 'waiting';
+            title = 'Command requires approval';
+            detail = cleanArgs.CommandLine || toolErrText;
+            fullContent = `**Command requires approval (\`${toolName}\`)**\n\n\`\`\`\n${toolErrText.slice(0, 600)}\n\`\`\``;
+          } else if (isToolDone) {
             statusLabel = `Running (Analyzing ${toolName})`;
             state = 'thinking';
             title = `Antigravity running...`;

@@ -203,8 +203,10 @@ function readAntigravityHistory(filePath, { tailBytes = 6 * 1024 * 1024, max = 8
       }
 
       if (e.type === 'USER_INPUT') {
-        const text = cleanAgUserPrompt(contentStr);
-        const imageCount = Array.isArray(e.media) ? e.media.length : 0;
+        const rawPrompt = cleanAgUserPrompt(contentStr);
+        const inlineImgMatches = rawPrompt.match(/\[Attached image:\s*[^\]]+\]/gi) || [];
+        const text = rawPrompt.replace(/\[Attached image:\s*[^\]]+\]/gi, '').trim();
+        const imageCount = (Array.isArray(e.media) ? e.media.length : 0) + inlineImgMatches.length;
         if (!text && !imageCount) continue;
         msgs.push({ role: 'user', text, ts, imageCount });
       } else if (e.type === 'PLANNER_RESPONSE') {
@@ -245,9 +247,11 @@ function readAntigravityHistory(filePath, { tailBytes = 6 * 1024 * 1024, max = 8
     }
   }
 
-  // Fallback / supplement from SQLite steps if DB has newer steps than transcript.jsonl
+  // Fallback from SQLite steps only when transcript.jsonl was missing or yielded no messages
+  // (SQLite step_payload for tool-only PLANNER_RESPONSE steps contains internal thinking text,
+  // so supplementing an existing transcript.jsonl would leak thinking blobs into chat bubbles.)
   const watcher = ctx?.getWatcher?.();
-  if (dbPath && fs.existsSync(dbPath) && watcher && typeof watcher.getSqlite === 'function') {
+  if (msgs.length === 0 && dbPath && fs.existsSync(dbPath) && watcher && typeof watcher.getSqlite === 'function') {
     const DatabaseSync = watcher.getSqlite();
     if (DatabaseSync) {
       let db;
@@ -641,15 +645,68 @@ Start-Sleep -Milliseconds 40
 }
 
 // ---------------------------------------------------------------------------
-// Open a file in VS Code (falls back to the default app)
+// Open a file, folder, file:// URL (with optional #L123 line anchor), or web URL
 // ---------------------------------------------------------------------------
-async function openFile(p) {
-  if (!p || !path.isAbsolute(p) || !fs.existsSync(p)) return 'missing';
+async function openFile(raw) {
+  if (!raw || typeof raw !== 'string') return 'missing';
+  const trimmed = raw.trim();
+
+  // Web / mail links → default browser
+  if (/^(https?:|mailto:)/i.test(trimmed)) {
+    try {
+      await shell.openExternal(trimmed);
+      return 'browser';
+    } catch (_) {
+      return 'error';
+    }
+  }
+
+  // Parse file:// URL or local path + optional #L123 or :123 line number
+  let filePath = trimmed;
+  let line = '';
+  const hashMatch = filePath.match(/#L(\d+)(?:-L?\d+)?$/i);
+  if (hashMatch) {
+    line = hashMatch[1];
+    filePath = filePath.slice(0, hashMatch.index);
+  }
+  if (/^file:\/\//i.test(filePath)) {
+    try {
+      const { fileURLToPath } = require('url');
+      filePath = fileURLToPath(filePath);
+    } catch (_) {
+      filePath = decodeURIComponent(filePath.replace(/^file:\/\/\/?/i, ''))
+        .replace(/^([a-zA-Z])\|/, '$1:');
+      if (process.platform === 'win32') filePath = filePath.replace(/\//g, '\\');
+    }
+  } else {
+    const colonLine = filePath.match(/^([a-zA-Z]:[\\/][^:]+|\/[^:]+):(\d+)(?::\d+)?$/);
+    if (colonLine) {
+      filePath = colonLine[1];
+      if (!line) line = colonLine[2];
+    }
+  }
+
+  if (!filePath || !path.isAbsolute(filePath) || !fs.existsSync(filePath)) return 'missing';
   try {
-    await shell.openExternal('vscode://file/' + encodeURI(p.replace(/\\/g, '/')));
+    const st = fs.statSync(filePath);
+    if (st.isDirectory()) {
+      const err = await shell.openPath(filePath);
+      return err ? 'error' : 'folder';
+    }
+  } catch (_) {}
+
+  try {
+    const encodedPath = filePath
+      .replace(/\\/g, '/')
+      .replace(/^\/+/, '')
+      .split('/')
+      .map((seg, idx) => (idx === 0 && /^[a-zA-Z]:$/.test(seg) ? seg : encodeURIComponent(seg)))
+      .join('/');
+    const vscodeUri = `vscode://file/${encodedPath}${line ? `:${line}` : ''}`;
+    await shell.openExternal(vscodeUri);
     return 'vscode';
   } catch (_) {
-    const err = await shell.openPath(p);
+    const err = await shell.openPath(filePath);
     return err ? 'error' : 'default';
   }
 }
@@ -832,6 +889,36 @@ function register(c) {
   // Git info for a session's folder (read-only git commands, cached a few seconds)
   ipcMain.handle('git-info', (_e, cwd) => gitInfo(cwd));
 
+  // Desktop shortcut creator (Windows .lnk via Electron's shell.writeShortcutLink)
+  function createDesktopShortcut({ force = false } = {}) {
+    if (process.platform !== 'win32') return { ok: false, error: 'Windows only' };
+    try {
+      const desktopDir = app.getPath('desktop');
+      const shortcutPath = path.join(desktopDir, 'AI Overlay HUD.lnk');
+      if (!force && fs.existsSync(shortcutPath)) return { ok: true, path: shortcutPath, existed: true };
+      const vbsPath = path.join(__dirname, 'Launch AI HUD.vbs');
+      const wscriptExe = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'wscript.exe');
+      const target = fs.existsSync(vbsPath) && fs.existsSync(wscriptExe) ? wscriptExe : process.execPath;
+      const args = target === wscriptExe ? `"${vbsPath}"` : `"${__dirname}"`;
+      const ok = shell.writeShortcutLink(shortcutPath, fs.existsSync(shortcutPath) ? 'replace' : 'create', {
+        target,
+        args,
+        cwd: __dirname,
+        description: 'Multi-AI Session Overlay HUD (Claude Code & Antigravity)',
+        icon: process.execPath,
+        iconIndex: 0,
+      });
+      if (ok) setSetting('desktopShortcutCreated', true);
+      return { ok, path: shortcutPath };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  }
+  ipcMain.handle('create-desktop-shortcut', () => createDesktopShortcut({ force: true }));
+  if (process.platform === 'win32' && !getSetting('desktopShortcutCreated', false)) {
+    createDesktopShortcut({ force: false });
+  }
+
   // Global hotkey: bring the HUD up and put the cursor in the input box
   const HOTKEY = 'CommandOrControl+Alt+Space';
   try {
@@ -848,5 +935,5 @@ function register(c) {
 
 module.exports = {
   register, onSync, readClaudeHistory, readAntigravityHistory, readSessionHistory, pathForSession,
-  getSetting, setSetting, trackChild, aliasChild, wasStopped, editFromToolUse, mergeEdit,
+  getSetting, setSetting, trackChild, aliasChild, wasStopped, editFromToolUse, mergeEdit, openFile,
 };

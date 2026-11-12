@@ -198,6 +198,32 @@ function appendBubble(msgArg) {
   return bubble;
 }
 
+function handleHudLinkClick(e, a) {
+  const href = a.getAttribute('href') || '';
+  if (!href || href.startsWith('#')) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (/^conversation:\/\//i.test(href)) {
+    const convId = href.replace(/^conversation:\/\/\/?/i, '').trim();
+    const target = sessionsList.find((s) => s.sessionUuid === convId || s.id.endsWith(convId));
+    if (target) showDetailView(target);
+    return;
+  }
+  window.electronAPI.openFile?.(href).then((res) => {
+    if (res === 'missing' && replyStatusMsg) {
+      replyStatusMsg.textContent = '⚠ File not found on disk';
+      setTimeout(() => {
+        if (replyStatusMsg.textContent === '⚠ File not found on disk') replyStatusMsg.textContent = '';
+      }, 3000);
+    }
+  });
+}
+
+document.addEventListener('click', (e) => {
+  const a = e.target.closest?.('a[href]');
+  if (a) handleHudLinkClick(e, a);
+}, true);
+
 function attachCodeCopyHandlers(container) {
   container.querySelectorAll('pre').forEach((pre) => {
     if (pre.dataset.copyBound) return;
@@ -214,6 +240,11 @@ function attachCodeCopyHandlers(container) {
       pre.style.borderColor = '#10b981';
       setTimeout(() => pre.style.borderColor = originalBorder, 1000);
     });
+  });
+  container.querySelectorAll('a[href]').forEach((a) => {
+    if (a.dataset.linkBound) return;
+    a.dataset.linkBound = '1';
+    a.addEventListener('click', (e) => handleHudLinkClick(e, a));
   });
 }
 
@@ -513,6 +544,11 @@ function submitReply(text) {
     replyStatusMsg.textContent = '⏳ Starting the new conversation… send again in a moment';
     return;
   }
+
+  // Sent while the agent is still busy: the agent queues it and answers after the
+  // current reply, but our "You said" box is drawn right now, ABOVE the reply that
+  // is still being written. Redraw from the transcript until that turn is over.
+  if (currentActiveSession && currentActiveSession.status === 'running') resyncFromDisk.add(currentActiveSession.id);
 
   const userMsg = {
     role: 'user',
@@ -1728,9 +1764,35 @@ function resyncOpenChat() {
   if (document.getElementById('streamingBubble')) return; // a HUD reply is still streaming — retry when it ends
   if (syncedRecord.get(updated.id) === updated.lastRecordId) return;
   syncedRecord.set(updated.id, updated.lastRecordId);
+  if (resyncFromDisk.has(updated.id)) { redrawInLogOrder(updated); return; }
   // A message typed somewhere else (remote control, VS Code, a terminal) is only in the
   // transcript: pull it in first so its "You said" box shows before the reply.
   redrawIfRemoteMessages(updated).then((redrawn) => { if (!redrawn) syncLiveMessage(updated); });
+}
+
+// Messages sent while the agent was busy (see submitReply): draw the chat in the
+// transcript's order, so each reply sits under the message it answers.
+var resyncFromDisk = new Set();
+async function redrawInLogOrder(s) {
+  let msgs = null;
+  try { msgs = await window.electronAPI.getSessionHistory(s.id); } catch (e) {}
+  if (currentActiveSession?.id !== s.id || document.getElementById('streamingBubble')) return;
+  if (!msgs || !msgs.length) { syncLiveMessage(s); return; }
+  const history = sessionChatHistory.get(s.id) || [];
+  sessionChatHistory.set(s.id, history);
+  await loadHistoryFromDisk(s, history, msgs);
+  // The log joins a turn's texts into one reply; the live text is only its newest
+  // piece. Already there → just mark it live; otherwise the log is a step behind.
+  const shown = sessionChatHistory.get(s.id) || [];
+  const last = shown[shown.length - 1];
+  const newest = String(s.fullContent || '').trim();
+  if (last && last.role === 'assistant' && newest && String(last.text || '').trim().endsWith(newest)) {
+    last.live = s.status === 'running';
+    last.el?.classList.toggle('live', last.live);
+  } else if (!isPlaceholderText(newest)) {
+    syncLiveMessage(s);
+  }
+  if (s.status !== 'running') resyncFromDisk.delete(s.id); // that turn is over
 }
 
 const normMsg = (t) => String(t || '').replace(/\s+/g, ' ').trim();
@@ -1842,23 +1904,144 @@ function currentActivity(s) {
   return s.state === 'tool' ? { kind: 'tool', tool: 'tool' } : { kind: 'thinking', steps: 0 };
 }
 
+// Activity card: the session's robot runs in place on the left, recent steps below
+var activityTrail = new Map(); // sessionId -> { sig, cur, steps: [{ icon, label, at }] }
+var activityTrailOpen = false;  // the "✓ N done ▾" list is expanded
+function activityIcon(act) {
+  const t = act.tool || '';
+  if (act.kind === 'compacting') return '🗜';
+  if (/Bash|PowerShell|command/i.test(t)) return '⌨';
+  if (/Read|view|read_/i.test(t)) return '📖';
+  if (/Edit|replace|Write|write_/i.test(t)) return '✏';
+  if (/Grep|Glob|search|find|list_dir/i.test(t)) return '🔍';
+  if (/Web|url|browser/i.test(t)) return '🌐';
+  if (/Task|Agent|subagent|swarm/i.test(t)) return '🤖';
+  return '⚙';
+}
+
+function renderActivityProgress(row, s, act, verb, target) {
+  let run = row.querySelector('.act-runwrap');
+  if (!run) {
+    run = document.createElement('div');
+    run.className = 'act-runwrap';
+    run.innerHTML = '<span class="act-ground"></span><span class="act-bot"></span>';
+    row.prepend(run);
+  }
+  let box = row.querySelector('.act-progress');
+  if (!box) {
+    box = document.createElement('div');
+    box.className = 'act-progress';
+    box.innerHTML = '<div class="act-trail"></div>';
+    row.appendChild(box);
+  }
+  // Same colour as the contact picture (the runner is drawn in the default robot palette)
+  // Same colour AND outfit as the contact picture (hat, glasses, clothes in profile)
+  const hue = typeof robotHueFor === 'function' ? robotHueFor(s) : 0;
+  const outfit = typeof window.robotOutfitFor === 'function' ? window.robotOutfitFor(s) : null;
+  const bot = run.querySelector('.act-bot');
+  const look = `${hue}|${outfit ? JSON.stringify(outfit) : ''}`;
+  if (bot.dataset.look !== look && typeof window.buildRunnerSvg === 'function') {
+    bot.dataset.look = look;
+    bot.innerHTML = window.buildRunnerSvg(hue, outfit);
+  }
+
+  // Finished steps: every time the activity changes, the old one is "done".
+  // Shown as one compact pill ("stacked" icons + count); click it for the full list.
+  let tr = activityTrail.get(s.id);
+  if (!tr) { tr = { sig: '', cur: null, steps: [] }; activityTrail.set(s.id, tr); }
+  const sig = `${act.kind}|${verb}|${target}`;
+  if (sig !== tr.sig) {
+    if (tr.cur && tr.cur.real) tr.steps = [...tr.steps, tr.cur].slice(-30);
+    tr.sig = sig;
+    tr.cur = { icon: activityIcon(act), verb, target, at: Date.now(), real: act.kind === 'tool' || act.kind === 'compacting' };
+  }
+
+  let pill = row.querySelector('.act-stack');
+  if (!pill) {
+    pill = document.createElement('button');
+    pill.className = 'act-stack';
+    pill.addEventListener('click', (e) => {
+      e.stopPropagation();
+      activityTrailOpen = !activityTrailOpen;
+      if (currentActiveSession) renderActivity(currentActiveSession);
+    });
+    row.appendChild(pill);
+  }
+  const n = tr.steps.length;
+  pill.style.display = n ? '' : 'none';
+  pill.classList.toggle('open', activityTrailOpen);
+  pill.title = activityTrailOpen ? 'Hide finished steps' : 'Show finished steps';
+  pill.textContent = '';
+  const icons = document.createElement('span');
+  icons.className = 'act-stack-icons';
+  for (const st of tr.steps.slice(-3).reverse()) {
+    const i = document.createElement('span');
+    i.className = 'act-stack-ico';
+    i.textContent = st.icon;
+    icons.appendChild(i);
+  }
+  const label = document.createElement('span');
+  label.textContent = `${n} done`;
+  const caret = document.createElement('span');
+  caret.className = 'act-stack-caret';
+  caret.textContent = activityTrailOpen ? '▴' : '▾';
+  pill.append(icons, label, caret);
+
+  const trail = box.querySelector('.act-trail');
+  trail.textContent = '';
+  box.style.display = n && activityTrailOpen ? '' : 'none';
+  if (n && activityTrailOpen) {
+    for (const st of [...tr.steps].reverse()) {
+      const r = document.createElement('div');
+      r.className = 'act-step';
+      const ic = document.createElement('span'); ic.className = 'act-step-ico'; ic.textContent = st.icon;
+      const v = document.createElement('span'); v.className = 'act-step-verb'; v.textContent = st.verb;
+      const t = document.createElement('span'); t.className = 'act-step-target'; t.textContent = st.target || '';
+      const when = document.createElement('span'); when.className = 'act-step-time'; when.textContent = fmtElapsed(Date.now() - st.at) + ' ago';
+      r.title = st.target ? `${st.verb} ${st.target}` : st.verb;
+      r.append(ic, v, t, when);
+      trail.appendChild(r);
+    }
+  }
+}
+
+var activityHideTimer = null;
 function renderActivity(s) {
   const row = document.getElementById('activityRow');
   if (!row) return;
   const isAttn = s && (s.unread || s.state === 'attention');
   const working = s && !isAttn && !s.deliveryFailed && (s.status === 'running' || s.context?.compacting);
   if (!working) {
-    row.style.display = 'none';
-    if (s) activityFirstSeen.delete(s.id);
-    if (activityTimer) { clearInterval(activityTimer); activityTimer = null; }
+    if (row.style.display === 'none') {
+      avatarFrameImg()?.classList.remove('avatar-away'); // never leave the frame empty
+      return;
+    }
+    // Still showing: the status often blinks to "done" for a moment between
+    // tool calls. Only treat it as finished if it stays that way.
+    if (!activityHideTimer) {
+      activityHideTimer = setTimeout(() => {
+        activityHideTimer = null;
+        const cur = currentActiveSession;
+        const still = cur && !(cur.unread || cur.state === 'attention') && !cur.deliveryFailed &&
+          (cur.status === 'running' || cur.context?.compacting);
+        if (still) return;
+        avatarJumpBack(row);
+        row.style.display = 'none';
+        if (cur) { activityFirstSeen.delete(cur.id); activityTrail.delete(cur.id); }
+        activityTrailOpen = false;
+        if (activityTimer) { clearInterval(activityTimer); activityTimer = null; }
+      }, 1500);
+    }
     return;
   }
+  if (activityHideTimer) { clearTimeout(activityHideTimer); activityHideTimer = null; }
   if (!activityFirstSeen.has(s.id)) activityFirstSeen.set(s.id, Date.now());
 
   const agent = agentLabel(s.source, s.id);
   const act = currentActivity(s);
   const { verb, target } = describeActivity(act, agent);
   row.className = `activity-row kind-${act.kind || 'tool'}`;
+  renderActivityProgress(row, s, act, verb, target);
   document.getElementById('activityVerb').textContent = verb;
   const tEl = document.getElementById('activityTarget');
   tEl.textContent = target;
@@ -1878,7 +2061,136 @@ function renderActivity(s) {
     if (row.style.display === 'none' || !row.isConnected) { clearInterval(activityTimer); activityTimer = null; return; }
     tick();
   }, 1000);
+  const wasHidden = row.style.display === 'none';
   row.style.display = '';
+  if (wasHidden) avatarJumpToRunner(row);
+}
+
+// On send: the big contact avatar leaps out of its frame, arcs down into the
+// activity card and vanishes in a puff of smoke; the runner appears from it.
+// When the reply is done the runner poofs away and the avatar jumps back home.
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const avatarFrameImg = () => document.querySelector('#dpAgentImg img') || document.getElementById('dpAgentImg');
+
+function smokePuff(x, y, size = 46) {
+  const box = document.createElement('div');
+  box.className = 'smoke-puff';
+  Object.assign(box.style, { left: x + 'px', top: y + 'px' });
+  const n = 10;
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement('i');
+    const ang = (i / n) * Math.PI * 2 + Math.random() * 0.5;
+    const core = i % 3 === 0; // a few big puffs in the middle so the cloud is solid
+    const dist = size * (core ? 0.08 : 0.35 + Math.random() * 0.25);
+    const r = size * (core ? 0.5 : 0.28 + Math.random() * 0.14);
+    Object.assign(p.style, { width: r + 'px', height: r + 'px', marginLeft: -r / 2 + 'px', marginTop: -r / 2 + 'px' });
+    box.appendChild(p);
+    p.animate([
+      { transform: 'translate(0,0) scale(.2)', opacity: 1 },
+      { transform: `translate(${Math.cos(ang) * dist * 0.7}px, ${Math.sin(ang) * dist * 0.7 - 4}px) scale(1.15)`, opacity: 1, offset: 0.45 },
+      { transform: `translate(${Math.cos(ang) * dist}px, ${Math.sin(ang) * dist - 10}px) scale(.6)`, opacity: 0 },
+    ], { duration: 560 + Math.random() * 120, easing: 'ease-out', fill: 'forwards' });
+  }
+  // cartoon "pop" lines
+  for (let i = 0; i < 4; i++) {
+    const l = document.createElement('b');
+    l.style.transform = `rotate(${i * 90 + 45}deg)`;
+    box.appendChild(l);
+    l.animate([{ opacity: 1, height: '2px', top: '-6px' }, { opacity: 0, height: '9px', top: `-${size * 0.75}px` }], { duration: 380, easing: 'ease-out', fill: 'forwards' });
+  }
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 800);
+}
+
+function makeGhost(img, rect) {
+  const ghost = img.cloneNode(true);
+  ghost.removeAttribute('id');
+  ghost.className = 'avatar-ghost';
+  ghost.style.visibility = '';
+  Object.assign(ghost.style, { left: rect.left + 'px', top: rect.top + 'px', width: rect.width + 'px', height: rect.height + 'px' });
+  document.body.appendChild(ghost);
+  return ghost;
+}
+let avatarFlight = null; // the jump currently playing
+function cancelAvatarFlight() {
+  if (!avatarFlight) return;
+  const f = avatarFlight;
+  avatarFlight = null;
+  f.anim.onfinish = null;
+  f.anim.cancel();
+  f.ghost.remove();
+}
+const frameImgOf = (el) => (el.tagName === 'IMG' ? el : (el.querySelector('img') || el));
+
+function avatarJumpToRunner(row) {
+  const home = avatarFrameImg();
+  const wrap = row.querySelector('.act-runwrap');
+  if (!home || !wrap) return;
+  if (reducedMotion()) { home.classList.add('avatar-away'); return; }
+  requestAnimationFrame(() => {
+    const a = home.getBoundingClientRect();
+    const b = wrap.getBoundingClientRect();
+    if (!a.width || !b.width) return;
+    const k = Math.min(1, (b.height * 0.9) / a.height);
+    const dx = b.left + b.width / 2 - (a.left + a.width / 2);
+    const dy = b.top + b.height / 2 - (a.top + a.height / 2);
+    cancelAvatarFlight();
+    row.classList.add('runner-incoming');
+    const ghost = makeGhost(frameImgOf(home), a);
+    home.classList.add('avatar-away');
+    const anim = ghost.animate([
+      { transform: 'translate(0,0) scale(1) rotate(0)' },
+      { transform: `translate(${dx * 0.12}px, -26px) scale(1.06) rotate(-12deg)`, offset: 0.22, easing: 'ease-in' },
+      { transform: `translate(${dx}px, ${dy}px) scale(${k}) rotate(8deg)` },
+    ], { duration: 700, easing: 'cubic-bezier(.3,.1,.6,1)', fill: 'forwards' });
+    avatarFlight = { ghost, anim };
+    anim.onfinish = () => {
+      avatarFlight = null;
+      // poof! the avatar vanishes, the runner appears out of the smoke
+      smokePuff(b.left + b.width / 2, b.top + b.height / 2);
+      ghost.animate([
+        { opacity: 1, transform: `translate(${dx}px, ${dy}px) scale(${k})` },
+        { opacity: 0, transform: `translate(${dx}px, ${dy}px) scale(${k * 0.3})` },
+      ], { duration: 180, fill: 'forwards' }).onfinish = () => ghost.remove();
+      setTimeout(() => {
+        row.classList.remove('runner-incoming');
+        wrap.animate([
+          { transform: 'scale(.3)', opacity: 0 },
+          { transform: 'scale(1.12, .9)', opacity: 1, offset: 0.6 },
+          { transform: 'none', opacity: 1 },
+        ], { duration: 300, easing: 'ease-out' });
+      }, 140);
+    };
+  });
+}
+
+// Reply finished: the runner vanishes in smoke and the avatar hops back into its frame
+function avatarJumpBack(row) {
+  const home = avatarFrameImg();
+  if (!home || !home.classList.contains('avatar-away')) return;
+  const wrap = row.querySelector('.act-runwrap');
+  const b = wrap && wrap.getBoundingClientRect();
+  const a = home.getBoundingClientRect();
+  if (reducedMotion() || !b || !b.width || !a.width) { home.classList.remove('avatar-away'); return; }
+  smokePuff(b.left + b.width / 2, b.top + b.height / 2);
+  const k = Math.min(1, (b.height * 0.9) / a.height);
+  const dx = b.left + b.width / 2 - (a.left + a.width / 2);
+  const dy = b.top + b.height / 2 - (a.top + a.height / 2);
+  cancelAvatarFlight();
+  const ghost = makeGhost(frameImgOf(home), a);
+  const anim = ghost.animate([
+    { transform: `translate(${dx}px, ${dy}px) scale(${k})`, opacity: 0 },
+    { transform: `translate(${dx}px, ${dy}px) scale(${k})`, opacity: 1, offset: 0.15 },
+    { transform: `translate(${dx * 0.4}px, ${dy * 0.25 - 40}px) scale(${(k + 1) / 2}) rotate(-14deg)`, offset: 0.6, easing: 'ease-in' },
+    { transform: 'translate(0,0) scale(1) rotate(0)', opacity: 1 },
+  ], { duration: 780, easing: 'ease-out', fill: 'forwards' });
+  avatarFlight = { ghost, anim };
+  anim.onfinish = () => {
+    avatarFlight = null;
+    ghost.remove();
+    home.classList.remove('avatar-away');
+    home.animate([{ transform: 'scale(1.18, .85)' }, { transform: 'scale(.94, 1.06)' }, { transform: 'none' }], { duration: 300, easing: 'ease-out' });
+  };
 }
 
 // Text that is only a stand-in ("*Claude is thinking...*"), not a real reply
@@ -1894,6 +2206,17 @@ function syncLiveMessage(s) {
   sessionChatHistory.set(s.id, history);
   const last = history[history.length - 1];
   const stillWorking = s.status === 'running';
+
+  // Just sent a message: until the agent writes something new, its "latest text"
+  // is still the PREVIOUS reply. Don't show that again as the new answer.
+  if (last && last.role === 'user') {
+    const prevReply = [...history].reverse().find((m) => m.role === 'assistant');
+    const latest = normMsg(s.fullContent);
+    const prev = prevReply ? normMsg(prevReply.text) : '';
+    // whole previous reply, or a long piece of it (the log joins a turn's texts);
+    // a short new answer like "Done." must not be mistaken for the old one
+    if (latest && (prev === latest || (latest.length > 40 && prev.endsWith(latest)))) return;
+  }
 
   if (last && last.role === 'assistant' && last.text === s.fullContent) {
     last.live = stillWorking;
@@ -2295,10 +2618,14 @@ let agySlashModelOptions = null;
 let slashItems = [];
 let slashIndex = 0;
 
-async function loadSlashCommands(cwd, source = currentActiveSession?.source) {
+async function loadSlashCommands(cwd, forceOrSource = false, maybeSource = undefined) {
+  const force = typeof forceOrSource === 'boolean' ? forceOrSource : false;
+  const source = typeof forceOrSource === 'string'
+    ? forceOrSource
+    : (maybeSource !== undefined ? maybeSource : currentActiveSession?.source);
   const src = source === 'antigravity' ? 'antigravity' : 'claude';
   const key = `${src}:${cwd || ''}`;
-  if (slashCache.has(key)) return slashCache.get(key);
+  if (!force && slashCache.has(key)) return slashCache.get(key);
   let list = [];
   try { list = (await window.electronAPI.listSlashCommands(cwd, src)) || []; } catch (e) {}
   slashCache.set(key, list);
@@ -2316,10 +2643,11 @@ async function getAgySlashModelOptions() {
   ];
   try {
     const r = await window.electronAPI.agyModels?.();
-    if (r?.models?.length) {
+    const list = Array.isArray(r) ? r : r?.models;
+    if (Array.isArray(list) && list.length) {
       agySlashModelOptions = [
         { value: 'default', description: 'Use the session’s model' },
-        ...r.models.map((m) => ({ value: m.slug, description: m.name })),
+        ...list.map((m) => ({ value: m.id || m.slug, description: m.name || m.id || m.slug })),
       ];
       return agySlashModelOptions;
     }
@@ -2973,9 +3301,24 @@ function isUsagePanelOpen() {
 function openUsagePanel() {
   mcpPanel.style.display = 'none';
   usagePanel.style.display = '';
+  fitUsagePanel();
   tbUsage?.classList.add('open');
   loadUsage();
 }
+
+// The panel opens upward from the input box: keep its top below the toolbar
+// (it used to slide under the address bar when the window is short or the
+// activity card is showing). The body scrolls instead.
+function fitUsagePanel() {
+  if (!isUsagePanelOpen()) return;
+  const host = usagePanel.offsetParent || usagePanel.parentElement;
+  const toolbar = document.querySelector('#detailView .convo-toolbar');
+  const ceiling = toolbar ? toolbar.getBoundingClientRect().bottom + 6 : 60;
+  const room = host.getBoundingClientRect().top - 4 - ceiling;
+  usagePanel.style.maxHeight = Math.max(160, Math.floor(room)) + 'px';
+}
+window.addEventListener('resize', fitUsagePanel);
+new ResizeObserver(fitUsagePanel).observe(document.getElementById('activityRow') || document.body);
 
 function closeUsagePanel() {
   if (!usagePanel) return;

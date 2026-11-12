@@ -179,8 +179,12 @@ async function parseAntigravityFile(file) {
         }
       }
       if (c.includes('Model Selection')) {
-        const mm = c.match(/changed setting `Model Selection` from [^\r\n]+? to ([^\r\n.]+)\.?/i);
-        if (mm && mm[1] && !/^none$/i.test(mm[1].trim())) currentModel = mm[1].trim();
+        const mm = c.match(/changed setting `Model Selection` from [^\r\n]+? to ([^\r\n]+?)\.?$/im) ||
+                   c.match(/changed setting `Model Selection` from [^\r\n]+? to ([^\r\n]+)/i);
+        if (mm && mm[1]) {
+          const cleaned = mm[1].trim().replace(/\.\s[\s\S]*$/, '').replace(/\.$/, '');
+          if (!/^none$/i.test(cleaned)) currentModel = cleaned;
+        }
       }
     }
     if (e.type === 'PLANNER_RESPONSE' && (e.input_tokens || e.output_tokens)) {

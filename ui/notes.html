@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <!-- Notes are written by an AI: no scripts or handlers from note content can run here -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data: https:; font-src 'self' file:">
+  <title>Pinned notes</title>
+  <link rel="stylesheet" href="notes.css">
+</head>
+<body>
+  <div class="np">
+    <div class="np-head">
+      <span class="np-title">📌 Pinned notes</span>
+      <span id="npCount" class="np-count"></span>
+      <button id="npFolder" class="np-icon" title="Open the notes folder">📂</button>
+      <button id="npClose" class="np-icon" title="Close">✕</button>
+    </div>
+    <input id="npFilter" class="np-filter" placeholder="Filter notes…" spellcheck="false">
+    <div id="npList" class="np-list"></div>
+    <div id="npEmpty" class="np-empty" hidden>
+      <div class="np-empty-ico">📌</div>
+      <b>No pinned notes yet</b>
+      <p>Ask Claude in any chat: <i>"pin this as a note"</i>.<br>It saves Markdown here with the <code>pin_note</code> tool.</p>
+    </div>
+  </div>
+  <script src="marked.min.js"></script>
+  <script src="notes.js"></script>
+</body>
+</html>

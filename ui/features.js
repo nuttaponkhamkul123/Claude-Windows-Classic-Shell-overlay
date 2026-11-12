@@ -354,7 +354,8 @@
         if (!sessionChatHistory.has(id)) sessionChatHistory.set(id, []);
         sessionChatHistory.get(id).push(userMsg);
         liveActivity.set(id, { act: { kind: 'sending', since: Date.now() }, at: Date.now() });
-        api.sendReply({ text: item.text, ...att, session: s, options: {} });
+        const opts = typeof takeReplyOptions === 'function' ? takeReplyOptions(s) : {};
+        api.sendReply({ text: item.text, ...att, session: s, options: opts });
       }
       renderQueue();
     }
@@ -633,8 +634,11 @@
   const rowExport = setRow('btnExport', '💾', 'Export conversation…');
   rowExport.querySelector('.set-check').remove();
   rowExport.title = 'Save this conversation as a Markdown file';
+  const rowShortcut = setRow('btnCreateShortcut', '🖥', 'Create Desktop shortcut');
+  rowShortcut.querySelector('.set-check').remove();
+  rowShortcut.title = 'Create an "AI Overlay HUD" shortcut on your Desktop';
   if (settingsPanelEl) {
-    (sep || restartRow)?.before(rowNotify, rowDigest, digestBox, rowExport);
+    (sep || restartRow)?.before(rowNotify, rowDigest, digestBox, rowExport, rowShortcut);
   }
 
   ready.then(() => rowNotify.classList.toggle('active', store.notify !== false));
@@ -667,6 +671,15 @@
     }
     const saved = await api.exportConversation?.(title, md);
     if (saved) replyStatusMsg.textContent = `💾 Saved to ${saved}`;
+  });
+  rowShortcut.addEventListener('click', async () => {
+    closeSettingsPanel();
+    const res = await api.createDesktopShortcut?.();
+    if (replyStatusMsg) {
+      replyStatusMsg.textContent = res?.ok
+        ? `✓ Desktop shortcut created: ${res.path}`
+        : `⚠ Could not create shortcut: ${res?.error || 'unknown error'}`;
+    }
   });
 
   // -------------------------------------------------------------------------

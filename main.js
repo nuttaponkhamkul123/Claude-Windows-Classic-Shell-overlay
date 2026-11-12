@@ -71,8 +71,21 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadFile(path.join(__dirname, 'ui', 'index.html'));
+  const indexHtmlPath = path.join(__dirname, 'ui', 'index.html');
+  mainWindow.loadFile(indexHtmlPath);
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
+
+  // Never let a clicked link (file://, https://, etc.) navigate the HUD window away from index.html
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url) features.openFile(url);
+    return { action: 'deny' };
+  });
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const normUrl = String(url || '').replace(/\\/g, '/').toLowerCase();
+    if (normUrl.endsWith('/ui/index.html')) return;
+    event.preventDefault();
+    if (url) features.openFile(url);
+  });
 
   mainWindow.on('resize', () => {
     if (!mainWindow || dockState.docked || boundsAnim) return; // don't remember mini/animation sizes
@@ -146,6 +159,23 @@ function createTray() {
   });
 }
 
+// Everything the main/ipc/* modules are allowed to reach. Passing it explicitly
+// keeps the handler modules free of imports from this file (no require cycle).
+const appCtx = {
+  getWin: () => mainWindow,
+  getWatcher: () => watcher,
+  window: {
+    isDocked: () => dockState.docked,
+    undock: () => undock(),
+  },
+  appState: {
+    get dragTimer() { return dragTimer; },
+    get boundsAnim() { return boundsAnim; },
+    lastNudgeAt: 0,
+    shakeTimer: null,
+  },
+};
+
 app.whenReady().then(() => {
   createWindow();
   createTray();
@@ -155,6 +185,17 @@ app.whenReady().then(() => {
   const skillInstaller = require('./skill-install-main');
   skillInstaller.register({ getWin: () => mainWindow });
   app.on('will-quit', () => skillInstaller.cleanup());
+  const notes = require('./main/notes');
+  notes.register({ getWin: () => mainWindow });
+  app.on('will-quit', () => notes.cleanup());
+
+  // Channels that no longer need window/dock state.
+  const { createRegistry } = require('./main/ipc');
+  const ipc = createRegistry(appCtx);
+  require('./main/ipc/clipboard').register(ipc);
+  require('./main/ipc/snap').register(ipc);
+  require('./main/ipc/permissions').register(ipc, appCtx, permState);
+
   features.register({
     app, ipcMain,
     getWin: () => mainWindow,
@@ -225,6 +266,14 @@ ipcMain.handle('get-window-size', () => {
   return mainWindow ? mainWindow.getSize() : [currentWidth, COMPACT_HEIGHT];
 });
 
+ipcMain.on('minimize-window', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.minimize();
+});
+
+ipcMain.on('close-window', () => {
+  app.quit();
+});
+
 ipcMain.handle('toggle-pin', () => {
   if (!mainWindow) return isAlwaysOnTop;
   isAlwaysOnTop = !isAlwaysOnTop;
@@ -281,168 +330,21 @@ function findClaudeBinary() {
 }
 
 // ===========================================================================
-// Tool approvals for replies sent from the HUD (like the VS Code extension).
-// `claude -p` can't show a permission prompt, so we register permission-mcp.js
-// as --permission-prompt-tool. It POSTs each request here; we show it in the
-// HUD and answer with the user's choice.
 // ===========================================================================
-const PERM_TOKEN = crypto.randomBytes(24).toString('hex');
-let permPort = 0;
-const pendingPermissions = new Map(); // id -> { res, onDecision, timer, sessionId, toolName }
-
-// ---- Saved "Always allow" rules (persist across restarts) ------------------
-// A rule = { id, tool, folder, prefix }.  folder '' = any folder; prefix is
-// only used for Bash ("npm test" matches "npm test --silent" but never a
-// command that chains something else on with ; & | ` $( > < or a newline).
-const RULES_FILE = path.join(os.homedir(), '.ovly-claude', 'approval-rules.json');
-let approvalRules = [];
-try { approvalRules = JSON.parse(fs.readFileSync(RULES_FILE, 'utf8')).filter((r) => r && r.tool); } catch (e) {}
-function saveRules() {
-  try {
-    fs.mkdirSync(path.dirname(RULES_FILE), { recursive: true });
-    fs.writeFileSync(RULES_FILE, JSON.stringify(approvalRules, null, 2));
-  } catch (e) { console.error('[Main] could not save approval rules:', e.message); }
-}
-const normFolder = (p) => (p ? path.resolve(String(p)).replace(/[\\/]+$/, '').toLowerCase() : '');
-// Chained shell commands ("cd x && sed … && npm test | grep y") are split into
-// parts; see approval-shell.js for what is harmless, what can get a rule and
-// what always asks (command substitution, redirects into files, rm, node, …).
-const shellRules = require('./approval-shell');
-function sessionCwd(sessionId) {
-  try {
-    const s = watcher && watcher.sessions && watcher.sessions.get(sessionId);
-    return s && s.cwd ? s.cwd : '';
-  } catch (e) { return ''; }
-}
-
-const isShellToolName = (t) => t === 'Bash' || t === 'run_command';
-
-// Is this request covered by saved rules?  For a shell command also returns
-// what "Always allow" can offer: { allowed, always: { prefixes, stillAsks } | null }
-function checkRules(sessionId, toolName, input, cwdOverride = '') {
-  const cwd = cwdOverride || sessionCwd(sessionId);
-  const folderOk = (r) => !r.folder || (!!cwd && normFolder(cwd) === r.folder);
-  const isShell = input && typeof input.command === 'string';
-  const mine = approvalRules.filter((r) =>
-    (r.tool === toolName || (isShell && isShellToolName(toolName) && isShellToolName(r.tool))) && folderOk(r)
-  );
-  if (!isShell) {
-    return { allowed: mine.some((r) => !r.prefix), offer: cwd ? { prefixes: [''], stillAsks: [] } : null };
-  }
-  if (mine.some((r) => !r.prefix)) return { allowed: true, offer: null };       // blanket rule for this tool
-  const covers = (part) => mine.some((r) => r.prefix && shellRules.prefixMatches(part, r.prefix));
-  const a = shellRules.analyse(input.command, cwd, covers);
-  return {
-    allowed: a.allowed,
-    offer: cwd && a.prefixes ? { prefixes: a.prefixes, stillAsks: a.stillAsks || [] } : null,
-  };
-}
-const sessionAliases = new Map();     // New-chat draft id -> real 'claude_<uuid>' or 'antigravity_<uuid>' id
-const PERMISSION_TIMEOUT_MS = 10 * 60 * 1000;
-
-function answerPermission(id, decision) {
-  const p = pendingPermissions.get(id);
-  if (!p) return;
-  pendingPermissions.delete(id);
-  clearTimeout(p.timer);
-  if (typeof p.onDecision === 'function') {
-    try { p.onDecision(decision); } catch (e) {}
-    return;
-  }
-  try {
-    p.res.writeHead(200, { 'Content-Type': 'application/json' });
-    p.res.end(JSON.stringify(decision));
-  } catch (e) {}
-}
-
+// Tool approvals for replies sent from the HUD (like the VS Code extension).
+// `claude -p` cannot show a permission prompt, so we register permission-mcp.js
+// as --permission-prompt-tool. It POSTs each request to main/ipc/permissions.js,
+// which shows it in the HUD and answers with the user's choice.
+// ===========================================================================
+const permissions = require('./main/ipc/permissions');
+const permState = permissions.createState();
+const sessionAliases = permState.sessionAliases;
+const PERM_TOKEN = permissions.PERM_TOKEN;
+const answerPermission = (id, decision) => permissions.answerPermission(permState, id, decision);
+const getPermPort = () => permState.permPort;
 function startPermissionServer() {
-  const server = http.createServer((req, res) => {
-    if (req.method !== 'POST' || req.url !== '/permission' || req.headers['x-hud-token'] !== PERM_TOKEN) {
-      res.writeHead(403); return res.end();
-    }
-    let body = '';
-    req.on('data', (c) => { body += c; if (body.length > 5e6) req.destroy(); });
-    req.on('end', () => {
-      let payload;
-      try { payload = JSON.parse(body); } catch (e) { res.writeHead(400); return res.end(); }
-      const { toolName = 'unknown', input = {} } = payload;
-      // a New-chat run was started under a draft id; report the real session
-      const sessionId = sessionAliases.get(payload.sessionId || '') || payload.sessionId || '';
-
-      const check = checkRules(sessionId, toolName, input);
-      if (check.allowed) {
-        console.log(`[Main] Auto-allowed ${toolName} by saved rules`);
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ behavior: 'allow' }));
-      }
-      // What the "Always allow" button can offer. Rules are always scoped to the
-      // session's folder. For a chained command: one rule per safe part; parts
-      // that can't get a rule (rm, node, …) are listed in stillAsks.
-      const cwdForRule = sessionCwd(sessionId);
-      const always = check.offer ? {
-        tool: toolName,
-        prefixes: check.offer.prefixes,
-        prefix: check.offer.prefixes.filter(Boolean).join(' + '),   // label for the button
-        stillAsks: check.offer.stillAsks,
-        folder: cwdForRule,
-      } : null;
-
-      const id = crypto.randomBytes(8).toString('hex');
-      const timer = setTimeout(() => {
-        answerPermission(id, { behavior: 'deny', message: 'No answer in the HUD within 10 minutes.' });
-        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('permission-expired', { id });
-      }, PERMISSION_TIMEOUT_MS);
-      pendingPermissions.set(id, { res, timer, sessionId, toolName, always });
-      // If the client gives up (e.g. Claude was stopped), drop the prompt
-      res.on('close', () => {
-        if (pendingPermissions.has(id)) {
-          pendingPermissions.delete(id);
-          clearTimeout(timer);
-          if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('permission-expired', { id });
-        }
-      });
-
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        if (dockState.docked) undock();
-        mainWindow.showInactive();
-        mainWindow.webContents.send('permission-request', { id, sessionId, toolName, input, always });
-      }
-    });
-  });
-  server.listen(0, '127.0.0.1', () => {
-    permPort = server.address().port;
-    console.log(`[Main] Permission endpoint on 127.0.0.1:${permPort}`);
-  });
+  permissions.startPermissionServer(appCtx, permState);
 }
-
-ipcMain.on('permission-response', (_event, { id, choice, message }) => {
-  const p = pendingPermissions.get(id);
-  if (!p) return;
-  if (choice === 'always' && p.always) {
-    const folder = normFolder(p.always.folder);
-    const prefixes = Array.isArray(p.always.prefixes) ? p.always.prefixes : [p.always.prefix || ''];
-    let added = false;
-    for (const prefix of prefixes) {
-      const exists = approvalRules.some((r) => r.tool === p.always.tool && (r.prefix || '') === prefix && r.folder === folder);
-      if (exists) continue;
-      approvalRules.push({ id: crypto.randomBytes(4).toString('hex'), tool: p.always.tool, prefix, folder, created: Date.now() });
-      added = true;
-    }
-    if (added) saveRules();
-  }
-  const note = typeof message === 'string' && message.trim() ? message.trim().slice(0, 4000) : 'The user denied this in the HUD.';
-  answerPermission(id, choice === 'deny'
-    ? { behavior: 'deny', message: note }
-    : { behavior: 'allow' });
-});
-
-ipcMain.handle('rules-list', () => approvalRules);
-ipcMain.handle('rules-delete', (_e, id) => {
-  approvalRules = approvalRules.filter((r) => r.id !== id);
-  saveRules();
-  return approvalRules;
-});
-ipcMain.handle('rules-clear', () => { approvalRules = []; saveRules(); return approvalRules; });
 
 // Extra `claude` args for a HUD reply: approval tool + per-reply overrides.
 // Returns { args, tempFiles } — temp files are removed when the process exits.
@@ -456,7 +358,7 @@ function buildClaudeExtraArgs(sessionId, options = {}) {
     return file;
   };
 
-  if (permPort) {
+  if (getPermPort()) {
     const mcpConfig = {
       mcpServers: {
         ovly_hud: {
@@ -465,7 +367,7 @@ function buildClaudeExtraArgs(sessionId, options = {}) {
           args: [path.join(__dirname, 'permission-mcp.js')],
           env: {
             ELECTRON_RUN_AS_NODE: '1',
-            HUD_PERM_URL: `http://127.0.0.1:${permPort}/permission`,
+            HUD_PERM_URL: `http://127.0.0.1:${getPermPort()}/permission`,
             HUD_PERM_TOKEN: PERM_TOKEN,
             HUD_SESSION_ID: sessionId || '',
           },
@@ -986,18 +888,6 @@ function sendViaAgy(agyBin, { text, images = [], session, sessionId, options = {
   child.on('close', (code) => finish(code));
 }
 
-// Right-click "Paste" in the HUD (the page itself is not allowed to read the clipboard)
-ipcMain.handle('read-clipboard', () => {
-  const text = clipboard.readText();
-  if (text) return { text };
-  const img = clipboard.readImage();
-  return img.isEmpty() ? {} : { image: img.toDataURL() };
-});
-
-ipcMain.on('copy-clipboard', (_event, text) => {
-  if (text) clipboard.writeText(text);
-});
-
 // Send reply directly to Claude Code (--resume) or Antigravity IDE (chat subcommand)
 // Non-image attachments → paths on disk that the agent can open. Files picked
 // or dropped from Explorer keep their real path; pasted ones are saved to temp.
@@ -1206,7 +1096,7 @@ ipcMain.on('send-reply', async (_event, { text, image, images, files, session, c
       child.on('close', (code) => {
         cleanupTemp();
         // Any approval prompts from this run can no longer be answered
-        for (const [pid, p] of pendingPermissions) {
+        for (const [pid, p] of permState.pendingPermissions) {
           if (p.sessionId === sessionId || p.sessionId === startedAsId) {
             answerPermission(pid, { behavior: 'deny', message: 'Claude process ended.' });
             if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('permission-expired', { id: pid });
@@ -1670,8 +1560,6 @@ ipcMain.on('undock-window', () => undock());
 // Silent: the window shakes and the HUD glows — no sound.
 // ---------------------------------------------------------------
 const lastStatus = new Map(); // session id -> 'running' | 'idle'
-let lastNudgeAt = 0;
-let shakeTimer = null;
 
 function detectFinishedSessions(sessions) {
   const finished = [];
@@ -1684,156 +1572,11 @@ function detectFinishedSessions(sessions) {
   if (finished.length) nudge(finished);
 }
 
-function nudge(finished) {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  // Tell the renderer which sessions finished (it glows them)
-  mainWindow.webContents.send('session-nudge', { ids: finished.map((s) => s.id) });
-  // Several finishing together = one shake; never more than one every 3 s
-  if (Date.now() - lastNudgeAt < 3000) return;
-  lastNudgeAt = Date.now();
-  shakeWindow();
-}
+// Window shake animation, "Test Nudge" and multi-monitor quick snip live in
+// main/ipc/snap.js. Only the finished-session detection stays here.
+const snap = require('./main/ipc/snap');
+const nudge = (finished) => snap.nudge(appCtx, finished);
 
-// "Test Nudge" button: run the real nudge as if the most recent session finished.
-// Short delay so you can let go of the mouse / look at the window first.
-ipcMain.on('test-nudge', () => {
-  setTimeout(() => {
-    const latest = watcher ? watcher.getAllSessions()[0] : null;
-    lastNudgeAt = 0; // bypass the 3-second limit for tests
-    nudge(latest ? [latest] : []);
-  }, 400);
-});
-
-function shakeWindow() {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  if (dragTimer || boundsAnim || shakeTimer) return; // don't fight a drag / animation
-  if (!mainWindow.isVisible()) mainWindow.showInactive();
-
-  const start = mainWindow.getBounds();
-  // Docked tab shakes vertically so it stays stuck to the screen edge
-  const vertical = dockState.docked;
-  const offsets = [10, -10, 8, -8, 6, -6, 4, -4, 2, -2, 0];
-  let i = 0;
-  shakeTimer = setInterval(() => {
-    if (!mainWindow || mainWindow.isDestroyed()) { clearInterval(shakeTimer); shakeTimer = null; return; }
-    const d = offsets[i++];
-    const dy = i % 2 ? 2 : -2; // a little diagonal wobble, like MSN
-    mainWindow.setBounds({
-      x: start.x + (vertical ? 0 : d),
-      y: start.y + (vertical ? d : dy),
-      width: start.width,
-      height: start.height,
-    });
-    if (i >= offsets.length) {
-      clearInterval(shakeTimer);
-      shakeTimer = null;
-      mainWindow.setBounds(start); // back exactly where it was
-    }
-  }, 45);
-}
-
-// ---------- Quick snip (all monitors): hide the HUD, freeze every screen,
-// let the user drag a rectangle on any of them, return the cropped PNG ----------
-let snipInProgress = null;
-ipcMain.handle('quick-snip', async () => {
-  if (snipInProgress) return snipInProgress;
-  snipInProgress = (async () => {
-    const { desktopCapturer } = require('electron');
-    const displays = screen.getAllDisplays();
-    const wasVisible = mainWindow && mainWindow.isVisible();
-    if (wasVisible) mainWindow.hide();
-    await new Promise(r => setTimeout(r, 220)); // let DWM drop the HUD from the screen
-
-    let pairs = [];
-    try {
-      // one capture call for every screen; size the thumbnails for the largest physical display
-      const maxW = Math.max(...displays.map(d => Math.round(d.bounds.width * (d.scaleFactor || 1))));
-      const maxH = Math.max(...displays.map(d => Math.round(d.bounds.height * (d.scaleFactor || 1))));
-      const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: maxW, height: maxH } });
-      const used = new Set();
-      displays.forEach((d, i) => {
-        // match by display id; fall back to list order (display_id can be blank on some Windows setups)
-        let src = sources.find(s => s.display_id && String(s.display_id) === String(d.id));
-        if (!src && sources.length === displays.length) src = sources[i];
-        if (!src || used.has(src.id) || !src.thumbnail || src.thumbnail.isEmpty()) return;
-        used.add(src.id);
-        pairs.push({ display: d, shot: src.thumbnail });
-      });
-    } catch (e) { console.error('[snip] capture failed:', e.message); }
-
-    let result = null;
-    if (pairs.length) {
-      const cursorDisplay = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-      result = await runSnipSelectors(pairs, cursorDisplay.id);
-    }
-
-    if (mainWindow && wasVisible) { mainWindow.show(); mainWindow.focus(); }
-    return result; // data URL or null (cancelled / failed)
-  })();
-  try { return await snipInProgress; } finally { snipInProgress = null; }
-});
-
-// One frozen-screen window per monitor. The first finished selection (or a
-// cancel on any screen) closes them all.
-function runSnipSelectors(pairs, focusDisplayId) {
-  return new Promise((resolve) => {
-    const wins = new Map(); // webContents.id -> { win, display, shot }
-    let done = false;
-    const finish = (val) => {
-      if (done) return; done = true;
-      ipcMain.removeListener('snip-result', onResult);
-      for (const { win } of wins.values()) if (!win.isDestroyed()) win.close();
-      resolve(val);
-    };
-    const onResult = (event, rect) => {
-      const entry = wins.get(event.sender.id);
-      if (!entry) return;
-      if (!rect || rect.width < 3 || rect.height < 3) return finish(null);
-      const b = entry.display.bounds;
-      const size = entry.shot.getSize();
-      const kx = size.width / b.width, ky = size.height / b.height;
-      const crop = {
-        x: Math.max(0, Math.round(rect.x * kx)),
-        y: Math.max(0, Math.round(rect.y * ky)),
-        width: Math.round(rect.width * kx),
-        height: Math.round(rect.height * ky),
-      };
-      crop.width = Math.min(crop.width, size.width - crop.x);
-      crop.height = Math.min(crop.height, size.height - crop.y);
-      try { finish(entry.shot.crop(crop).toDataURL()); } catch (e) { finish(null); }
-    };
-    ipcMain.on('snip-result', onResult);
-
-    for (const { display, shot } of pairs) {
-      const b = display.bounds;
-      const win = new BrowserWindow({
-        x: b.x, y: b.y, width: b.width, height: b.height,
-        frame: false, transparent: false, resizable: false, movable: false,
-        skipTaskbar: true, alwaysOnTop: true, fullscreenable: false, hasShadow: false,
-        backgroundColor: '#000000', show: false,
-        webPreferences: { preload: path.join(__dirname, 'snip-preload.js'), contextIsolation: true, nodeIntegration: false },
-      });
-      win.setAlwaysOnTop(true, 'screen-saver');
-      wins.set(win.webContents.id, { win, display, shot });
-      win.on('closed', () => finish(null)); // e.g. Alt+F4 on any screen = cancel
-      win.loadFile(path.join(__dirname, 'ui', 'snip.html'));
-      win.webContents.once('did-finish-load', () => {
-        if (done) return;
-        win.webContents.send('snip-image', shot.toDataURL());
-        win.setBounds(b); // re-apply: Windows may adjust bounds across mixed-DPI monitors
-        if (display.id === focusDisplayId) { win.show(); win.focus(); } else win.showInactive();
-      });
-    }
-  });
-}
-
-ipcMain.on('minimize-window', () => {
-  if (mainWindow) mainWindow.minimize();
-});
-
-ipcMain.on('close-window', () => {
-  if (mainWindow) mainWindow.close();
-});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

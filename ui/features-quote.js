@@ -132,3 +132,20 @@
     }
   });
 })();
+
+// 📌 Notes buttons: open/close the pinned-notes panel docked left of the HUD
+(function () {
+  const api = window.electronAPI;
+  if (!api || !api.notesToggle) return;
+  const btns = [...document.querySelectorAll('.tb-notes')];
+  const paint = (st) => {
+    for (const b of btns) {
+      b.classList.toggle('open', !!(st && st.open));
+      const badge = b.querySelector('.notes-badge');
+      if (badge) badge.textContent = st && st.count ? String(st.count) : '';
+    }
+  };
+  btns.forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); api.notesToggle(); }));
+  api.onNotesState(paint);
+  api.notesState().then(paint).catch(() => {});
+})();
