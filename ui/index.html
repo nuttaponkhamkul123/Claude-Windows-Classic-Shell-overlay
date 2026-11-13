@@ -274,6 +274,12 @@
         <button id="btnNudge" class="set-row active" title="Shake the HUD when a chat finishes">
           <span class="set-ico">📳</span><span class="set-label">Nudge when a chat finishes</span><span class="set-check"></span>
         </button>
+        <button id="btnSleep" class="set-row active" title="In the Vault, chats idle for 2+ days go to sleep in the storage drawer under their room">
+          <span class="set-ico">💤</span><span class="set-label">Sleeping robots (idle 2+ days)</span><span class="set-check"></span>
+        </button>
+        <button id="btnWindows" class="set-row active" title="Each Vault room gets a window on its back wall with a moving scene (right-click a room → Change view)">
+          <span class="set-ico">🪟</span><span class="set-label">Room windows</span><span class="set-check"></span>
+        </button>
         <button id="btnPin" class="set-row active" title="Always on Top">
           <span class="set-ico">📌</span><span class="set-label">Always on top</span><span class="set-check"></span>
         </button>
@@ -296,10 +302,13 @@
   <script src="lib/robot-runner.js"></script>
   <script src="app.js"></script>
   <script src="logic/vault/rooms.js"></script>
+  <script src="logic/vault/furniture-art.js"></script>
+  <script src="logic/vault/window-art.js"></script>
   <script src="logic/vault/robots.js"></script>
   <script src="logic/vault/focus.js"></script>
   <script src="logic/vault/room-build.js"></script>
   <script src="logic/vault/grab.js"></script>
+  <script src="logic/vault/room-actions.js"></script>
   <script src="features.js"></script>
   <script src="logic/nav/toolbar.js"></script>
   <script src="logic/nav/git.js"></script>

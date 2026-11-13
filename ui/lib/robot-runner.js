@@ -143,6 +143,7 @@
 
   // pose: run | think | type | read | search | hammer | web (CSS: .pose-<name> in features.css)
   window.buildRunnerSvg = function (hue, outfit, pose) {
+    if (pose === 'gaze') return buildBackSvg(hue, outfit);
     const prop = PROPS[pose] || {};
     const sh = (hex) => (hue && typeof shiftHexHue === 'function' ? shiftHexHue(hex, hue) : hex);
     const o = sh(P.outline), main = sh(P.main), light = sh(P.light), mid = sh(P.mid), dark = sh(P.dark), white = P.white;
@@ -202,4 +203,42 @@
   </g>
 </svg>`;
   };
+
+  // Back view (pose "gaze"): the robot seen from behind, looking out of a window —
+  // back of the head with both ears, hands clasped behind its back, feet together.
+  // Same 40×52 box and ground line as the side view, centred on x 20.
+  function buildBackSvg(hue, outfit) {
+    const sh = (hex) => (hue && typeof shiftHexHue === 'function' ? shiftHexHue(hex, hue) : hex);
+    const o = sh(P.outline), main = sh(P.main), light = sh(P.light), mid = sh(P.mid), dark = sh(P.dark);
+    const fit = outfit || {};
+    const hatC = okHex(fit.hatColor, '#e0483e'), clC = okHex(fit.clothesColor, '#3faa4a');
+    const torso = fit.clothes && CLOTHES[fit.clothes] ? clC : main;
+    const legFill = fit.clothes === 'overalls' ? clC : mid;
+    const armFill = fit.clothes && SLEEVES[fit.clothes] ? clC : mid;
+    // hats are drawn around x 21 in profile: shift onto the centre line
+    const hat = fit.hat && HATS[fit.hat] ? `<g transform="translate(-1 0)">${HATS[fit.hat](hatC, o)}</g>` : '';
+    const leg = (x) => `<rect x="${x}" y="30" width="4.5" height="13" rx="2.2" fill="${legFill}" stroke="${o}" stroke-width="1.2"/>` +
+      `<rect x="${x - 0.8}" y="42" width="6" height="3" rx="1.5" fill="${legFill}" stroke="${o}" stroke-width="1.2"/>`;
+    const arm = (x1, x2) => `<path d="M${x1},21.5 L${x2},29.3" stroke="${o}" stroke-width="4.6" stroke-linecap="round"/>` +
+      `<path d="M${x1},21.5 L${x2},29.3" stroke="${armFill}" stroke-width="2.6" stroke-linecap="round"/>`;
+    return `<svg viewBox="0 -5 40 52" class="runner runner-back" aria-hidden="true" overflow="visible">
+  <g class="r-body">
+    ${leg(14.6)}${leg(20.9)}
+    <rect class="r-torso" x="12" y="19.5" width="16" height="12.5" rx="4" fill="${torso}" stroke="${o}" stroke-width="1"/>
+    <rect x="16.5" y="22" width="7" height="6" rx="1.4" fill="${dark}" opacity=".45"/>
+    <path d="M18,24H22M18,26H22" stroke="${light}" stroke-width=".7" opacity=".8"/>
+    ${arm(12.8, 18)}${arm(27.2, 22)}
+    <circle cx="18.6" cy="29.4" r="2" fill="${armFill}" stroke="${o}" stroke-width="1"/>
+    <circle cx="21.4" cy="29.4" r="2" fill="${armFill}" stroke="${o}" stroke-width="1"/>
+    <g class="r-head">
+      <circle cx="7.8" cy="10.6" r="2.6" fill="${mid}" stroke="${o}" stroke-width="1"/>
+      <circle cx="32.2" cy="10.6" r="2.6" fill="${mid}" stroke="${o}" stroke-width="1"/>
+      <ellipse cx="20" cy="9.5" rx="12.6" ry="11" fill="${main}" stroke="${o}" stroke-width="1.4"/>
+      <path d="M12.5,5.5C14,1.8 17,0.2 20,0.2C17.6,1.8 15.6,4 14.8,6.8Z" fill="${light}" opacity=".9"/>
+      <ellipse cx="20" cy="17" rx="7" ry="2.6" fill="${dark}" opacity=".3"/>
+      ${hat}
+    </g>
+  </g>
+</svg>`;
+  }
 })();

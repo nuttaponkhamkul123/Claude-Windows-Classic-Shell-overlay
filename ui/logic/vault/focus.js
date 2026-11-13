@@ -11,6 +11,7 @@ var vaultZoomFrom = null; // session id whose robot opened the chat
 // pointer at the robot. Other robots in the strip can be clicked to switch chats.
 var vaultFocus = null;          // { id, t: {x, y, s}, settleAt } while a chat is open beside its robot
 var vaultFocusOpening = false;  // showDetailView called by focus mode itself
+var vaultPinnedId = null;       // session whose robot stays on the floor while its chat is open
 const FOCUS_SCALE = 2.1;
 function focusRobotEl(id) {
   return listView.querySelector(`.vault-walker[data-sid="${CSS.escape(id)}"] .vault-bot`);
@@ -39,7 +40,14 @@ function alignFocus(animate) {
 }
 function openVaultFocus(session) {
   if (!document.body.classList.contains('list-grid') || popupBody.getBoundingClientRect().width < 400) return false;
-  if (!focusRobotEl(session.id)) return false; // chips in the drawer: no robot to point at
+  // keep this chat's robot on the floor while its chat is open, even if it would be a chip
+  // in the drawer (overflow / asleep) or its room is collapsed or hidden (room-build.js, app.js)
+  const prevPinned = vaultPinnedId;
+  vaultPinnedId = session.id;
+  if (!focusRobotEl(session.id)) {
+    renderSessionCards(true); // draws the robot on the floor
+    if (!focusRobotEl(session.id)) { vaultPinnedId = prevPinned; return false; }
+  }
   const switching = !!vaultFocus;
   vaultFocus = { id: session.id };
   vaultFocusOpening = true;
@@ -58,10 +66,11 @@ function openVaultFocus(session) {
 // Leave focus mode. animate=false when another part of the HUD takes over the view.
 function closeVaultFocus(animate = true) {
   if (!vaultFocus) return false;
-  const leftId = vaultFocus.id;
   vaultFocus = null;
-  // a request still waiting: put its bubble back in the room (it was left out while the chat was open)
-  if (typeof pendingApprovals !== 'undefined' && [...pendingApprovals.values()].some((r) => r.sessionId === leftId)) renderSessionCards(true);
+  vaultPinnedId = null; // its robot goes back to the drawer / its room folds again
+  // redraw: a robot that was brought out goes back, and a request still waiting gets its
+  // bubble back in the room (it was left out while the chat was open)
+  renderSessionCards(true);
   document.body.classList.remove('vault-focus');
   listView.querySelectorAll('.vault-walker.is-focus').forEach((w) => w.classList.remove('is-focus'));
   listView.style.transition = animate && !reducedMotion() ? 'transform .42s cubic-bezier(.3,.7,.2,1)' : 'none';
@@ -92,6 +101,16 @@ renderSessionCards = function (...args) {
     }, wait);
   }
   return out;
+};
+
+// Every other way of opening a chat (Ctrl+K, notifications, toasts, links, the mini
+// dock…) also opens it beside its robot when you're in the Vault view, instead of the
+// full chat box. Falls back to the full chat when there's no robot on the floor
+// (drawer chips, hidden/collapsed rooms) or the HUD is narrower than 400px.
+const showDetailBeforeFocus = showDetailView;
+showDetailView = function (session, ...rest) {
+  if (!vaultFocusOpening && session?.id && openVaultFocus(session)) return;
+  return showDetailBeforeFocus.call(this, session, ...rest);
 };
 
 function zoomIntoChat(session, fromEl) {

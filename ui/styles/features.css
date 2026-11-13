@@ -999,8 +999,10 @@ body.docked:has(.mini-dock.has-approval) .hot-bar { display: none; }
 }
 #activityRow .team-line i {
   position: absolute; bottom: -5px; left: 0; width: 6px; height: 8px; border-radius: 1px;
-  background: #fff; border: 1px solid #8a96a6; animation: team-carry 1.8s ease-in-out infinite;
+  background: #fff; border: 1px solid #8a96a6; opacity: 0;
 }
+/* the page flies once, when a helper is handed its job */
+#activityRow .team-line.handoff i { animation: team-carry 1.1s ease-in-out 1; }
 @keyframes team-carry { 0% { left: -4px; opacity: 0; } 15%, 85% { opacity: 1; } 100% { left: 16px; opacity: 0; } }
 #activityRow .team-mates { display: flex; gap: 4px; min-width: 0; overflow: visible; }
 #activityRow .team-mate { display: flex; flex-direction: column; align-items: center; gap: 1px; width: 66px; min-width: 0; }
@@ -1384,6 +1386,10 @@ body.vault-focus .vault-walker.is-focus .vault-bot { filter: drop-shadow(0 0 3px
 .vault-furn.in-use .f-fire { transform-origin: 50% 50%; animation: f-fire .3s ease-in-out infinite alternate; }
 @keyframes f-fire { from { transform: scale(.9); opacity: .55; } to { transform: scale(1.1); opacity: .9; } }
 
+/* 3D printer (decor): the print head slides back and forth */
+.vault-furn.in-use .f-head { animation: f-head 1.6s ease-in-out infinite alternate; }
+@keyframes f-head { from { transform: translateX(-9px); } to { transform: translateX(9px); } }
+
 @media (prefers-reduced-motion: reduce) { .vault-furn * { animation: none !important; } }
 
 /* ===== Ctrl+K quick finder (logic/nav/finder.js) ===== */
@@ -1543,3 +1549,161 @@ body.vault-grabbing, body.vault-grabbing * { cursor: grabbing !important; user-s
 }
 /* chatting with this robot: its request is in the chat, so no bubble in the room */
 body.vault-focus .vault-walker.is-focus .vault-ask { display: none; }
+
+/* ---- Team stage: hand back, approvals, full list ---- */
+/* "!": waiting for your OK (lead or helper), hand up */
+#activityRow .act-bubble.ask {
+  font: 800 10px/1 "Segoe UI", sans-serif; color: #241600; background: #f5a524;
+  box-shadow: 0 0 0 2px rgba(245, 165, 36, .35); animation: ask-pulse 1s ease-in-out infinite;
+}
+@keyframes ask-pulse { 50% { box-shadow: 0 0 0 5px rgba(245, 165, 36, 0); } }
+#activityRow .team-mate.asking .team-tag { color: #241600; background: #f5a524; }
+/* walking back: the page in hand, name and task fade */
+#activityRow .team-mate.leaving { position: relative; z-index: 3; pointer-events: none; }
+#activityRow .team-mate.leaving .team-tag, #activityRow .team-mate.leaving .team-task { opacity: 0; transition: opacity .2s; }
+#activityRow .team-page {
+  position: absolute; left: 15px; top: 15px; width: 7px; height: 9px; border-radius: 1px;
+  background: #fff; border: 1px solid #8a96a6; box-shadow: 1px 1px 0 rgba(0, 0, 0, .25);
+}
+/* the lead takes the page: a little hop */
+#activityRow .act-runwrap.got-page .act-bot { animation: lead-take .4s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes lead-take { 40% { translate: 0 -4px; } }
+/* "+N": the full list of helpers */
+#activityRow .team-more { cursor: pointer; }
+#activityRow .team-more.open { background: rgba(127, 140, 160, .4); }
+#activityRow .team-list {
+  position: absolute; left: 40px; right: 0; bottom: calc(100% + 4px); z-index: 20; max-height: 180px; overflow-y: auto;
+  padding: 4px; border-radius: 6px; background: #18202a; border: 1px solid #3a4658; color: #dfe6ee;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .5);
+}
+#activityRow .team-list[hidden] { display: none; }
+#activityRow .team-li { display: grid; grid-template-columns: 8px auto 1fr auto; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 4px; font-size: 11px; }
+#activityRow .team-li:hover { background: rgba(255, 255, 255, .06); }
+#activityRow .team-li i { width: 8px; height: 8px; border-radius: 50%; }
+#activityRow .team-li b { font-weight: 600; white-space: nowrap; }
+#activityRow .team-li-task { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: .85; }
+#activityRow .team-li-now { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 10px Consolas, monospace; opacity: .7; }
+#activityRow .team-li.done { opacity: .55; }
+body:not(.style-shelter):not(.theme-vista).theme-aero #activityRow .team-list { background: #fff; color: #1e395b; border-color: #a9bfd6; }
+@media (prefers-reduced-motion: reduce) {
+  #activityRow .team-line.handoff i, #activityRow .act-bubble.ask, #activityRow .act-runwrap.got-page .act-bot { animation: none; }
+}
+
+/* ---- Vault QoL: reply bubble, sleeping robots, room menu, hidden rooms ---- */
+/* just replied: a speech bubble with the first line of the reply */
+.vault-say {
+  position: absolute; left: calc(100% - 4px); bottom: 34px; z-index: 14; width: max-content; max-width: 180px;
+  padding: 4px 8px; border-radius: 8px 8px 8px 2px; pointer-events: none;
+  font: 11px/1.3 "Segoe UI", sans-serif; color: #10202a; background: #f4f8fb;
+  border: 1px solid #b9c7d6; box-shadow: 0 4px 10px rgba(0, 0, 0, .35);
+  animation: say-in .35s cubic-bezier(.3, 1.5, .5, 1);
+  transform-origin: 0 100%;
+}
+.vault-say > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.vault-say.to-left { left: auto; right: calc(100% - 4px); border-radius: 8px 8px 2px 8px; transform-origin: 100% 100%; }
+.vault-say.bye { animation: say-out .3s ease-in forwards; }
+@keyframes say-in { from { opacity: 0; scale: .6; } }
+@keyframes say-out { to { opacity: 0; scale: .8; translate: 0 -4px; } }
+body.style-shelter .vault-say { color: #dff8f3; background: #12302d; border-color: #2dd4bf; box-shadow: 0 0 10px rgba(45, 212, 191, .3), 0 4px 10px rgba(0, 0, 0, .4); }
+.vault-walker:hover .vault-say { display: none; } /* the hover card takes over */
+/* sleeping chips in the drawer */
+.vault-chip.is-asleep { opacity: .62; filter: saturate(.4); }
+.vault-chip.is-asleep:hover { opacity: 1; filter: none; }
+.vault-chip.is-asleep i { position: relative; }
+.vault-chip.is-asleep i::after { content: "z"; position: absolute; right: -6px; top: -8px; font: 700 8px "Segoe UI", sans-serif; color: #9fb0c4; animation: zz 2.4s ease-in-out infinite; }
+@keyframes zz { 0% { opacity: 0; translate: 0 3px; } 40% { opacity: 1; } 100% { opacity: 0; translate: 3px -4px; } }
+/* hidden rooms: Vault only (the List view still lists them) */
+body.list-grid .workspace-group.vault-hidden { display: none; }
+.vault-hidden-note { display: none; }
+body.list-grid .vault-hidden-note {
+  display: block; margin: 6px auto 4px; padding: 2px 10px; border-radius: 10px; cursor: pointer;
+  font: 600 10.5px "Segoe UI", sans-serif; color: #9fb0c4; background: rgba(127, 140, 160, .14); border: 1px dashed rgba(127, 140, 160, .5);
+}
+body.list-grid .vault-hidden-note:hover { color: #fff; border-style: solid; }
+/* room right-click menu */
+.vault-room-menu { position: fixed; z-index: 10050; min-width: 170px; }
+.vault-room-menu-head { padding: 3px 9px 4px; font: 600 10px "Segoe UI", sans-serif; letter-spacing: .06em; text-transform: uppercase; opacity: .65; }
+body.style-shelter .vault-room-menu-head { font-family: var(--sh-font); color: var(--sh-amber); opacity: 1; }
+.vault-room-menu .fx-menu-item:disabled { opacity: .45; cursor: default; }
+/* double-click with no folder to start in: a little shake */
+.vault-room.vault-nope { animation: room-nope .35s; }
+@keyframes room-nope { 25% { translate: -3px 0; } 75% { translate: 3px 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .vault-say, .vault-say.bye, .vault-chip.is-asleep i::after, .vault-room.vault-nope { animation: none; }
+}
+
+/* ---- Vault windows: a scene on each room's back wall (logic/vault/window-art.js) ---- */
+/* sits in .vault-wall before the furniture, so furniture and robots stand in front of it */
+.vault-window { position: absolute; top: 5px; z-index: 0; transform: translateX(-50%); pointer-events: none; }
+.vw-frame { position: relative; display: block; overflow: hidden; background: #000; }
+.vw-scene { display: block; width: 100%; height: 100%; }
+.vw-glare {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.1) 38%, transparent 46%, transparent 60%, rgba(255,255,255,.05) 64%, transparent 68%);
+}
+/* the view's light on the wall around it */
+.vw-spill {
+  position: absolute; left: 50%; top: -6px; width: 170px; height: 64px; transform: translateX(-50%);
+  background: radial-gradient(ellipse at 50% 30%, rgba(186, 230, 253, .1), transparent 65%);
+}
+/* B · Vault window: steel frame with cross bars */
+.vw-vault .vw-frame { width: 62px; height: 36px; border-radius: 3px; border: 3px solid #3a4658; box-shadow: inset 0 0 0 1px #070a0e, 0 0 0 1px #070a0e, 0 2px 6px rgba(0,0,0,.5); }
+.vw-vault .vw-frame::before {
+  content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: linear-gradient(#3a4658, #3a4658) 50% 0 / 2px 100% no-repeat, linear-gradient(#3a4658, #3a4658) 0 50% / 100% 2px no-repeat;
+}
+/* A · Porthole: round steel ring */
+.vw-porthole .vw-frame { width: 36px; height: 36px; border-radius: 50%; border: 3px solid #56647a; box-shadow: inset 0 0 0 1px #070a0e, 0 0 0 1px #070a0e, inset 0 0 8px rgba(0,0,0,.6), 0 2px 6px rgba(0,0,0,.5); }
+/* C · Panorama slit with a sill, like a bunker viewport */
+.vw-pano .vw-frame { width: 92px; height: 26px; border-radius: 2px; border: 2px solid #2e3949; border-bottom-width: 4px; box-shadow: inset 0 0 0 1px #070a0e, 0 0 0 1px #070a0e, inset 0 3px 6px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.5); }
+/* after sunset on your clock: the view darkens */
+.vault-window.vw-night .vw-scene { filter: brightness(.6) saturate(.85); }
+.vault-window.vw-night .vw-spill { opacity: .5; }
+/* light Classic themes: lighter steel */
+:is(body.theme-aero:not(.theme-vista), body.theme-xp):not(.style-shelter) .vw-vault .vw-frame,
+:is(body.theme-aero:not(.theme-vista), body.theme-xp):not(.style-shelter) .vw-porthole .vw-frame,
+:is(body.theme-aero:not(.theme-vista), body.theme-xp):not(.style-shelter) .vw-pano .vw-frame { border-color: #8aa4c6; box-shadow: 0 0 0 1px #5d7aa0, 0 2px 5px rgba(60,90,130,.3); }
+:is(body.theme-aero:not(.theme-vista), body.theme-xp):not(.style-shelter) .vw-vault .vw-frame::before {
+  background: linear-gradient(#8aa4c6, #8aa4c6) 50% 0 / 2px 100% no-repeat, linear-gradient(#8aa4c6, #8aa4c6) 0 50% / 100% 2px no-repeat;
+}
+/* slow, small movement. --vw-t (set per draw) keeps each animation where it was, as the room is redrawn often */
+.vault-window .s-drift   { animation: vw-drift 14s linear infinite; animation-delay: var(--vw-t, 0s); }
+.vault-window .s-drift-2 { animation: vw-drift 22s linear infinite; animation-delay: calc(var(--vw-t, 0s) - 9s); }
+.vault-window .s-flap    { animation: vw-drift 18s linear infinite; animation-delay: var(--vw-t, 0s); }
+@keyframes vw-drift { from { transform: translateX(-30px); } to { transform: translateX(150px); } }
+.vault-window .s-swim    { animation: vw-swim 11s linear infinite; animation-delay: var(--vw-t, 0s); }
+.vault-window .s-swim-2  { animation: vw-swim 16s linear infinite reverse; animation-delay: calc(var(--vw-t, 0s) - 5s); }
+@keyframes vw-swim { from { transform: translateX(-20px); } to { transform: translateX(140px); } }
+.vault-window .s-rise circle { animation: vw-rise 4s ease-in infinite; animation-delay: var(--vw-t, 0s); }
+.vault-window .s-rise circle:nth-child(2) { animation-delay: calc(var(--vw-t, 0s) - 1.3s); }
+.vault-window .s-rise circle:nth-child(3) { animation-delay: calc(var(--vw-t, 0s) - 2.6s); }
+@keyframes vw-rise { from { transform: translateY(0); opacity: 0; } 15% { opacity: .9; } to { transform: translateY(-60px); opacity: 0; } }
+.vault-window .s-twinkle circle { animation: vw-twinkle 2.4s ease-in-out infinite alternate; animation-delay: var(--vw-t, 0s); }
+.vault-window .s-twinkle circle:nth-child(3n) { animation-delay: calc(var(--vw-t, 0s) - 1.1s); }
+.vault-window .s-twinkle circle:nth-child(4n) { animation-duration: 3.2s; }
+@keyframes vw-twinkle { from { opacity: .25; } to { opacity: 1; } }
+.vault-window .s-blink rect { animation: vw-twinkle 3s steps(2) infinite; animation-delay: var(--vw-t, 0s); }
+.vault-window .s-blink rect:nth-child(3n) { animation-delay: calc(var(--vw-t, 0s) - 1.4s); }
+.vault-window .s-blink rect:nth-child(5n) { animation-duration: 4.6s; }
+.vault-window .s-fall circle { animation: vw-fall 5s linear infinite; animation-delay: var(--vw-t, 0s); }
+.vault-window .s-fall :nth-child(2n) { animation-duration: 6.5s; animation-delay: calc(var(--vw-t, 0s) - 2s); }
+.vault-window .s-fall :nth-child(3n) { animation-delay: calc(var(--vw-t, 0s) - 3.7s); }
+@keyframes vw-fall { from { transform: translate(0, -10px); } to { transform: translate(-8px, 80px); } }
+.vault-window .s-rain path { animation: vw-rain .7s linear infinite; animation-delay: var(--vw-t, 0s); }
+.vault-window .s-rain path:nth-child(2n) { animation-delay: calc(var(--vw-t, 0s) - .35s); }
+.vault-window .s-rain path:nth-child(3n) { animation-duration: .9s; }
+@keyframes vw-rain { from { transform: translate(0, -20px); } to { transform: translate(-6px, 80px); } }
+.vault-window .s-wave { animation: vw-wave 7s ease-in-out infinite alternate; animation-delay: var(--vw-t, 0s); transform-box: fill-box; transform-origin: 50% 50%; }
+.vault-window .s-wave-2 { animation-duration: 9s; animation-delay: calc(var(--vw-t, 0s) - 3s); }
+@keyframes vw-wave { from { transform: translateX(-6px) scaleY(.9); opacity: .55; } to { transform: translateX(6px) scaleY(1.1); opacity: .9; } }
+.vault-window .s-glow { animation: vw-glow 2.2s ease-in-out infinite alternate; animation-delay: var(--vw-t, 0s); }
+@keyframes vw-glow { from { opacity: .55; } to { opacity: 1; } }
+.vault-window .s-shoot { animation: vw-shoot 6s ease-in infinite; animation-delay: var(--vw-t, 0s); }
+@keyframes vw-shoot { 0%, 80% { transform: translate(0, 0); opacity: 0; } 82% { opacity: 1; } 100% { transform: translate(-60px, 30px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .vault-window * { animation: none !important; } }
+/* an idle robot at the window, seen from behind (back view: robot-runner.js buildBackSvg),
+   looking out: the head tilts now and then as something goes past outside */
+.vault-stage .pose-gaze .r-head { transform-origin: 20px 19px; animation: gaze-look 6s ease-in-out infinite; }
+.vault-stage .pose-gaze .r-body { animation: rp-breathe 3.2s ease-in-out infinite alternate; }
+@keyframes gaze-look { 0%, 30%, 100% { transform: rotate(0); } 45%, 60% { transform: rotate(-5deg); } 75%, 85% { transform: rotate(4deg); } }
+@media (prefers-reduced-motion: reduce) { .vault-stage .pose-gaze .r-head { animation: none; } }

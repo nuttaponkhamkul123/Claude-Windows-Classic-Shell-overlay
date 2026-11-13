@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vault furniture — design sheet</title>
+<!-- the app's own furniture animations (f-screen, f-led, f-fluid…) -->
+<link rel="stylesheet" href="../../ui/styles/features.css">
+<style>
+  :root { --bg: #0d1218; --panel: #18202a; --line: #2e3949; --text: #dfe6ee; --dim: #8796a8; --amber: #f5a524; --teal: #2dd4bf; }
+  body { margin: 0; padding: 28px 34px 60px; background: var(--bg); color: var(--text); font: 13px/1.5 "Segoe UI", sans-serif; }
+  h1 { margin: 0 0 4px; font: 600 22px "Bahnschrift", "Segoe UI", sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--amber); }
+  h2 { margin: 34px 0 6px; font: 600 15px "Bahnschrift", "Segoe UI", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--teal); }
+  .sub, .note { color: var(--dim); max-width: 860px; }
+  .bar { position: sticky; top: 0; z-index: 5; display: flex; gap: 14px; align-items: center; margin: 14px -34px 0; padding: 10px 34px; background: rgba(13,18,24,.92); border-bottom: 1px solid var(--line); backdrop-filter: blur(4px); }
+  .bar label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; user-select: none; }
+  .bar .pill { padding: 2px 9px; border-radius: 10px; font-size: 11px; border: 1px solid var(--line); color: var(--dim); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-top: 12px; }
+  .grid.decor { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+  .card { background: linear-gradient(180deg, #1d2530, #161d26); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px 14px; }
+  .card h3 { margin: 0; font: 600 13px "Bahnschrift", "Segoe UI", sans-serif; letter-spacing: .04em; }
+  .card .job { font-size: 11px; color: var(--dim); }
+  .card .job b { color: var(--amber); font-weight: 600; }
+  .pair { display: flex; gap: 10px; margin-top: 10px; }
+  .slot { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .slot .tag { font: 600 9.5px "Segoe UI", sans-serif; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+  .slot .tag.new { color: var(--teal); }
+  /* a little stage for each piece: wall + floor, like a room */
+  .stage { position: relative; width: 100%; height: 124px; border-radius: 6px; overflow: hidden;
+    background: linear-gradient(180deg, #1b2431 0%, #141b25 78%, #2a3442 78%, #222b37 100%); border: 1px solid #263140; }
+  .stage::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: repeating-linear-gradient(90deg, #2dd4bf 0 22px, transparent 22px 40px); opacity: .35; }
+  /* the sheet shows pieces at 2× size, standing on the floor line */
+  .stage .vault-furn { position: absolute; left: 50%; bottom: 12px; width: 128px; height: 112px; transform: translateX(-50%); opacity: 1; }
+  .card p { margin: 8px 0 0; font-size: 11.5px; color: #b3c0cf; }
+  .card .anim { margin-top: 6px; font-size: 10.5px; color: var(--dim); }
+  .card .anim code { color: #7fe3d2; background: #0a0e13; border: 1px solid #222c39; border-radius: 3px; padding: 0 4px; }
+  .emote { font-size: 15px; }
+
+  /* sample rooms */
+  .room { position: relative; height: 150px; margin-top: 12px; border-radius: 8px; overflow: hidden; border: 1px solid #344155;
+    background: linear-gradient(180deg, #1b2431 0%, #141b25 82%, #2a3442 82%, #222b37 100%); }
+  .room .plate { position: absolute; left: 10px; top: 8px; padding: 1px 8px; border-radius: 4px; font: 600 11px "Bahnschrift", sans-serif; letter-spacing: .06em; background: #0b1015; border: 1px solid #344155; }
+  .room .plate i { font-style: normal; color: var(--teal); margin-left: 6px; font-size: 10px; }
+  .room .vault-furn { position: absolute; bottom: 6px; width: 96px; height: 84px; transform: translateX(-50%); opacity: 1; }
+  table { border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+  td, th { padding: 4px 12px 4px 0; text-align: left; border-bottom: 1px solid var(--line); }
+  th { color: var(--dim); font-weight: 600; }
+</style>
+</head>
+<body>
+  <h1>Vault furniture</h1>
+  <div class="sub">Every task piece gets a second look (same job, same moving parts), so rooms in the Vault don't all look alike. Seven new decor pieces give idle robots more to do. Pieces are drawn in a 64×56 box; this sheet shows them at 2× size.</div>
+
+  <div class="bar">
+    <label><input type="checkbox" id="power" checked> Powered on (in use)</label>
+    <span class="pill">Off = how a piece looks when nobody's using it (dimmed, still)</span>
+  </div>
+
+  <h2>1 · Task furniture — original and new look</h2>
+  <div class="note">A robot walks to the piece for its current step. Each room picks one look per piece (from the room's name), so a room keeps its look; pieces that pop in for a task pick one at random.</div>
+  <div class="grid" id="tasks"></div>
+
+  <h2>2 · Decor — for idle robots</h2>
+  <div class="note">No task uses these. Idle robots wander over and use them; the piece comes alive while they're there. Each room gets one decor piece.</div>
+  <div class="grid decor" id="decor"></div>
+
+  <h2>3 · Sample rooms</h2>
+  <div class="note">Three task pieces plus one decor piece per room, in the room's own looks.</div>
+  <div id="rooms"></div>
+
+  <h2>4 · How it's built</h2>
+  <table>
+    <tr><th>File</th><th>What</th></tr>
+    <tr><td><code>ui/logic/vault/rooms.js</code></td><td>The original looks (<code>AI_FURNITURE</code>)</td></tr>
+    <tr><td><code>ui/logic/vault/furniture-art.js</code></td><td>New looks (<code>AI_FURNITURE_ALT</code>), decor (<code>AI_DECOR</code>), what idle robots do there (<code>DECOR_IDLE</code>)</td></tr>
+    <tr><td><code>ui/logic/vault/robots.js</code></td><td>Which look a room uses, the decor piece in each room, idle robots using decor</td></tr>
+    <tr><td><code>ui/styles/features.css</code></td><td>The moving parts (<code>f-*</code> classes) — the printer head (<code>f-head</code>) is new</td></tr>
+  </table>
+
+<script src="../../ui/logic/vault/rooms.js"></script>
+<script src="../../ui/logic/vault/furniture-art.js"></script>
+<script>
+  const TASKS = [
+    ['diffDesk', 'Desk', 'Edit / Write', 'Original: two monitors on a desk. New: a standing desk with one ultrawide curved screen.', 'f-screen · f-code'],
+    ['promptTerm', 'Terminal', 'Bash', 'Original: kiosk terminal. New: a low console projecting a holographic screen.', 'f-term · f-cursor'],
+    ['ctxTank', 'Context store', 'Read', 'Original: a glass tank. New: an archive cabinet with lit drawers.', 'f-led · f-bubbles'],
+    ['vectorPods', 'Vector store', 'Grep / Glob', 'Original: two cylinders. New: a glowing embedding orb in an orbit ring.', 'f-fluid · f-bubbles'],
+    ['mcpDock', 'MCP dock', 'Web / MCP', 'Original: a dock with three cables. New: a patch bay with looping cables.', 'f-led · f-cable'],
+    ['whiteboard', 'Planning board', 'Thinking', 'Original: a graph on a whiteboard. New: a cork kanban board; an arrow moves a card.', 'f-draw'],
+    ['gpuRack', 'GPU rack', 'Working', 'Original: one tall rack with a fan. New: two liquid-cooled cabinets joined by pipes.', 'f-led · f-fluid'],
+    ['forgeCore', 'Forge', '(Tool forge room)', 'Original: furnace and anvil. New: a compile press squeezing a glowing block.', 'f-fire · f-led'],
+    ['rechargePod', 'Rest spot', 'Compacting (coffee break)', 'Original: sofa and plant. New: a bean bag and a floor lamp. Robots sit on the left.', '—'],
+  ];
+  const DECOR = [
+    ['coffeeBar', 'Coffee bar', 'Stands and sips', 'Steam rises from the cup.'],
+    ['bookshelf', 'Bookshelf', 'Reads a book', 'Three shelves of books and a globe.'],
+    ['arcade', 'Arcade cabinet', 'Plays a game', 'The game plays on screen; the coin light blinks.'],
+    ['plantWall', 'Planter', 'Looks after the plants', 'The grow light flickers.'],
+    ['bunk', 'Bunk bed', 'Sits on the lower bunk', 'Zz bubbles drift up.'],
+    ['waterCooler', 'Water cooler', 'Gets a drink', 'The water glugs and bubbles.'],
+    ['printer3d', '3D printer', 'Watches it print', 'The print head slides back and forth.'],
+  ];
+  const svg = (kind, variant, cls = '') => `<svg class="vault-furn ${cls}" data-kind="${kind}" viewBox="0 0 64 56">${furnitureArt(kind, variant)}</svg>`;
+
+  document.getElementById('tasks').innerHTML = TASKS.map(([k, name, job, desc, anim]) => `
+    <div class="card"><h3>${name}</h3><div class="job">Used for <b>${job}</b> · <code>${k}</code></div>
+      <div class="pair">
+        <div class="slot"><div class="stage">${svg(k, 0, 'in-use')}</div><span class="tag">Original</span></div>
+        <div class="slot"><div class="stage">${svg(k, 1, 'in-use')}</div><span class="tag new">New look</span></div>
+      </div>
+      <p>${desc}</p><div class="anim">Moves: <code>${anim}</code></div></div>`).join('');
+
+  document.getElementById('decor').innerHTML = DECOR.map(([k, name, does, moves]) => `
+    <div class="card"><h3>${name}</h3><div class="job">Idle robot: <b>${does}</b> <span class="emote">${DECOR_IDLE[k].emote}</span> · <code>${k}</code></div>
+      <div class="pair"><div class="slot"><div class="stage">${svg(k, 0, 'in-use')}</div><span class="tag new">New</span></div></div>
+      <p>${moves}</p></div>`).join('');
+
+  const ROOMS = [
+    ['HEADQUARTER', 'CODING LAB', [['diffDesk', 1], ['promptTerm', 0], ['ctxTank', 1], ['coffeeBar', 0]]],
+    ['SHOP API', 'MCP & WEB', [['mcpDock', 1], ['gpuRack', 1], ['whiteboard', 0], ['arcade', 0]]],
+    ['DOCS', 'CONTEXT ARCHIVE', [['vectorPods', 1], ['whiteboard', 1], ['rechargePod', 1], ['bookshelf', 0]]],
+    ['INFRA', 'TOOL FORGE', [['forgeCore', 1], ['promptTerm', 1], ['gpuRack', 0], ['printer3d', 0]]],
+  ];
+  document.getElementById('rooms').innerHTML = ROOMS.map(([name, type, pieces]) => `
+    <div class="room"><span class="plate">${name}<i>${type}</i></span>
+      ${pieces.map(([k, v], i) => svg(k, v, 'in-use').replace('class="vault-furn', `style="left:${[13, 38, 63, 88][i]}%" class="vault-furn`)).join('')}
+    </div>`).join('');
+
+  document.getElementById('power').addEventListener('change', (e) => {
+    document.querySelectorAll('.vault-furn').forEach((f) => f.classList.toggle('in-use', e.target.checked));
+  });
+</script>
+</body>
+</html>

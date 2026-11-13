@@ -933,6 +933,32 @@ if (btnNudge) {
   });
 }
 
+// Sleeping robots: in the Vault, chats idle 2+ days nap in the storage drawer (room-build.js)
+var vaultSleepOn = window.electronAPI.settings?.vaultSleep !== false;
+const btnSleep = document.getElementById('btnSleep');
+if (btnSleep) {
+  btnSleep.classList.toggle('active', vaultSleepOn);
+  btnSleep.addEventListener('click', () => {
+    vaultSleepOn = !btnSleep.classList.contains('active');
+    btnSleep.classList.toggle('active', vaultSleepOn);
+    window.electronAPI.storeSet('vaultSleep', vaultSleepOn);
+    renderSessionCards(true);
+  });
+}
+
+// Room windows: a scene on each Vault room's back wall (window-art.js)
+var vaultWindowsOn = window.electronAPI.settings?.vaultWindows !== false;
+const btnWindows = document.getElementById('btnWindows');
+if (btnWindows) {
+  btnWindows.classList.toggle('active', vaultWindowsOn);
+  btnWindows.addEventListener('click', () => {
+    vaultWindowsOn = !btnWindows.classList.contains('active');
+    btnWindows.classList.toggle('active', vaultWindowsOn);
+    window.electronAPI.storeSet('vaultWindows', vaultWindowsOn);
+    renderSessionCards(true);
+  });
+}
+
 // Pin toggle
 btnPin.addEventListener('click', async () => {
   isPinned = await window.electronAPI.togglePin();
@@ -988,7 +1014,7 @@ function buildSettingsDialogLayout() {
   const appearance = makeSection('Appearance', [
     settingsPanel.querySelector('.set-style-row'), settingsPanel.querySelector('.style-pills'), byId('btnTheme'), themePills,
   ]);
-  const behavior = makeSection('Behavior', [byId('btnSound'), byId('btnNudge'), byId('btnPin'), byId('btnNotify'), byId('btnShowAg')]);
+  const behavior = makeSection('Behavior', [byId('btnSound'), byId('btnNudge'), byId('btnSleep'), byId('btnWindows'), byId('btnPin'), byId('btnNotify'), byId('btnShowAg')]);
   const tools = makeSection('Tools & Data', [
     byId('btnDigest'), digestBox, byId('btnExport'), byId('btnCreateShortcut'), byId('btnRules'), byId('btnInstallSkill'),
   ]);
@@ -1479,9 +1505,12 @@ function renderSessionCards(force = false) {
   }
 
   sortedGroups.forEach(group => {
-    const isCollapsed = collapsedGroups.has(group.key);
+    // a chat open beside its robot (focus.js): its room shows while it's open, even if folded or hidden
+    const hasPinned = typeof vaultPinnedId !== 'undefined' && !!vaultPinnedId && group.sessions.some((x) => x.id === vaultPinnedId);
+    const isCollapsed = collapsedGroups.has(group.key) && !hasPinned;
     const groupEl = document.createElement('div');
     groupEl.className = `workspace-group ${isCollapsed ? 'collapsed' : ''}`;
+    if (hiddenRooms.has(group.key) && !hasPinned) groupEl.classList.add('vault-hidden'); // hidden in the Vault only (room right-click)
 
     const header = document.createElement('div');
     header.className = 'workspace-header';
@@ -1541,12 +1570,22 @@ function renderSessionCards(force = false) {
     ordered.forEach(session => body.appendChild(buildSessionCard(session)));
 
     const vaultRoom = typeof buildWorkspaceVaultRoom === 'function'
-      ? buildWorkspaceVaultRoom(ordered, { name: group.name, runningN, attnN, total: group.sessions.length }) : null;
+      ? buildWorkspaceVaultRoom(ordered, { name: group.name, key: group.key, cwd: group.cwd, runningN, attnN, total: group.sessions.length }) : null;
     groupEl.appendChild(header);
     if (vaultRoom) groupEl.appendChild(vaultRoom);
     groupEl.appendChild(body);
     sessionsContainer.appendChild(groupEl);
   });
+  // Vault: a note at the bottom when rooms are hidden, to bring them back
+  const hiddenN = sortedGroups.filter((g) => hiddenRooms.has(g.key)).length;
+  if (hiddenN) {
+    const note = document.createElement('button');
+    note.className = 'vault-hidden-note';
+    note.textContent = `${hiddenN} hidden room${hiddenN === 1 ? '' : 's'} · Show`;
+    note.title = 'Show the rooms you hid (right-click a room → Hide room)';
+    note.addEventListener('click', (e) => { e.stopPropagation(); hiddenRooms.clear(); saveHiddenRooms(); renderSessionCards(true); });
+    sessionsContainer.appendChild(note);
+  }
 }
 
 // How the contact list is grouped: by folder (default) or by status (remembered)
@@ -1585,6 +1624,9 @@ function workspaceKey(session) {
 }
 
 const collapsedGroups = new Set(window.electronAPI.settings?.collapsedGroups || []);
+// rooms hidden from the Vault view (the List view still shows them)
+const hiddenRooms = new Set(window.electronAPI.settings?.hiddenRooms || []);
+function saveHiddenRooms() { window.electronAPI.storeSet('hiddenRooms', [...hiddenRooms]); }
 function saveCollapsedGroups() {
   window.electronAPI.storeSet('collapsedGroups', [...collapsedGroups]);
 }
@@ -2204,12 +2246,15 @@ function renderActivityProgress(row, s, act, verb, target) {
   const hue = typeof robotHueFor === 'function' ? robotHueFor(s) : 0;
   const outfit = typeof window.robotOutfitFor === 'function' ? window.robotOutfitFor(s) : null;
   const bot = run.querySelector('.act-bot');
-  const pose = activityPose(act);
-  const look = `${hue}|${outfit ? JSON.stringify(outfit) : ''}|${pose}`;
+  // waiting for your OK and no helper's step matches the request: the lead raises its hand
+  const req = pendingApprovalFor(s);
+  const leadAsks = !!req && !helperAsking(s, req);
+  const pose = leadAsks ? 'done' : activityPose(act);
+  const look = `${hue}|${outfit ? JSON.stringify(outfit) : ''}|${pose}|${leadAsks ? 'ask' : ''}`;
   if (bot.dataset.look !== look && typeof window.buildRunnerSvg === 'function') {
     bot.dataset.look = look;
     bot.innerHTML = window.buildRunnerSvg(hue, outfit, pose) +
-      (pose === 'think' ? '<span class="act-bubble"><i></i><i></i><i></i></span>' : '');
+      (leadAsks ? '<span class="act-bubble ask">!</span>' : pose === 'think' ? '<span class="act-bubble"><i></i><i></i><i></i></span>' : '');
     run.className = `act-runwrap pose-${pose}`;
   }
 
@@ -2276,7 +2321,8 @@ function renderActivityProgress(row, s, act, verb, target) {
 }
 
 // Team stage: helper agents work next to the lead robot, each acting out its own step.
-// New helpers pop out of a smoke puff; finished ones wave a ✓, then poof away.
+// New helpers pop out of a smoke puff as a page flies down the line to them; finished
+// ones wave a ✓, walk the page back to the lead and poof. "+N" opens the full list.
 const TEAM_MAX = 4;
 const TEAM_HUE = { Explore: -40, Plan: 80, 'general-purpose': 190, claude: 140 };
 function teamHue(type) {
@@ -2285,11 +2331,34 @@ function teamHue(type) {
   for (const ch of String(type)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return (h % 12) * 30;
 }
+// Which helper (if any) a pending approval belongs to. The request doesn't say, so match
+// it against each helper's current step (same tool, same command / file).
+function pendingApprovalFor(s) {
+  if (typeof pendingApprovals === 'undefined' || !s) return null;
+  for (const r of pendingApprovals.values()) if (r.sessionId === s.id) return r;
+  return null;
+}
+function helperAsking(s, req) {
+  if (!req) return null;
+  const i = req.input || {};
+  const want = String(i.command || i.file_path || i.pattern || i.query || i.url || i.description || '').split('\n')[0].slice(0, 100);
+  return (s.subagents || []).find((a) => !a.finished && a.tool === req.toolName && a.target === want) || null;
+}
+
+const teamLeaving = new Set();  // helper ids walking their page back to the lead
+const teamRetired = new Set();  // helper ids that have handed back and gone
+let teamListOpen = false;
 function renderActivityTeam(row, s) {
   const subs = Array.isArray(s.subagents) ? s.subagents : [];
   let team = row.querySelector('.act-team');
-  if (!subs.length) {
-    if (team) {
+  // one already finished when first seen (e.g. you opened the chat late): nothing to hand back
+  const mates0 = team?.querySelector('.team-mates');
+  for (const a of subs) {
+    if (a.finished && !teamLeaving.has(a.id) && !mates0?.querySelector(`.team-mate[data-id="${CSS.escape(a.id)}"]`)) teamRetired.add(a.id);
+  }
+  const visible = subs.filter((a) => !teamRetired.has(a.id) && !teamLeaving.has(a.id));
+  if (!visible.length) {
+    if (team && !team.querySelector('.team-mate.leaving')) {
       for (const m of team.querySelectorAll('.team-mate')) teamPoof(m);
       team.remove();
     }
@@ -2298,14 +2367,20 @@ function renderActivityTeam(row, s) {
   if (!team) {
     team = document.createElement('div');
     team.className = 'act-team';
-    team.innerHTML = '<span class="team-line"><i></i></span><div class="team-mates"></div><button class="team-more"></button>';
+    team.innerHTML = '<span class="team-line"><i></i></span><div class="team-mates"></div><button class="team-more"></button><div class="team-list" hidden></div>';
+    team.querySelector('.team-more').addEventListener('click', (e) => {
+      e.stopPropagation();
+      teamListOpen = !teamListOpen;
+      if (currentActiveSession) renderActivity(currentActiveSession);
+    });
     row.appendChild(team);
   }
   const mates = team.querySelector('.team-mates');
-  const shown = subs.slice(-TEAM_MAX);
+  const shown = visible.slice(-TEAM_MAX);
   const keep = new Set(shown.map((a) => a.id));
-  for (const m of [...mates.children]) if (!keep.has(m.dataset.id)) { teamPoof(m); m.remove(); }
+  for (const m of [...mates.children]) if (!keep.has(m.dataset.id) && !m.classList.contains('leaving')) { teamPoof(m); m.remove(); }
 
+  const asker = helperAsking(s, pendingApprovalFor(s));
   for (const a of shown) {
     let m = mates.querySelector(`.team-mate[data-id="${CSS.escape(a.id)}"]`);
     const isNew = !m;
@@ -2316,27 +2391,91 @@ function renderActivityTeam(row, s) {
       m.innerHTML = '<span class="team-bot"></span><span class="team-tag"></span><span class="team-task"></span>';
       mates.appendChild(m);
     }
-    const pose = a.finished ? 'done' : activityPose(a.tool ? { kind: 'tool', tool: a.tool } : { kind: 'thinking' });
+    const asking = asker?.id === a.id;
+    const pose = a.finished || asking ? 'done' : activityPose(a.tool ? { kind: 'tool', tool: a.tool } : { kind: 'thinking' });
+    const look = `${pose}|${a.finished ? 'ok' : asking ? 'ask' : ''}`;
     const bot = m.querySelector('.team-bot');
-    if (bot.dataset.look !== pose && typeof window.buildRunnerSvg === 'function') {
-      bot.dataset.look = pose;
+    if (bot.dataset.look !== look && typeof window.buildRunnerSvg === 'function') {
+      bot.dataset.look = look;
       bot.innerHTML = window.buildRunnerSvg(teamHue(a.type), null, pose) +
-        (pose === 'done' ? '<span class="act-bubble ok">✓</span>' : pose === 'think' ? '<span class="act-bubble"><i></i><i></i><i></i></span>' : '');
-      m.className = `team-mate pose-${pose}`;
+        (a.finished ? '<span class="act-bubble ok">✓</span>' : asking ? '<span class="act-bubble ask">!</span>'
+          : pose === 'think' ? '<span class="act-bubble"><i></i><i></i><i></i></span>' : '');
+      m.className = `team-mate pose-${pose}${asking ? ' asking' : ''}`;
     }
     m.querySelector('.team-tag').textContent = a.type;
     m.querySelector('.team-task').textContent = a.task;
-    m.title = `${a.type}: ${a.task}` + (a.finished ? '\n✓ Done' : a.tool ? `\nNow: ${a.tool}${a.target ? ' ' + a.target : ''}` : '\nNow: thinking');
+    m.title = `${a.type}: ${a.task}` + (a.finished ? '\n✓ Done' : asking ? `\nWaiting for your OK: ${a.tool} ${a.target || ''}`
+      : a.tool ? `\nNow: ${a.tool}${a.target ? ' ' + a.target : ''}` : '\nNow: thinking');
     if (isNew) requestAnimationFrame(() => {
       const r = bot.getBoundingClientRect();
       if (r.width) smokePuff(r.left + r.width / 2, r.top + r.height / 2, 30);
+      // the hand-off: one page flies down the line to the new helper
+      const line = team.querySelector('.team-line');
+      line.classList.remove('handoff'); void line.offsetWidth; line.classList.add('handoff');
     });
+    // finished: wave the ✓ for a moment, then walk the page back to the lead
+    if (a.finished && !m.dataset.doneAt) {
+      m.dataset.doneAt = String(Date.now());
+      setTimeout(() => teamReturn(m, row, a), 1300);
+    }
   }
   const more = team.querySelector('.team-more');
-  const extra = subs.length - shown.length;
+  const extra = visible.length - shown.length;
   more.style.display = extra > 0 ? '' : 'none';
   more.textContent = `+${extra}`;
-  more.title = subs.slice(0, extra).map((a) => `${a.type}: ${a.task}`).join('\n');
+  more.title = teamListOpen ? 'Hide the list' : `Show all ${visible.length} helpers`;
+  more.classList.toggle('open', teamListOpen && extra > 0);
+
+  // "+N" opens the full list of helpers
+  const list = team.querySelector('.team-list');
+  list.hidden = !(teamListOpen && extra > 0);
+  if (!list.hidden) {
+    list.textContent = '';
+    for (const a of subs) {
+      const r = document.createElement('div');
+      r.className = `team-li${a.finished ? ' done' : ''}`;
+      const dot = document.createElement('i');
+      dot.style.background = shiftHexHue('#62b6d8', teamHue(a.type));
+      const tag = document.createElement('b'); tag.textContent = a.type;
+      const task = document.createElement('span'); task.className = 'team-li-task'; task.textContent = a.task;
+      const now = document.createElement('span'); now.className = 'team-li-now';
+      now.textContent = a.finished ? '✓ done' : asker?.id === a.id ? '! needs your OK' : a.tool ? `${a.tool}${a.target ? ' ' + a.target : ''}` : 'thinking…';
+      r.title = `${a.type}: ${a.task}`;
+      r.append(dot, tag, task, now);
+      list.appendChild(r);
+    }
+  }
+}
+// A finished helper turns, walks its page back up the line to the lead and poofs.
+function teamReturn(m, row, a) {
+  if (!m.isConnected || m.classList.contains('leaving')) return;
+  teamLeaving.add(a.id);
+  m.classList.add('leaving');
+  const done = () => {
+    const r = m.getBoundingClientRect();
+    if (r.width) smokePuff(r.left + r.width / 2, r.top + r.height / 2, 26);
+    m.remove();
+    teamLeaving.delete(a.id);
+    teamRetired.add(a.id);
+    const run = row.querySelector('.act-runwrap');
+    if (run) { run.classList.remove('got-page'); void run.offsetWidth; run.classList.add('got-page'); } // lead takes the page
+    if (currentActiveSession) renderActivity(currentActiveSession);
+  };
+  const bot = m.querySelector('.team-bot');
+  const lead = row.querySelector('.act-bot')?.getBoundingClientRect();
+  const me = bot?.getBoundingClientRect();
+  if (reducedMotion() || !lead || !me || !me.width || typeof window.buildRunnerSvg !== 'function') { done(); return; }
+  bot.innerHTML = window.buildRunnerSvg(teamHue(a.type), null, 'walk') + '<span class="team-page"></span>';
+  bot.style.transform = `scaleX(${lead.left + lead.width / 2 < me.left + me.width / 2 ? -1 : 1})`; // face the lead
+  const dx = (lead.left + lead.width / 2) - (me.left + me.width / 2);
+  const dy = (lead.bottom - 4) - me.bottom;
+  const dur = Math.min(1600, Math.max(700, Math.hypot(dx, dy) * 12));
+  m.animate([
+    { transform: 'translate(0, 0)', opacity: 1 },
+    { transform: `translate(${dx * 0.55}px, 0)`, opacity: 1, offset: 0.5 },            // along the bottom of the line…
+    { transform: `translate(${dx}px, ${dy}px) scale(.8)`, opacity: 1, offset: 0.9 },   // …and up to the lead
+    { transform: `translate(${dx}px, ${dy}px) scale(.6)`, opacity: 0 },
+  ], { duration: dur, easing: 'linear', fill: 'forwards' }).finished.then(done, done);
 }
 function teamPoof(m) {
   const r = m.querySelector('.team-bot')?.getBoundingClientRect();
@@ -2349,7 +2488,9 @@ function renderActivity(s) {
   if (!row) return;
   const isAttn = s && (s.unread || s.state === 'attention');
   // helpers (sub-agents) still working keep the card up after the main reply ends
-  const helpersBusy = (x) => (x?.subagents || []).some((a) => !a.finished);
+  // (a finished helper still counts until it has walked its page back to the lead)
+  const onCard = (a) => !!document.querySelector(`#activityRow .team-mate[data-id="${CSS.escape(a.id)}"]`);
+  const helpersBusy = (x) => (x?.subagents || []).some((a) => !a.finished || teamLeaving.has(a.id) || (!teamRetired.has(a.id) && onCard(a)));
   const working = s && !isAttn && !s.deliveryFailed && (s.status === 'running' || s.context?.compacting || helpersBusy(s));
   if (!working) {
     if (row.style.display === 'none') {
@@ -2383,7 +2524,7 @@ function renderActivity(s) {
   let { verb, target } = describeActivity(act, agent);
   if (!mainBusy) {
     const open = s.subagents.filter((a) => !a.finished);
-    verb = `Waiting for ${open.length} helper${open.length === 1 ? '' : 's'}`;
+    verb = open.length ? `Waiting for ${open.length} helper${open.length === 1 ? '' : 's'}` : 'Helpers handing back their work';
     target = open[0]?.task || '';
   }
   row.className = `activity-row kind-${act.kind || 'tool'}`;

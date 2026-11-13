@@ -43,7 +43,9 @@
       const list = typeof sessionsList !== 'undefined' ? sessionsList : [];
       if (saved.chat && !list.length && Date.now() - started < 6000) { setTimeout(restore, 150); return; }
       const s = saved.chat && list.find((x) => x.id === saved.chat);
-      if (s && saved.focus && typeof openVaultFocus === 'function') {
+      // in the Vault view: reopen beside its robot even if it was the full chat before
+      const inVault = saved.focus || document.body.classList.contains('list-grid');
+      if (s && inVault && typeof openVaultFocus === 'function') {
         // reopen beside its robot; the robots may need a moment to be drawn
         if (!openVaultFocus(s)) {
           if (Date.now() - started < 6000) { setTimeout(restore, 150); return; }

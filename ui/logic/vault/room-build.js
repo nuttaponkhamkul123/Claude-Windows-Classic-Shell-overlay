@@ -1,11 +1,42 @@
 // Vault view: draws one workspace room (furniture, robots, hover cards, approvals,
 // helpers) plus the drawer for chats that don't fit.
 
+// Sleeping robots: idle (nothing running, nothing waiting for you) for 2+ days
+const VAULT_SLEEP_MS = 2 * 24 * 60 * 60 * 1000;
+function sessionLastActive(s) {
+  return s.mtime > 0 ? s.mtime : (Date.parse(s.timestamp) || Date.now());
+}
+function isAsleep(s, now = Date.now()) {
+  if (typeof vaultSleepOn !== 'undefined' && !vaultSleepOn) return false;
+  if (typeof vaultPinnedId !== 'undefined' && vaultPinnedId === s.id) return false; // its chat is open: awake
+  if (s.draft || s.status === 'running' || s.unread || s.state === 'attention') return false;
+  if (typeof pendingApprovals !== 'undefined' && [...pendingApprovals.values()].some((r) => r.sessionId === s.id)) return false;
+  return now - sessionLastActive(s) > VAULT_SLEEP_MS;
+}
+// "Just replied": a chat goes from working to done → its robot says the first line
+// of the reply for a few seconds
+const vaultPrevStatus = new Map(); // session id -> 'running' | 'idle'
+const vaultSaying = new Map();     // session id -> { text, until }
+const VAULT_SAY_MS = 9000;
+
 function buildWorkspaceVaultRoom(orderedSessions, groupMeta = {}) {
   if (typeof window.buildRunnerSvg !== 'function' || !orderedSessions.length) return null;
   const maxDwellers = 6;
-  const dwellers = orderedSessions.slice(0, maxDwellers);
-  const overflow = orderedSessions.length - dwellers.length;
+  const sleeping = orderedSessions.filter((x) => isAsleep(x));
+  const awake = orderedSessions.filter((x) => !sleeping.includes(x));
+  const dwellers = awake.slice(0, maxDwellers);
+  // its chat is open beside it (focus.js): its robot stays on the floor, not in the drawer
+  const pinned = typeof vaultPinnedId !== 'undefined' ? awake.find((x) => x.id === vaultPinnedId) : null;
+  if (pinned && !dwellers.includes(pinned)) dwellers[dwellers.length - 1] = pinned;
+  const overflow = awake.length - dwellers.length;
+  for (const x of orderedSessions) {
+    const st = x.status === 'running' ? 'running' : 'idle';
+    if (vaultPrevStatus.get(x.id) === 'running' && st === 'idle' && x.detail) {
+      const line = String(x.detail).split(/\r?\n/).map((l) => l.trim()).find(Boolean) || '';
+      if (line) vaultSaying.set(x.id, { text: line.length > 90 ? line.slice(0, 88) + '…' : line, until: Date.now() + VAULT_SAY_MS });
+    }
+    vaultPrevStatus.set(x.id, st);
+  }
   const metaOf = (s) => {
     const isAttn = s.unread || s.state === 'attention';
     const state = isAttn ? 'attention' : (s.status === 'running' ? 'running' : 'idle');
@@ -56,6 +87,13 @@ function buildWorkspaceVaultRoom(orderedSessions, groupMeta = {}) {
     const st = vaultWorkerAI.get(sid);
     if (st && Math.abs(st.tx - job.tx) < 0.3 && now >= st.t0 + st.dur * 1000) job.piece.inUse = true;
   }
+  // …and while an idle robot is using it (coffee, books, arcade…)
+  for (const d of items) {
+    const st = d.state === 'idle' ? vaultDwellerAI.get(d.s.id) : null;
+    if (!st?.useKind || st.pose === 'walk') continue;
+    const p = furn.filter((x) => x.kind === st.useKind).sort((a, b) => Math.abs(a.x - (st.useX ?? 0)) - Math.abs(b.x - (st.useX ?? 0)))[0];
+    if (p) p.inUse = true;
+  }
   const furnitureHtml = furn.map(furnitureSvg).join('');
   for (const p of furn) if (p.needsPuff) { puffs.push(p.x); p.needsPuff = false; }
 
@@ -66,9 +104,13 @@ function buildWorkspaceVaultRoom(orderedSessions, groupMeta = {}) {
   const anyAttn = items.some((d) => d.state === 'attention' || d.approval);
   const room = document.createElement('div');
   room.className = `vault-room vault-stage room-${roomType}${anyAttn ? ' room-alert-on' : ''}`;
+  // for the room's right-click menu and double-click (room-actions.js)
+  room.vaultGroup = { key: groupMeta.key || roomKey, cwd: groupMeta.cwd || '', name: groupMeta.name || '', sessions: orderedSessions, windowKey: roomKey, seed: roomSeed };
+  // a window on the back wall, behind the furniture (window-art.js)
+  const windowHtml = typeof buildVaultWindowHtml === 'function' ? buildVaultWindowHtml(roomKey, roomSeed, furn) : '';
   room.innerHTML =
     '<span class="vault-ceiling"></span>' +
-    `<span class="vault-wall">${furnitureHtml}</span>` +
+    `<span class="vault-wall">${windowHtml}${furnitureHtml}</span>` +
     '<span class="vault-plaque"><span class="vault-ws-name"></span><span class="vault-ws-tag"></span></span>' +
     '<span class="vault-shaft left"></span>' +
     '<span class="vault-shaft right"></span>' +
@@ -225,6 +267,20 @@ function buildWorkspaceVaultRoom(orderedSessions, groupMeta = {}) {
     dweller.appendChild(card);
     // the approval bubble — not for the robot whose chat is open (the chat shows the request)
     if (d.approval && vaultFocus?.id !== d.s.id) dweller.appendChild(buildRoomApproval(d.approval, slotPct > 58));
+    // just replied: a speech bubble with the first line, which pops away by itself
+    const say = vaultSaying.get(d.s.id);
+    if (say && say.until > now && !d.approval && vaultFocus?.id !== d.s.id) {
+      const b = document.createElement('span');
+      b.className = `vault-say${slotPct > 58 ? ' to-left' : ''}`;
+      const t = document.createElement('span'); // the 2-line clamp sits on this inner span
+      t.textContent = say.text;
+      b.appendChild(t);
+      b.title = 'Click the robot to open the chat';
+      dweller.appendChild(b);
+      setTimeout(() => { b.classList.add('bye'); setTimeout(() => b.remove(), 300); }, say.until - now);
+    } else if (say && say.until <= now) {
+      vaultSaying.delete(d.s.id);
+    }
     // helpers (sub-agents) still working: small robots beside their lead, each doing its own step
     const helpers = (d.s.subagents || []).filter((a) => !a.finished).slice(0, 3);
     helpers.forEach((a, k) => {
@@ -244,7 +300,7 @@ function buildWorkspaceVaultRoom(orderedSessions, groupMeta = {}) {
   });
 
   puffRoomFurniture(room, puffs);
-  if (overflow <= 0) return room;
+  if (overflow <= 0 && !sleeping.length) return room;
 
   // Chats that don't fit on the floor: a drawer of small chips under the room,
   // so every chat can still be opened (click / Enter) and right-clicked.
@@ -253,12 +309,20 @@ function buildWorkspaceVaultRoom(orderedSessions, groupMeta = {}) {
   drawer.className = 'vault-drawer';
   const lbl = document.createElement('span');
   lbl.className = 'vault-drawer-label';
-  lbl.textContent = `+${overflow} more:`;
+  lbl.textContent = overflow > 0 ? `+${overflow} more:` : `💤 ${sleeping.length} asleep:`;
   drawer.appendChild(lbl);
-  for (const s of orderedSessions.slice(maxDwellers)) {
+  const chipsFor = [...awake.filter((x) => !dwellers.includes(x)), ...sleeping];
+  for (const s of chipsFor) {
+    const asleep = sleeping.includes(s);
+    if (asleep && overflow > 0 && s === sleeping[0]) {
+      const z = document.createElement('span');
+      z.className = 'vault-drawer-label';
+      z.textContent = `💤 ${sleeping.length} asleep:`;
+      drawer.appendChild(z);
+    }
     const isAttn = s.unread || s.state === 'attention';
     const chip = document.createElement('button');
-    chip.className = `vault-chip${isAttn ? ' is-attn' : s.status === 'running' ? ' is-running' : ''}`;
+    chip.className = `vault-chip${isAttn ? ' is-attn' : s.status === 'running' ? ' is-running' : ''}${asleep ? ' is-asleep' : ''}`;
     chip.dataset.sid = s.id;
     const hue = typeof robotHueFor === 'function' ? robotHueFor(s) : 0;
     const dot = document.createElement('i');
@@ -266,7 +330,8 @@ function buildWorkspaceVaultRoom(orderedSessions, groupMeta = {}) {
     const name = document.createElement('span');
     const title = s.sessionTitle || s.aiTitle || agentLabel(s.source, s.id);
     name.textContent = title;
-    chip.title = `${agentLabel(s.source, s.id)} — ${title}\n${isAttn ? 'Needs input' : s.status === 'running' ? friendlyStatus(s, 'running') : 'Idle'}`;
+    const days = Math.floor((Date.now() - sessionLastActive(s)) / 86400000);
+    chip.title = `${agentLabel(s.source, s.id)} — ${title}\n${asleep ? `Asleep · idle ${days} days (click to open it)` : isAttn ? 'Needs input' : s.status === 'running' ? friendlyStatus(s, 'running') : 'Idle'}`;
     chip.append(dot, name);
     chip.addEventListener('click', (e) => { e.stopPropagation(); zoomIntoChat(s, chip); });
     drawer.appendChild(chip);

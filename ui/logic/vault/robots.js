@@ -65,7 +65,14 @@ const IDLE_AT = {
   mcpDock: { pose: 'stand', emote: '' },
   vectorPods: { pose: 'search', emote: '' },
   forgeCore: { pose: 'stand', emote: '🔥' },
+  // the room's window (window-art.js): stand right under it, back to you, and look out
+  window: { pose: 'gaze', emote: '👀', dx: 0 },
 };
+
+// decor pieces (furniture-art.js): what idle robots do there
+for (const [k, d] of Object.entries(typeof DECOR_IDLE !== 'undefined' ? DECOR_IDLE : {})) {
+  IDLE_AT[k] = { pose: d.pose, emote: d.emote, ...(d.dx != null ? { dx: d.dx } : {}) };
+}
 
 function startIdleWalk(st, targetX, now, plan = null) {
   const dur = +walkSecs(Math.abs(targetX - st.x)).toFixed(2);
@@ -79,6 +86,7 @@ function startIdleWalk(st, targetX, now, plan = null) {
   st.stopAt = now + TURN_MS + dur * 1000;
   st.emote = '';
   st.plan = plan;             // what to do on arrival (sit, sip, read…)
+  st.useKind = null;          // left whatever it was using
   st.nextAt = st.stopAt;
 }
 
@@ -93,7 +101,7 @@ function stepIdleDweller(st, occupied = [], pieces = []) {
     st.dur = 0;
     st.stopAt = 0;
     if (p) {
-      Object.assign(st, { pose: p.pose, face: p.face, emote: p.emote || '' });
+      Object.assign(st, { pose: p.pose, face: p.face, emote: p.emote || '', useKind: p.kind || null, useX: p.at ?? null });
       st.nextAt = now + 6000 + Math.random() * 6000;
     } else {
       st.pose = 'stand';
@@ -112,7 +120,7 @@ function stepIdleDweller(st, occupied = [], pieces = []) {
       const px = cfg.dx != null ? cfg.dx : side * (STANCE_PX[f.kind] || 24);
       const x = Math.max(4, Math.min(96, f.x + (px / roomW) * 100));
       const face = cfg.dx != null ? 1 : -side; // face the piece (sofa: sit facing out to the right)
-      return { x, plan: { pose: cfg.pose, emote: cfg.emote, face } };
+      return { x, plan: { pose: cfg.pose, emote: f.emote || cfg.emote, face, kind: f.kind, at: f.x } };
     }).filter((o) => free(o.x) && Math.abs(o.x - st.x) > 1);
     if (options.length) {
       const o = options[Math.floor(Math.random() * options.length)];
@@ -132,6 +140,7 @@ function stepIdleDweller(st, occupied = [], pieces = []) {
     // a moment in place: stand, stretch (arms up) or think
     const acts = ['stand', 'stand', 'done', 'think'];
     st.pose = acts[Math.floor(Math.random() * acts.length)];
+    st.useKind = null;
     st.face = Math.random() < 0.5 ? 1 : -1;
     st.dur = 0;
     st.turnMs = 0;
@@ -152,6 +161,7 @@ const TASK_POSE_AT = { run: 'type' }; // "working" with no specific tool: operat
 // How far from a piece's centre a robot stands to use it (px): close enough that its
 // hands reach the keyboard / screen / panel, overlapping the piece's edge a little
 const STANCE_PX = { diffDesk: 20, promptTerm: 24, gpuRack: 22, ctxTank: 20, vectorPods: 24, mcpDock: 22, whiteboard: 26, forgeCore: 26, rechargePod: 26 };
+for (const [k, d] of Object.entries(typeof DECOR_IDLE !== 'undefined' ? DECOR_IDLE : {})) if (d.stance) STANCE_PX[k] = d.stance;
 const FURN_SLOTS = [12, 25, 38, 51, 64, 77, 88];
 const vaultRoomFurniture = new Map(); // room key -> [{ kind, x, spawned, needsPuff, lastUsed }]
 const vaultWorkerAI = new Map();      // session id -> { x, tx, t0, dur, kind, side }
@@ -167,7 +177,12 @@ function roomFurnitureState(key, seed) {
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
   const slots = [12, 38, 64, 88].filter((_, i) => !(i === 2 && (s % 4) === 0));
-  list = slots.map((x, i) => ({ kind: pool[i], x, spawned: false, needsPuff: false, lastUsed: 0 }));
+  // each piece in the room's own look (original or the alternate), stable per room
+  list = slots.map((x, i) => ({ kind: pool[i], x, variant: (s >>> (i * 3 + 5)) & 1, spawned: false, needsPuff: false, lastUsed: 0 }));
+  // the last spot: a decor piece for idle robots (coffee bar, bookshelf, arcade…)
+  if (typeof DECOR_KINDS !== 'undefined' && DECOR_KINDS.length) {
+    list[list.length - 1] = { ...list[list.length - 1], kind: DECOR_KINDS[(s >>> 11) % DECOR_KINDS.length], variant: 0, decor: true };
+  }
   vaultRoomFurniture.set(key, list);
   return list;
 }
@@ -178,14 +193,14 @@ function furnitureFor(list, kind, busy) {
   if (f) return f;
   const free = FURN_SLOTS.find((x) => list.every((p) => Math.abs(p.x - x) >= 12));
   if (free !== undefined) {
-    f = { kind, x: free, spawned: true, needsPuff: true, lastUsed: Date.now() };
+    f = { kind, x: free, variant: Math.random() < 0.5 ? 1 : 0, spawned: true, needsPuff: true, lastUsed: Date.now() };
     list.push(f);
     return f;
   }
-  // room full: swap out a piece nobody is using
-  const spare = list.find((p) => !busy.has(p));
+  // room full: swap out a piece nobody is using (decor first)
+  const spare = list.find((p) => !busy.has(p) && p.decor) || list.find((p) => !busy.has(p));
   if (!spare) return list[0];
-  Object.assign(spare, { kind, spawned: true, needsPuff: true, lastUsed: Date.now() });
+  Object.assign(spare, { kind, variant: Math.random() < 0.5 ? 1 : 0, decor: false, spawned: true, needsPuff: true, lastUsed: Date.now() });
   return spare;
 }
 
@@ -197,7 +212,7 @@ function workerPos(st, now = Date.now()) {
 }
 
 function furnitureSvg(p) {
-  return `<svg class="vault-furn${p.needsPuff ? ' furn-spawn' : ''}${p.inUse ? ' in-use' : ''}" data-kind="${p.kind}" style="left:${p.x}%" viewBox="0 0 64 56">${AI_FURNITURE[p.kind]}</svg>`;
+  return `<svg class="vault-furn${p.needsPuff ? ' furn-spawn' : ''}${p.inUse ? ' in-use' : ''}" data-kind="${p.kind}" style="left:${p.x}%" viewBox="0 0 64 56">${typeof furnitureArt === 'function' ? furnitureArt(p.kind, p.variant) : AI_FURNITURE[p.kind]}</svg>`;
 }
 
 // After the room is on screen: puff for pieces that just appeared or left
@@ -276,9 +291,18 @@ setInterval(() => {
     const occupied = [...(room?.querySelectorAll('.vault-walker') || [])].filter((w) => w !== el)
       .map((w) => { const o = vaultDwellerAI.get(w.dataset.sid); return o && w.dataset.idle ? o.x : parseFloat(w.style.left); })
       .filter((v) => !Number.isNaN(v));
-    const pieces = [...(room?.querySelectorAll('.vault-furn:not(.in-use)') || [])]
-      .map((f) => ({ kind: f.dataset.kind, x: parseFloat(f.style.left) })).filter((f) => f.kind && !Number.isNaN(f.x));
+    const pieces = [...(room?.querySelectorAll('.vault-furn:not(.in-use), .vault-window') || [])]
+      .map((f) => ({ kind: f.dataset.kind, x: parseFloat(f.style.left), emote: f.dataset.emote })).filter((f) => f.kind && !Number.isNaN(f.x));
+    const wasUsing = st.useKind ? { kind: st.useKind, at: st.useX } : null;
     stepIdleDweller(st, occupied, pieces);
+    const pieceAt = (u) => [...(room?.querySelectorAll(`.vault-furn[data-kind="${u.kind}"]`) || [])]
+      .sort((a, b) => Math.abs(parseFloat(a.style.left) - u.at) - Math.abs(parseFloat(b.style.left) - u.at))[0];
+    if (wasUsing && st.useKind !== wasUsing.kind) {
+      // powers down, unless a working robot is using it
+      const busyWorker = room?.querySelector(`.vault-walker[data-working="1"][data-kind="${wasUsing.kind}"]:not(.is-walking)`);
+      if (!busyWorker) pieceAt(wasUsing)?.classList.remove('in-use');
+    }
+    if (st.useKind && st.pose !== 'walk') pieceAt({ kind: st.useKind, at: st.useX })?.classList.add('in-use');
     const prevPose = el.dataset.pose;
     setPoseClass(el, st.pose);
     el.classList.toggle('is-walking', st.pose === 'walk');
