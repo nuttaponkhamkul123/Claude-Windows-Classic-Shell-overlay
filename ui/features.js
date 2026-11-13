@@ -438,6 +438,8 @@
     }
   };
 
+  window.sessionCostFor = (id) => costs[id]; // the Vault robots' hover card shows it too
+
   function matchesFilter(s) {
     if (currentFilter === 'running') return s.status === 'running';
     if (currentFilter === 'idle') return s.status === 'idle';
@@ -600,6 +602,8 @@
     showDetailView(s);
     tryJump();
   }
+
+  window.fxOpenSearchHit = openHit; // the Ctrl+K finder opens message hits the same way
 
   // After the conversation (and its history) loads, scroll to the match
   function tryJump() {

@@ -8,12 +8,15 @@
   let notes = [];
   let flashId = null;
 
+  // 'shelter' = the HUD's Shelter style (dark base + steel/amber), else a Windows theme
   function applyTheme(theme) {
-    const dark = theme === 'vista' || theme === 'dark';
+    const shelter = theme === 'shelter';
+    const dark = shelter || theme === 'vista' || theme === 'dark';
     document.body.classList.toggle('np-dark', dark);
     document.body.classList.toggle('np-light', !dark);
+    document.body.classList.toggle('np-shelter', shelter);
   }
-  applyTheme(api.settings.theme || 'aero');
+  applyTheme(api.settings.uiStyle === 'classic' ? (api.settings.theme || 'aero') : 'shelter');
   api.onTheme?.(applyTheme);
 
   const el = (tag, cls, text) => {

@@ -2389,3 +2389,6 @@ body.dock-right .mini-dock.has-approval { padding: 0 12px 0 7px; }
 .mini-dock.has-approval .mini-count { display: none !important; }
 body.docked .mini-dock.has-approval { animation: mini-pop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), mini-attention 1.6s 0.32s infinite ease-in-out; }
 .mini-dock.has-approval .mini-dot { background: #f59e0b; }
+/* "(Idle)": the brackets are drawn here so Shelter can show the status as a badge instead */
+body:not(.style-shelter) .convo-status::before { content: "("; }
+body:not(.style-shelter) .convo-status::after { content: ")"; }

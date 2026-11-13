@@ -152,6 +152,7 @@ body.theme-aero.theme-vista .sk-overlay {
   background: var(--sk-line);
   transition: background 0.15s ease;
   flex: none;
+  font-size: 0; color: transparent; overflow: hidden; /* hide the old ✓ text; the knob shows the state */
 }
 .settings-dialog .set-check::before {
   content: '';
@@ -165,7 +166,7 @@ body.theme-aero.theme-vista .sk-overlay {
   transition: transform 0.15s ease;
 }
 .settings-dialog .set-row.active .set-check { background: var(--sk-accent); }
-.settings-dialog .set-row.active .set-check::before { transform: translateX(14px); }
+.settings-dialog .set-row.active .set-check::before { content: ''; transform: translateX(14px); }
 
 /* Summary box inside card */
 .settings-dialog .set-digest {

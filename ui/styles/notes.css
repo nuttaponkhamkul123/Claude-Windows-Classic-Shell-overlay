@@ -107,3 +107,27 @@ html, body { margin: 0; height: 100%; background: transparent; font: 12px "Segoe
 .np-light .np-stack.stacked .np-card:nth-child(3) { background: #e6eef8; }
 .np-dark .np-stack.stacked .np-card:nth-child(2) { background: #20242b; }
 .np-dark .np-stack.stacked .np-card:nth-child(3) { background: #1b1f25; }
+
+/* ===== Shelter style (HUD Settings → Style → Shelter) ===== */
+.np-shelter .np {
+  background:
+    radial-gradient(circle at 7px 7px, #56647a 0 1.5px, transparent 2px),
+    radial-gradient(circle at calc(100% - 7px) 7px, #56647a 0 1.5px, transparent 2px),
+    linear-gradient(180deg, #151b24, #10151c);
+  border: 2px solid #3a4658; box-shadow: inset 0 0 0 1px #070a0e, 0 6px 18px rgba(0,0,0,.55); color: #dfe6ee;
+}
+.np-shelter .np-head { background: linear-gradient(180deg, #252f3c, #1b232e); border-bottom: 1px solid #070a0e; }
+.np-shelter .np-title { font: 600 12px "Bahnschrift", "Segoe UI", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #f5a524; }
+.np-shelter .np-count { background: #f5a524; color: #241600; font-weight: 700; }
+.np-shelter .np-icon:hover { background: #2a3442; border-color: #f5a524; }
+.np-shelter .np-filter { background: #0b1015; border: 1px solid #2e3949; color: #dfe6ee; box-shadow: inset 0 2px 4px rgba(0,0,0,.6); }
+.np-shelter .np-card { background: linear-gradient(180deg, #1b2430, #161e28); border: 1px solid #2d3848; }
+.np-shelter .np-card:hover { border-color: #f5a524; }
+.np-shelter .np-proj { background: rgba(45, 212, 191, .14); color: #9ff3e7; }
+.np-shelter .np-body code { background: #0a0e13; color: #7fe3d2; }
+.np-shelter .np-body pre { background: #0a0e13; border: 1px solid #273140; }
+.np-shelter .np-btn { background: linear-gradient(180deg, #2a3442, #202833); border: 1px solid #3c4859; color: #c9d3df; font-family: "Bahnschrift", "Segoe UI", sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+.np-shelter .np-btn:hover { border-color: #f5a524; color: #fff; }
+.np-shelter .np-group-head { color: #c9d3df; font-family: "Bahnschrift", "Segoe UI", sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.np-shelter .np-stack.stacked .np-card:nth-child(2) { background: #151c25; }
+.np-shelter .np-stack.stacked .np-card:nth-child(3) { background: #11171f; }

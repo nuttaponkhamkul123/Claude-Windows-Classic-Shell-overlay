@@ -84,6 +84,8 @@
           <button id="lbGroup" class="tb-btn" title="Group the contact list by folder or by status">Group: Folder</button>
           <button id="lbView" class="tb-btn" title="Show the contacts as a list or as a grid of avatars">View: Grid</button>
           <button id="lbNotes" class="tb-btn tb-notes" title="Pinned notes (Claude pins them with the pin_note tool)">📌 Notes<span class="notes-badge"></span></button>
+          <span class="tb-spacer"></span>
+          <button id="lbQuit" class="tb-btn tb-quit" title="Quit the HUD">⏻</button>
         </div>
         <!-- MSN Messenger style header: My Status + "new e-mail" strip (filled in app.js) -->
         <div class="msn-top">
@@ -172,7 +174,7 @@
             <div class="convo-contact">
               <div class="convo-name-row">
                 <span id="convoName" class="convo-name">Claude</span>
-                <span id="convoStatus" class="convo-status">(Idle)</span>
+                <span id="convoStatus" class="convo-status">Idle</span>
               </div>
               <div id="convoPersonal" class="convo-personal"></div>
               <!-- Context window meter (Claude Code) -->
@@ -293,6 +295,11 @@
   <script src="lib/robot-outfits.js"></script>
   <script src="lib/robot-runner.js"></script>
   <script src="app.js"></script>
+  <script src="logic/vault/rooms.js"></script>
+  <script src="logic/vault/robots.js"></script>
+  <script src="logic/vault/focus.js"></script>
+  <script src="logic/vault/room-build.js"></script>
+  <script src="logic/vault/grab.js"></script>
   <script src="features.js"></script>
   <script src="logic/nav/toolbar.js"></script>
   <script src="logic/nav/git.js"></script>
@@ -300,6 +307,7 @@
   <script src="logic/nav/workspace.js"></script>
   <script src="logic/personalization/dressup.js"></script>
   <script src="logic/nav/explorer.js"></script>
+  <script src="logic/nav/finder.js"></script>
   <script src="logic/personalization/myavatar.js"></script>
   <script src="logic/chat/quote.js"></script>
   <script src="logic/system/hot.js"></script>

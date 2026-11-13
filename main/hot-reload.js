@@ -47,7 +47,7 @@ function register({ getWin, getNotesWin }) {
       const rel = String(file).replace(/\\/g, '/');
       if (IGNORE.test(rel)) return;
       if (/^ui\/.+\.css$/i.test(rel)) pending.css.add(path.basename(rel));
-      else if (/^ui\/notes\.(js|html)$/i.test(rel)) pending.notesPage = true;
+      else if (/^ui\/(notes\.html|logic\/notes\.js)$/i.test(rel)) pending.notesPage = true;
       else if (/^ui\/.+\.(js|html|svg)$/i.test(rel) || /^robot_.*\.svg$/i.test(rel)) pending.page = true;
       else if (isMainSide(rel)) pending.main.add(rel);
       else return;
