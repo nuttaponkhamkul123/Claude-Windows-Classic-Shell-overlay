@@ -1772,3 +1772,11 @@ body.vault-builder .vault-furn:hover { filter: drop-shadow(0 0 3px #38bdf8) brig
 @keyframes furn-land { 0% { transform: translateX(-50%) translateY(-5px); } 60% { transform: translateX(-50%) scaleY(.92); } }
 .vault-furn.furn-nope { transition: left .25s ease; animation: room-nope .3s; }
 @media (prefers-reduced-motion: reduce) { .vault-furn.furn-landed, .vault-furn.furn-nope { animation: none; } }
+/* the window can be moved too: grab its frame (not the light spill around it) */
+body.vault-builder .vault-window .vw-frame { pointer-events: auto; cursor: grab; }
+body.vault-builder .vault-window:hover .vw-frame { outline: 2px solid #38bdf8; outline-offset: 1px; }
+.vault-window.furn-dragging { z-index: 3; cursor: grabbing; }
+.vault-window.furn-dragging .vw-frame { outline: 2px solid #38bdf8; outline-offset: 1px; box-shadow: 0 6px 10px rgba(0, 0, 0, .55); }
+.vault-window.furn-landed .vw-frame { animation: furn-pop .3s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes furn-pop { 50% { transform: scale(1.06); } }
+@media (prefers-reduced-motion: reduce) { .vault-window.furn-landed .vw-frame { animation: none; } }

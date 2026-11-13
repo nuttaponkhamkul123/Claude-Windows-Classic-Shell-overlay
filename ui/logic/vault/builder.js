@@ -1,5 +1,6 @@
 // Vault builder mode: "🔨 Build" in the list toolbar (or right-click a room → Builder
-// mode) turns it on; then drag any piece of furniture sideways to a new spot in its room.
+// mode) turns it on; then drag any piece of furniture, or the window, sideways to a new
+// spot in its room.
 // Robots fade and let clicks through so they don't get in the way. A piece can't be
 // dropped on top of another (it turns red and goes back). Esc or Build again turns it off.
 // Moves are remembered per room (furniture-shop.js moveRoomFurniture).
@@ -50,6 +51,15 @@
 
   listView.addEventListener('pointerdown', (e) => {
     if (!on || e.button !== 0) return;
+    // the window: slides along the back wall (behind the furniture, so no overlap check)
+    const w = e.target.closest('.vault-window');
+    const wRoom = w?.closest('.vault-room');
+    if (w && wRoom?.vaultGroup) {
+      e.preventDefault();
+      e.stopPropagation();
+      drag = { f: w, room: wRoom, piece: null, isWindow: true, key: wRoom.vaultGroup.windowKey, x0: e.clientX, fromX: parseFloat(w.style.left), started: false };
+      return;
+    }
     const f = e.target.closest('.vault-furn');
     const room = f?.closest('.vault-room');
     if (!f || !room) return;
@@ -73,6 +83,7 @@
     const pct = Math.max(6, Math.min(94, drag.fromX + ((e.clientX - drag.x0) / r.width) * 100));
     drag.pct = Math.round(pct * 10) / 10;
     drag.f.style.left = `${drag.pct}%`;
+    if (drag.isWindow) return;
     const gap = (MIN_GAP_PX / r.width) * 100;
     const others = roomFurnitureState(drag.key, drag.room.vaultGroup.seed).filter((p) => p !== drag.piece);
     drag.blocked = others.some((p) => Math.abs(p.x - drag.pct) < gap);
@@ -88,7 +99,8 @@
     setTimeout(() => { suppressClick = false; }, 0);
     d.f.classList.remove('furn-dragging', 'furn-blocked');
     if (moveTo != null) {
-      moveRoomFurniture(d.key, d.piece, moveTo);
+      if (d.isWindow) setWindowSpot(d.key, moveTo);
+      else moveRoomFurniture(d.key, d.piece, moveTo);
       d.f.classList.add('furn-landed');
     } else {
       d.f.style.left = `${d.fromX}%`; // back where it was
@@ -111,7 +123,7 @@
 
   // the click that ends a drag doesn't do anything else
   listView.addEventListener('click', (e) => {
-    if (!suppressClick && !(on && e.target.closest('.vault-furn'))) return;
+    if (!suppressClick && !(on && e.target.closest('.vault-furn, .vault-window'))) return;
     e.preventDefault();
     e.stopPropagation();
   }, true);

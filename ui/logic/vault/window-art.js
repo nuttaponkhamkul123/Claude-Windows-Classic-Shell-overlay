@@ -8,6 +8,13 @@ const WINDOW_FRAMES = ['vault', 'porthole', 'pano'];
 // remembered "Change view" picks: room key -> scene key
 const windowViews = Object.assign({}, window.electronAPI?.settings?.windowViews || {});
 const windowSpot = new Map(); // room key -> x% (stays put when furniture comes and goes)
+// moved in builder mode (builder.js): room key -> x%, remembered
+const windowSpotSaved = Object.assign({}, window.electronAPI?.settings?.windowSpots || {});
+function setWindowSpot(key, x) {
+  windowSpotSaved[key] = x;
+  windowSpot.set(key, x);
+  window.electronAPI?.storeSet?.('windowSpots', windowSpotSaved);
+}
 
 let windowUid = 0;
 const wGrad = (id, stops) => `<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">${stops.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join('')}</linearGradient>`;
@@ -116,6 +123,7 @@ function rerollWindowView(key, seed) {
 // Remembered per room so the window doesn't jump when pieces come and go.
 function windowSpotFor(key, furn, seed) {
   if (windowSpot.has(key)) return windowSpot.get(key);
+  if (windowSpotSaved[key] != null) { windowSpot.set(key, windowSpotSaved[key]); return windowSpotSaved[key]; }
   const xs = [...new Set(furn.map((p) => p.x))].sort((a, b) => a - b);
   const edges = [0, ...xs, 100];
   let best = null;
