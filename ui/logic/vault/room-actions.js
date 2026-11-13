@@ -48,6 +48,12 @@
     const noFolder = 'This room groups chats by status, not by folder';
     item('＋ New chat here', () => newChatIn(g), canChat, canChat ? `New chat in ${g.cwd}` : noFolder);
     item('📂 Open folder', () => api.openFolder?.(g.cwd), !!g.cwd, g.cwd || noFolder);
+    if (typeof window.openFurnitureShop === 'function') {
+      const wall = room.querySelector('.vault-wall')?.getBoundingClientRect();
+      const pct = wall?.width ? ((e.clientX - wall.left) / wall.width) * 100 : 50;
+      const at = { x: e.clientX, y: e.clientY };
+      item('🪑 Furniture…', () => window.openFurnitureShop(g, pct, at.x, at.y), true, 'Add furniture to this room, or take pieces out');
+    }
     if (typeof rerollWindowView === 'function' && (typeof vaultWindowsOn === 'undefined' || vaultWindowsOn)) {
       item('🪟 Change view', () => { rerollWindowView(g.windowKey, g.seed); renderSessionCards(true); },
         true, 'Show another scene through this room\'s window');

@@ -183,6 +183,8 @@ function roomFurnitureState(key, seed) {
   if (typeof DECOR_KINDS !== 'undefined' && DECOR_KINDS.length) {
     list[list.length - 1] = { ...list[list.length - 1], kind: DECOR_KINDS[(s >>> 11) % DECOR_KINDS.length], variant: 0, decor: true };
   }
+  // pieces you added / took out (right-click a room → Furniture…, furniture-shop.js)
+  if (typeof applyRoomFurnitureEdits === 'function') applyRoomFurnitureEdits(key, list);
   vaultRoomFurniture.set(key, list);
   return list;
 }
@@ -197,8 +199,8 @@ function furnitureFor(list, kind, busy) {
     list.push(f);
     return f;
   }
-  // room full: swap out a piece nobody is using (decor first)
-  const spare = list.find((p) => !busy.has(p) && p.decor) || list.find((p) => !busy.has(p));
+  // room full: swap out a piece nobody is using (decor first; never one you added)
+  const spare = list.find((p) => !busy.has(p) && !p.user && p.decor) || list.find((p) => !busy.has(p) && !p.user);
   if (!spare) return list[0];
   Object.assign(spare, { kind, variant: Math.random() < 0.5 ? 1 : 0, decor: false, spawned: true, needsPuff: true, lastUsed: Date.now() });
   return spare;
