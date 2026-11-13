@@ -1748,3 +1748,27 @@ body.style-shelter .furn-shop-sub { font-family: var(--sh-font); }
 :is(body.theme-aero:not(.theme-vista), body.theme-xp):not(.style-shelter) .furn-shop { background: #fff; color: #1e395b; border-color: #a9bfd6; }
 :is(body.theme-aero:not(.theme-vista), body.theme-xp):not(.style-shelter) .furn-tile { background: linear-gradient(180deg, #f4f8fc, #e3edf7); border-color: #c3d4e6; }
 :is(body.theme-aero:not(.theme-vista), body.theme-xp):not(.style-shelter) .furn-name { color: #4a6a8c; }
+
+/* ---- Builder mode: drag furniture to move it (logic/vault/builder.js) ---- */
+#lbBuild { display: none; }
+body.list-grid:not(.vault-focus) #lbBuild { display: inline-block; }
+#lbBuild.active { color: #052e16; background: linear-gradient(180deg, #5fd68a, #2f9e58); border-color: #1f6f3a; }
+/* blueprint grid on the back wall */
+body.vault-builder .vault-wall::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    repeating-linear-gradient(0deg, rgba(56, 189, 248, .13) 0 1px, transparent 1px 10px),
+    repeating-linear-gradient(90deg, rgba(56, 189, 248, .13) 0 1px, transparent 1px 10px);
+  outline: 1px dashed rgba(56, 189, 248, .55); outline-offset: -1px;
+}
+/* robots step aside: faded and clicks go through to the furniture */
+body.vault-builder .vault-walker, body.vault-builder .vault-helper,
+body.vault-builder .vault-ask, body.vault-builder .vault-say { opacity: .35; pointer-events: none; transition: opacity .2s; }
+body.vault-builder .vault-furn { pointer-events: auto; cursor: grab; z-index: 1; opacity: 1; }
+body.vault-builder .vault-furn:hover { filter: drop-shadow(0 0 3px #38bdf8) brightness(1.12); }
+.vault-furn.furn-dragging { z-index: 3; cursor: grabbing; transform: translateX(-50%) translateY(-5px); filter: drop-shadow(0 6px 4px rgba(0, 0, 0, .55)) drop-shadow(0 0 3px #38bdf8) !important; }
+.vault-furn.furn-dragging.furn-blocked { filter: drop-shadow(0 6px 4px rgba(0, 0, 0, .55)) drop-shadow(0 0 3px #ef4444) sepia(.5) hue-rotate(-30deg) !important; }
+.vault-furn.furn-landed { animation: furn-land .3s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes furn-land { 0% { transform: translateX(-50%) translateY(-5px); } 60% { transform: translateX(-50%) scaleY(.92); } }
+.vault-furn.furn-nope { transition: left .25s ease; animation: room-nope .3s; }
+@media (prefers-reduced-motion: reduce) { .vault-furn.furn-landed, .vault-furn.furn-nope { animation: none; } }

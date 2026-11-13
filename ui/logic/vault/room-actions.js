@@ -54,6 +54,11 @@
       const at = { x: e.clientX, y: e.clientY };
       item('🪑 Furniture…', () => window.openFurnitureShop(g, pct, at.x, at.y), true, 'Add furniture to this room, or take pieces out');
     }
+    if (typeof window.setVaultBuilder === 'function') {
+      const building = window.isVaultBuilder();
+      item(building ? '✓ Done building' : '🔨 Builder mode', () => window.setVaultBuilder(!building),
+        true, building ? 'Finish moving furniture (Esc)' : 'Drag furniture to move it around the room');
+    }
     if (typeof rerollWindowView === 'function' && (typeof vaultWindowsOn === 'undefined' || vaultWindowsOn)) {
       item('🪟 Change view', () => { rerollWindowView(g.windowKey, g.seed); renderSessionCards(true); },
         true, 'Show another scene through this room\'s window');
@@ -79,7 +84,7 @@
 
   // double-click the floor (not a robot, a bubble or the drawer) → new chat here
   listView.addEventListener('dblclick', (e) => {
-    if (vaultFocus) return;
+    if (vaultFocus || document.body.classList.contains('vault-builder')) return;
     const room = e.target.closest('.vault-room');
     if (!room?.vaultGroup || e.target.closest('.vault-walker, .vault-ask, .vault-say, button')) return;
     e.preventDefault();

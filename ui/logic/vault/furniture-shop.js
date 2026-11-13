@@ -20,10 +20,13 @@ const isDecorPiece = (kind) => typeof AI_DECOR !== 'undefined' && !!AI_DECOR[kin
 
 // Called by roomFurnitureState when a room's furniture is first set up
 function applyRoomFurnitureEdits(key, list) {
+  for (const p of list) p.origX = p.x; // starting pieces are known by where they started
   const e = roomFurnEdits[key];
   if (!e) return;
   const removed = e.removed || [];
   for (let i = list.length - 1; i >= 0; i--) if (removed.includes(list[i].x)) list.splice(i, 1);
+  // moved in builder mode (builder.js)
+  for (const p of list) if (e.moved && e.moved[p.origX] != null) p.x = e.moved[p.origX];
   for (const a of e.added || []) {
     if (!isKnownPiece(a.kind)) continue;
     // a starting piece in that spot makes way
@@ -54,8 +57,27 @@ function removeRoomFurniture(key, seed, piece) {
   if (i < 0) return;
   list.splice(i, 1);
   const e = roomFurnEdits[key] || (roomFurnEdits[key] = { added: [], removed: [] });
-  if (piece.user) e.added = (e.added || []).filter((a) => a.x !== piece.x);
-  else (e.removed || (e.removed = [])).push(piece.x);
+  if (piece.user) e.added = (e.added || []).filter((a) => !(a.x === piece.x && a.kind === piece.kind));
+  else {
+    const at = piece.origX ?? piece.x;
+    (e.removed || (e.removed = [])).push(at);
+    if (e.moved) delete e.moved[at];
+  }
+  saveFurnEdits();
+}
+
+// Builder mode: a piece dragged to a new spot (x in % of the room)
+function moveRoomFurniture(key, piece, x) {
+  const oldX = piece.x;
+  piece.x = x;
+  if (piece.spawned) return; // a task piece that popped in for a moment: not remembered
+  const e = roomFurnEdits[key] || (roomFurnEdits[key] = { added: [], removed: [] });
+  if (piece.user) {
+    const a = (e.added || []).find((a) => a.x === oldX && a.kind === piece.kind);
+    if (a) a.x = x;
+  } else {
+    (e.moved || (e.moved = {}))[piece.origX ?? oldX] = x;
+  }
   saveFurnEdits();
 }
 
