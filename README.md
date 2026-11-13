@@ -80,7 +80,9 @@ npm start
 - `preload.js`: Secure context bridge between Electron IPC and the overlay UI.
 - `watcher.js`: High-speed tailing scanner for Claude Code and Antigravity logs.
 - `ui/index.html`: Clean glassmorphic overlay widget layout.
-- `ui/style.css`: Acrylic blur, glow borders, and animations.
 - `ui/app.js`: State management, alert triggers, and expand/collapse behaviors.
-- `ui/sound.js`: Web Audio API synthesizer for alert chimes.
+- `ui/logic/`: Feature scripts, grouped by area (`chat/`, `nav/`, `personalization/`, `system/`).
+- `ui/lib/`: Shared helpers: robot drawing and outfits, Markdown, the alert-chime synthesizer.
+- `ui/styles/`: Base styles, themes (Windows 7, XP, Vista Dark), and feature styles.
+- `mcp/`: MCP servers Claude runs: `pinner.js` (pin notes to the HUD) and `permission.js` (approval prompts).
 

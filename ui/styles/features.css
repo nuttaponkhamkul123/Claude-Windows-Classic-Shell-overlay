@@ -729,13 +729,18 @@ body.theme-vista .ctx-sep, body:not(.theme-aero) .ctx-sep { background: #4a5060;
 #activityRow .runner { width: 100%; height: 100%; overflow: visible; display: block; }
 #activityRow .runner * { transform-box: view-box; }
 
-#activityRow .r-body { transform-origin: 20px 45px; animation: r-bob .25s ease-in-out infinite alternate; }
-#activityRow .r-leg { transform-origin: 20px 31px; animation: r-thigh .5s linear infinite; }
-#activityRow .r-shin { transform-origin: 20px 37px; animation: r-knee .5s linear infinite; }
-#activityRow .r-arm { transform-origin: 20px 22px; animation: r-arm .5s ease-in-out infinite; }
-#activityRow .r-fore { transform-origin: 20px 27px; transform: rotate(-75deg); animation: r-elbow .5s ease-in-out infinite; }
+#activityRow .r-body { transform-origin: 20px 45px; }
+#activityRow .r-leg { transform-origin: 20px 31px; }
+#activityRow .r-shin { transform-origin: 20px 37px; }
+#activityRow .r-arm { transform-origin: 20px 22px; }
+#activityRow .r-fore { transform-origin: 20px 27px; transform: rotate(-75deg); }
+#activityRow .pose-run .r-body { animation: r-bob .25s ease-in-out infinite alternate; }
+#activityRow .pose-run .r-leg { animation: r-thigh .5s linear infinite; }
+#activityRow .pose-run .r-shin { animation: r-knee .5s linear infinite; }
+#activityRow .pose-run .r-arm { animation: r-arm .5s ease-in-out infinite; }
+#activityRow .pose-run .r-fore { animation: r-elbow .5s ease-in-out infinite; }
 /* the back limbs are half a stride behind */
-#activityRow .r-leg-back, #activityRow .r-leg-back .r-shin, #activityRow .r-arm-front, #activityRow .r-arm-front .r-fore { animation-delay: -.25s; }
+#activityRow .pose-run .r-leg-back, #activityRow .pose-run .r-leg-back .r-shin, #activityRow .pose-run .r-arm-front, #activityRow .pose-run .r-arm-front .r-fore { animation-delay: -.25s; }
 
 @keyframes r-thigh {          /* - = forward, + = back */
   0%   { transform: rotate(-32deg); }
@@ -777,7 +782,8 @@ body.theme-vista .ctx-sep, body:not(.theme-aero) .ctx-sep { background: #4a5060;
 @keyframes r-ground { from { background-position: 0 0; } to { background-position: -13px 0; } }
 
 /* side-view head, avatar palette */
-#activityRow .r-head { transform-origin: 20px 19px; animation: r-nod .25s ease-in-out infinite alternate; }
+#activityRow .r-head { transform-origin: 20px 19px; }
+#activityRow .pose-run .r-head { animation: r-nod .25s ease-in-out infinite alternate; }
 #activityRow .r-eye { transform-box: view-box; transform-origin: 28.2px 8.6px; animation: r-blink 3.2s infinite; }
 @keyframes r-nod { from { transform: rotate(-2deg); } to { transform: rotate(2deg); } }
 @keyframes r-blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.12); } }
@@ -874,3 +880,75 @@ body.theme-vista #activityRow .act-stack-ico, body:not(.theme-aero) #activityRow
   62%  { transform: rotate(-112deg); }
   100% { transform: rotate(-48deg); }
 }
+
+/* ===== Activity poses: the robot acts out the current step (props in robot-runner.js) ===== */
+/* ground streaks only while moving */
+#activityRow .act-runwrap:not(.pose-run):not(.pose-search) .act-ground { display: none; }
+#activityRow .pose-search .act-ground { animation-duration: 1s; }
+
+/* TYPE (Edit / Write / compacting): tapping at a little desk */
+#activityRow .pose-type .r-body { transform: rotate(4deg); }
+#activityRow .pose-type .r-arm-front { animation: rp-tap .2s ease-in-out infinite alternate; }
+#activityRow .pose-type .r-arm-back { animation: rp-tap .2s ease-in-out infinite alternate-reverse; }
+#activityRow .pose-type .r-fore { animation: rp-keys .2s ease-in-out infinite alternate; }
+#activityRow .pose-type .r-arm-back .r-fore { animation-direction: alternate-reverse; }
+#activityRow .pose-type .r-head { animation: rp-look 1.4s ease-in-out infinite alternate; }
+#activityRow .rp-glow { animation: rp-glow 1.2s ease-in-out infinite alternate; }
+#activityRow .rp-code { animation: rp-code 1.6s steps(1) infinite; }
+#activityRow .rp-code:nth-of-type(2) { animation-delay: -.5s; }
+#activityRow .rp-code:nth-of-type(3) { animation-delay: -1s; }
+@keyframes rp-tap { from { transform: rotate(-52deg); } to { transform: rotate(-62deg); } }
+@keyframes rp-keys { from { transform: rotate(-40deg); } to { transform: rotate(-58deg); } }
+@keyframes rp-look { from { transform: rotate(4deg); } to { transform: rotate(10deg); } }
+@keyframes rp-glow { from { opacity: .55; } to { opacity: 1; } }
+@keyframes rp-code { 0% { opacity: 0; } 30% { opacity: 1; } }
+
+/* READ: holding a book, turning pages */
+#activityRow .pose-read .r-arm-front, #activityRow .pose-read .r-arm-back { transform: rotate(-92deg); }
+#activityRow .pose-read .r-head { animation: rp-readnod 2.4s ease-in-out infinite; }
+#activityRow .rp-page { transform-box: fill-box; transform-origin: 0 50%; animation: rp-flip 2.4s ease-in-out infinite; }
+@keyframes rp-readnod { 0%, 80%, 100% { transform: rotate(9deg); } 90% { transform: rotate(3deg); } }
+@keyframes rp-flip { 0%, 75% { transform: scaleX(1); } 88% { transform: scaleX(-1); } 100% { transform: scaleX(-1); opacity: 0; } }
+
+/* SEARCH (Grep / Glob / find): slow walk with a magnifying glass */
+#activityRow .pose-search .r-body { animation: r-bob .5s ease-in-out infinite alternate; }
+#activityRow .pose-search .r-leg { animation: rp-walk 1s ease-in-out infinite; }
+#activityRow .pose-search .r-leg-back { animation-delay: -.5s; }
+#activityRow .pose-search .r-arm-front { animation: rp-scan 2s ease-in-out infinite; }
+#activityRow .pose-search .r-arm-back { animation: rp-walkarm 1s ease-in-out infinite; }
+#activityRow .pose-search .r-arm-back .r-fore { animation: rp-walkelbow 1s ease-in-out infinite; }
+#activityRow .rp-glint { animation: rp-glint 2s ease-in-out infinite; }
+@keyframes rp-walk { 0%, 100% { transform: rotate(-16deg); } 50% { transform: rotate(16deg); } }
+@keyframes rp-walkarm { 0%, 100% { transform: rotate(22deg); } 50% { transform: rotate(-18deg); } }
+@keyframes rp-walkelbow { 0%, 100% { transform: rotate(-35deg); } 50% { transform: rotate(-70deg); } }
+@keyframes rp-scan { 0%, 100% { transform: rotate(-80deg); } 50% { transform: rotate(-100deg); } }
+@keyframes rp-glint { 0%, 60%, 100% { opacity: 0; } 70% { opacity: 1; } }
+
+/* HAMMER (Bash / PowerShell): hammering the terminal, sparks on impact */
+#activityRow .pose-hammer .r-body { animation: rp-brace .55s ease-in infinite; }
+#activityRow .pose-hammer .r-arm-front { animation: rp-hammer .55s cubic-bezier(.6,0,.9,.4) infinite; }
+#activityRow .pose-hammer .r-arm-front .r-fore { animation: rp-strike .55s cubic-bezier(.6,0,.9,.4) infinite; }
+#activityRow .pose-hammer .r-arm-back { transform: rotate(-30deg); }
+#activityRow .rp-spark { opacity: 0; transform-origin: 33px 37px; animation: rp-spark .55s linear infinite; }
+@keyframes rp-hammer { 0%, 100% { transform: rotate(-165deg); } 70% { transform: rotate(-58deg); } }
+@keyframes rp-strike { 0%, 100% { transform: rotate(-120deg); } 70% { transform: rotate(-20deg); } }
+@keyframes rp-brace { 0%, 60%, 100% { transform: rotate(3deg); } 72% { transform: rotate(8deg) translateY(1px); } }
+@keyframes rp-spark { 0%, 66% { opacity: 0; transform: scale(.3); } 72% { opacity: 1; transform: scale(1); } 90%, 100% { opacity: 0; transform: scale(1.4); } }
+
+/* WEB (WebSearch / WebFetch / browser): spinning a globe on one finger */
+#activityRow .pose-web .r-arm-front { transform: rotate(-128deg); }
+#activityRow .pose-web .r-arm-back { animation: rp-tap 1s ease-in-out infinite alternate; }
+#activityRow .rp-globe { transform-origin: 37px 6px; animation: rp-spin 1.2s linear infinite; }
+@keyframes rp-spin { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(-1); } }
+
+/* THINK (no tool yet): hand on chin, "…" bubble */
+#activityRow .pose-think .r-arm-front { transform: rotate(-128deg); }
+#activityRow .pose-think .r-head { transform: rotate(-6deg); }
+#activityRow .act-bubble {
+  position: absolute; left: 30px; top: 0; height: 13px; padding: 0 4px; border-radius: 7px;
+  display: inline-flex; align-items: center; gap: 2px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.35);
+}
+#activityRow .act-bubble i { width: 3px; height: 3px; border-radius: 50%; background: #1a2b57; animation: rp-dot 1s infinite; }
+#activityRow .act-bubble i:nth-child(2) { animation-delay: .2s; }
+#activityRow .act-bubble i:nth-child(3) { animation-delay: .4s; }
+@keyframes rp-dot { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-2px); } }

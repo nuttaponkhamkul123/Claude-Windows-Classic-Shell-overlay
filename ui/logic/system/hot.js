@@ -10,10 +10,11 @@
   // ---- CSS: swap the <link> without a reload (new one loads first → no flash) ----
   api.onHotCss((files) => {
     for (const link of document.querySelectorAll('link[rel="stylesheet"]')) {
-      const name = (link.getAttribute('href') || '').split('?')[0].split('/').pop();
+      const baseHref = (link.getAttribute('href') || '').split('?')[0];
+      const name = baseHref.split('/').pop();
       if (!files.includes(name)) continue;
       const fresh = link.cloneNode();
-      fresh.href = `${name}?t=${Date.now()}`;
+      fresh.href = `${baseHref}?t=${Date.now()}`;
       fresh.addEventListener('load', () => link.remove(), { once: true });
       link.after(fresh);
     }

@@ -6,7 +6,7 @@
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'none'; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data: https:; font-src 'self' file:">
   <title>Pinned notes</title>
-  <link rel="stylesheet" href="notes.css">
+  <link rel="stylesheet" href="styles/notes.css">
 </head>
 <body>
   <div class="np">
@@ -24,7 +24,7 @@
       <p>Ask Claude in any chat: <i>"pin this as a note"</i>.<br>It saves Markdown here with the <code>pin_note</code> tool.</p>
     </div>
   </div>
-  <script src="marked.min.js"></script>
-  <script src="notes.js"></script>
+  <script src="lib/marked.min.js"></script>
+  <script src="logic/notes.js"></script>
 </body>
 </html>

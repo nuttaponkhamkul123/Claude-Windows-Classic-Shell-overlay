@@ -4,13 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Multi-AI Session Overlay HUD</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="theme-aero.css" />
-  <link rel="stylesheet" href="features.css" />
-  <link rel="stylesheet" href="theme-vista-dark.css" />
-  <link rel="stylesheet" href="theme-msn.css" />
-  <link rel="stylesheet" href="skill-install.css" />
-  <link rel="stylesheet" href="list-grid.css" />
+  <link rel="stylesheet" href="styles/style.css" />
+  <link rel="stylesheet" href="styles/theme-aero.css" />
+  <link rel="stylesheet" href="styles/features.css" />
+  <link rel="stylesheet" href="styles/theme-vista-dark.css" />
+  <link rel="stylesheet" href="styles/theme-msn.css" />
+  <link rel="stylesheet" href="styles/skill-install.css" />
+  <link rel="stylesheet" href="styles/list-grid.css" />
 </head>
 <body class="theme-aero">
   <!-- Mini tab shown while the HUD is docked to a screen edge.
@@ -76,9 +76,9 @@
     <div id="popupBody" class="popup-body" style="display: flex;">
       <!-- VIEW 1: Multi-Session List View -->
       <div id="listView" class="view-panel active">
-        <!-- Toolbar on the contact list: Settings dropdown + quick New chat -->
+        <!-- Toolbar on the contact list: Settings dialog + quick New chat -->
         <div id="listToolbar" class="list-toolbar">
-          <button id="lbSettings" class="tb-btn" title="Theme, chime, always on top">Settings ▾</button>
+          <button id="lbSettings" class="tb-btn" title="Theme, chime, always on top">Settings</button>
           <button id="lbNewChat" class="tb-btn" title="Start a new conversation in any folder">New chat</button>
           <button id="lbGroup" class="tb-btn" title="Group the contact list by folder or by status">Group: Folder</button>
           <button id="lbView" class="tb-btn" title="Show the contacts as a list or as a grid of avatars">View: Grid</button>
@@ -130,7 +130,7 @@
         <div class="detail-header convo-toolbar">
           <button id="tbModel" class="tb-btn" title="Choose model, then effort" hidden style="display:none">Model ▾</button>
           <button id="tbNewChat" class="tb-btn" title="Start a new conversation in this or another folder (/clear)">New chat</button>
-          <button id="tbSettings" class="tb-btn" title="Theme, chime, always on top">Settings ▾</button>
+          <button id="tbSettings" class="tb-btn" title="Theme, chime, always on top">Settings</button>
           <button id="tbNotes" class="tb-btn tb-notes" title="Pinned notes (Claude pins them with the pin_note tool)">📌 Notes<span class="notes-badge"></span></button>
           <span class="tb-spacer"></span>
           <button id="btnMcp" class="tb-btn btn-mcp" title="MCP servers for this workspace">MCP ▾</button>
@@ -141,23 +141,6 @@
             <span id="detailProject" class="detail-project">project-name</span>
             <span id="detailModel" class="model-chip" style="display: none;"></span>
             <span id="detailStatusPill" class="status-pill running"></span>
-          </div>
-
-          <!-- Settings dropdown (theme / chime / always on top) -->
-          <div id="settingsPanel" class="settings-panel" style="display: none;">
-            <button id="btnTheme" class="set-row" title="Switch theme (Windows 7 / Windows XP / Vista Dark / Dark)">
-              <span class="set-ico">🎨</span><span class="set-label">Theme</span><span id="setThemeVal" class="set-val">Windows 7</span>
-            </button>
-            <button id="btnSound" class="set-row active" title="Toggle chime">
-              <span class="set-ico">🔔</span><span class="set-label">Chime</span><span class="set-check"></span>
-            </button>
-            <button id="btnPin" class="set-row active" title="Always on Top">
-              <span class="set-ico">📌</span><span class="set-label">Always on top</span><span class="set-check"></span>
-            </button>
-            <div class="set-sep"></div>
-            <button id="btnRestartApp" class="set-row" title="Close and reopen the HUD (reloads all code)">
-              <span class="set-ico">🔄</span><span class="set-label">Restart app</span><span class="set-val"></span>
-            </button>
           </div>
 
           <!-- MCP servers dropdown (from `claude mcp list`) -->
@@ -271,28 +254,57 @@
     </div>
   </div>
 
+  <!-- Settings modal dialog -->
+  <div id="settingsOverlay" class="sk-overlay settings-overlay" style="display: none;">
+    <div class="sk-dialog settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsDialogTitle">
+      <div class="sk-head">
+        <span id="settingsDialogTitle" class="sk-title">⚙ Settings</span>
+        <button id="btnSettingsClose" class="sk-x" title="Close">✕</button>
+      </div>
+      <div id="settingsPanel" class="settings-panel settings-dialog-body">
+        <button id="btnTheme" class="set-row" title="Switch theme (Windows 7 / Windows XP / Vista Dark / Dark)">
+          <span class="set-ico">🎨</span><span class="set-label">Theme</span><span id="setThemeVal" class="set-val">Windows 7</span>
+        </button>
+        <button id="btnSound" class="set-row active" title="Toggle chime">
+          <span class="set-ico">🔔</span><span class="set-label">Chime</span><span class="set-check"></span>
+        </button>
+        <button id="btnPin" class="set-row active" title="Always on Top">
+          <span class="set-ico">📌</span><span class="set-label">Always on top</span><span class="set-check"></span>
+        </button>
+        <div class="set-sep"></div>
+        <button id="btnRestartApp" class="set-row" title="Close and reopen the HUD (reloads all code)">
+          <span class="set-ico">🔄</span><span class="set-label">Restart app</span><span class="set-val"></span>
+        </button>
+      </div>
+      <div class="settings-footer">
+        <div id="settingsFooterLeft" class="settings-footer-left"></div>
+        <button id="btnSettingsDone" class="sk-btn primary">Done</button>
+      </div>
+    </div>
+  </div>
+
   <script src="lib/dom.js"></script>
-  <script src="marked.min.js"></script>
-  <script src="sound.js"></script>
-  <script src="robot-outfits.js"></script>
-  <script src="robot-runner.js"></script>
+  <script src="lib/marked.min.js"></script>
+  <script src="lib/sound.js"></script>
+  <script src="lib/robot-outfits.js"></script>
+  <script src="lib/robot-runner.js"></script>
   <script src="app.js"></script>
   <script src="features.js"></script>
-  <script src="features-toolbar.js"></script>
-  <script src="features-git.js"></script>
-  <script src="features-names.js"></script>
-  <script src="features-workspace.js"></script>
-  <script src="features-dressup.js"></script>
-  <script src="features-explorer.js"></script>
-  <script src="features-myavatar.js"></script>
-  <script src="features-quote.js"></script>
-  <script src="features-hot.js"></script>
-  <script src="features-plan.js"></script>
-  <script src="features-ask.js"></script>
-  <script src="features-rules.js"></script>
-  <script src="features-quick.js"></script>
-  <script src="features-compact.js"></script>
-  <script src="pin-prompt.js"></script>
-  <script src="features-skillinstall.js"></script>
+  <script src="logic/nav/toolbar.js"></script>
+  <script src="logic/nav/git.js"></script>
+  <script src="logic/personalization/names.js"></script>
+  <script src="logic/nav/workspace.js"></script>
+  <script src="logic/personalization/dressup.js"></script>
+  <script src="logic/nav/explorer.js"></script>
+  <script src="logic/personalization/myavatar.js"></script>
+  <script src="logic/chat/quote.js"></script>
+  <script src="logic/system/hot.js"></script>
+  <script src="logic/chat/plan.js"></script>
+  <script src="logic/chat/ask.js"></script>
+  <script src="logic/system/rules.js"></script>
+  <script src="logic/chat/quick.js"></script>
+  <script src="logic/personalization/compact.js"></script>
+  <script src="logic/chat/pin-prompt.js"></script>
+  <script src="logic/system/skillinstall.js"></script>
 </body>
 </html>

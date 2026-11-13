@@ -627,6 +627,9 @@
   }
   const rowNotify = setRow('btnNotify', '💬', 'Desktop notifications');
   rowNotify.title = 'Windows notification when a session finishes';
+  const rowAg = setRow('btnShowAg', '✦', 'Show Antigravity');
+  rowAg.title = 'Include Antigravity sessions, search hits, and New chat option';
+  window.isAntigravityEnabled = () => store.showAntigravity !== false;
   const rowDigest = setRow('btnDigest', '📊', "Today's summary");
   rowDigest.querySelector('.set-check').remove();
   const digestBox = el('div', 'set-digest');
@@ -638,14 +641,32 @@
   rowShortcut.querySelector('.set-check').remove();
   rowShortcut.title = 'Create an "AI Overlay HUD" shortcut on your Desktop';
   if (settingsPanelEl) {
-    (sep || restartRow)?.before(rowNotify, rowDigest, digestBox, rowExport, rowShortcut);
+    (sep || restartRow)?.before(rowNotify, rowAg, rowDigest, digestBox, rowExport, rowShortcut);
   }
 
-  ready.then(() => rowNotify.classList.toggle('active', store.notify !== false));
+  ready.then(() => {
+    rowNotify.classList.toggle('active', store.notify !== false);
+    rowAg.classList.toggle('active', store.showAntigravity !== false);
+  });
   rowNotify.addEventListener('click', () => {
     const on = store.notify === false; // toggling
     setStore('notify', on);
     rowNotify.classList.toggle('active', on);
+  });
+  rowAg.addEventListener('click', async () => {
+    const on = store.showAntigravity === false; // toggling
+    setStore('showAntigravity', on);
+    rowAg.classList.toggle('active', on);
+    if (!on && currentActiveSession?.source === 'antigravity' && typeof showListView === 'function') {
+      showListView();
+    }
+    try {
+      const next = await api.getInitialSessions?.();
+      if (Array.isArray(next)) {
+        sessionsList = next;
+        if (typeof renderAll === 'function') renderAll();
+      }
+    } catch (_) {}
   });
   rowDigest.addEventListener('click', async (e) => {
     e.stopPropagation();

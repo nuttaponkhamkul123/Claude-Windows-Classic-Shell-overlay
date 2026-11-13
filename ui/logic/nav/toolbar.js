@@ -296,7 +296,9 @@
         panel.appendChild(row);
       };
       option('claude', 'Claude Code', 'Fresh Claude Code conversation' + (s?.source === 'claude' ? ' (keeps your Model / Effort choice).' : '.'));
-      option('antigravity', 'Antigravity', 'Fresh Antigravity conversation' + (s?.source === 'antigravity' ? ' (keeps your Model / Effort choice).' : ', using its default model.'));
+      if (typeof window.isAntigravityEnabled !== 'function' || window.isAntigravityEnabled()) {
+        option('antigravity', 'Antigravity', 'Fresh Antigravity conversation' + (s?.source === 'antigravity' ? ' (keeps your Model / Effort choice).' : ', using its default model.'));
+      }
     };
     draw();
   }

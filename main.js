@@ -211,15 +211,20 @@ app.whenReady().then(() => {
     },
   });
 
+  const agEnabled = () => features.getSetting('showAntigravity', true) !== false;
+  const visibleSessions = (sessions) => (agEnabled() ? sessions : sessions.filter((s) => s.source !== 'antigravity'));
+
   watcher.on('sync', (sessions) => {
+    const list = visibleSessions(sessions);
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('sessions-sync', sessions);
+      mainWindow.webContents.send('sessions-sync', list);
     }
-    detectFinishedSessions(sessions);
-    features.onSync(sessions); // done notifications + today's digest
+    detectFinishedSessions(list);
+    features.onSync(list); // done notifications + today's digest
   });
 
   watcher.on('alert', (session) => {
+    if (!agEnabled() && session?.source === 'antigravity') return;
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('session-alert', session);
     }
@@ -283,7 +288,10 @@ ipcMain.handle('toggle-pin', () => {
 });
 
 ipcMain.handle('get-initial-sessions', () => {
-  return watcher ? watcher.getAllSessions() : [];
+  const all = watcher ? watcher.getAllSessions() : [];
+  return features.getSetting('showAntigravity', true) === false
+    ? all.filter((s) => s.source !== 'antigravity')
+    : all;
 });
 
 ipcMain.handle('get-session-history', (_event, sessionId) => {
@@ -333,7 +341,7 @@ function findClaudeBinary() {
 // ===========================================================================
 // ===========================================================================
 // Tool approvals for replies sent from the HUD (like the VS Code extension).
-// `claude -p` cannot show a permission prompt, so we register permission-mcp.js
+// `claude -p` cannot show a permission prompt, so we register mcp/permission.js
 // as --permission-prompt-tool. It POSTs each request to main/ipc/permissions.js,
 // which shows it in the HUD and answers with the user's choice.
 // ===========================================================================
@@ -365,7 +373,7 @@ function buildClaudeExtraArgs(sessionId, options = {}) {
         ovly_hud: {
           type: 'stdio',
           command: process.execPath,
-          args: [path.join(__dirname, 'permission-mcp.js')],
+          args: [path.join(__dirname, 'mcp', 'permission.js')],
           env: {
             ELECTRON_RUN_AS_NODE: '1',
             HUD_PERM_URL: `http://127.0.0.1:${getPermPort()}/permission`,

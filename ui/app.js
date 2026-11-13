@@ -828,23 +828,19 @@ if (resizeGrip) {
   if (!THEMES.includes(theme)) theme = 'aero';
   apply(theme);
   if (btnTheme) {
-    // Sub menu: the Theme row opens a list of themes right under it.
+    // Segmented theme pills inside the Settings dialog
     const sub = document.createElement('div');
-    sub.className = 'theme-sub';
-    sub.hidden = true;
+    sub.className = 'theme-sub theme-pills';
     const items = THEMES.map((t) => {
       const b = document.createElement('button');
-      b.className = 'set-row theme-opt';
-      b.innerHTML = '<span class="set-ico"></span><span class="set-label"></span><span class="set-check"></span>';
-      b.querySelector('.set-label').textContent = LABELS[t];
+      b.className = 'theme-pill';
+      b.textContent = LABELS[t];
       b.addEventListener('click', () => {
         theme = t;
         apply(theme);
         window.electronAPI.storeSet('theme', theme);
         window.electronAPI.notesTheme?.(theme); // the pinned-notes panel follows right away
         mark();
-        sub.hidden = true;
-        btnTheme.classList.remove('open');
       });
       sub.appendChild(b);
       return b;
@@ -852,11 +848,6 @@ if (resizeGrip) {
     const mark = () => items.forEach((b, i) => b.classList.toggle('active', THEMES[i] === theme));
     mark();
     btnTheme.after(sub);
-    btnTheme.classList.add('has-sub');
-    btnTheme.addEventListener('click', () => {
-      sub.hidden = !sub.hidden;
-      btnTheme.classList.toggle('open', !sub.hidden);
-    });
   }
 })();
 
@@ -875,39 +866,88 @@ btnPin.addEventListener('click', async () => {
   btnPin.classList.toggle('active', isPinned);
 });
 
-// Settings dropdown (conversation toolbar, next to "New chat")
+// Settings modal dialog (shared by the contact-list and conversation toolbars)
 const tbSettings = document.getElementById('tbSettings');
-const settingsPanel = document.getElementById('settingsPanel');
-// The same dropdown serves the conversation toolbar and the contact-list toolbar:
-// it is moved under whichever "Settings ▾" button was clicked.
 const lbSettings = document.getElementById('lbSettings');
-const settingsHome = settingsPanel ? settingsPanel.parentNode : null; // conversation toolbar
-function openSettingsFrom(btn, host) {
-  if (settingsPanel.style.display !== 'none' && settingsPanel.parentNode === host) { closeSettingsPanel(); return; }
-  closeSettingsPanel();
+const settingsOverlay = document.getElementById('settingsOverlay');
+const settingsPanel = document.getElementById('settingsPanel');
+const btnSettingsClose = document.getElementById('btnSettingsClose');
+const btnSettingsDone = document.getElementById('btnSettingsDone');
+let settingsLayoutBuilt = false;
+
+function buildSettingsDialogLayout() {
+  if (settingsLayoutBuilt || !settingsPanel) return;
+  settingsLayoutBuilt = true;
+  const byId = (id) => document.getElementById(id);
+  const makeSection = (title, nodes) => {
+    const valid = nodes.filter(Boolean);
+    if (!valid.length) return null;
+    const sec = document.createElement('div');
+    sec.className = 'settings-sec';
+    const h = document.createElement('div');
+    h.className = 'settings-sec-title';
+    h.textContent = title;
+    const card = document.createElement('div');
+    card.className = 'settings-card';
+    for (const n of valid) card.appendChild(n);
+    sec.append(h, card);
+    return sec;
+  };
+
+  const themePills = settingsPanel.querySelector('.theme-pills');
+  const digestBox = settingsPanel.querySelector('.set-digest');
+  const restartBtn = byId('btnRestartApp');
+  const footerLeft = byId('settingsFooterLeft');
+  if (restartBtn && footerLeft) {
+    restartBtn.className = 'sk-btn';
+    restartBtn.innerHTML = '🔄 Restart app';
+    footerLeft.appendChild(restartBtn);
+  }
+
+  const appearance = makeSection('Appearance', [byId('btnTheme'), themePills]);
+  const behavior = makeSection('Behavior', [byId('btnSound'), byId('btnPin'), byId('btnNotify'), byId('btnShowAg')]);
+  const tools = makeSection('Tools & Data', [
+    byId('btnDigest'), digestBox, byId('btnExport'), byId('btnCreateShortcut'), byId('btnRules'), byId('btnInstallSkill'),
+  ]);
+
+  // Keep any extra rows added later by other scripts
+  const placed = new Set([appearance, behavior, tools]);
+  const extras = [...settingsPanel.children].filter((el) => !placed.has(el) && !el.classList.contains('set-sep'));
+  settingsPanel.innerHTML = '';
+  for (const s of [appearance, behavior, tools]) if (s) settingsPanel.appendChild(s);
+  if (extras.length) {
+    const extraSec = makeSection('Other', extras);
+    if (extraSec) settingsPanel.appendChild(extraSec);
+  }
+}
+
+function openSettingsDialog(btn) {
+  if (!settingsOverlay) return;
+  if (settingsOverlay.style.display !== 'none') { closeSettingsPanel(); return; }
+  buildSettingsDialogLayout();
   const mcp = document.getElementById('mcpPanel');
   if (mcp) mcp.style.display = 'none';
-  host.appendChild(settingsPanel);
-  settingsPanel.style.left = btn.offsetLeft + 'px';
-  settingsPanel.style.display = '';
-  btn.classList.add('open');
+  if (typeof closeUsagePanel === 'function') closeUsagePanel();
+  settingsOverlay.style.display = 'flex';
+  btn?.classList.add('open');
 }
 function closeSettingsPanel() {
-  if (!settingsPanel) return;
-  settingsPanel.style.display = 'none';
+  if (settingsOverlay) settingsOverlay.style.display = 'none';
   tbSettings?.classList.remove('open');
   lbSettings?.classList.remove('open');
 }
-tbSettings?.addEventListener('click', (e) => { e.stopPropagation(); openSettingsFrom(tbSettings, settingsHome); });
-lbSettings?.addEventListener('click', (e) => { e.stopPropagation(); openSettingsFrom(lbSettings, document.getElementById('listToolbar')); });
+tbSettings?.addEventListener('click', (e) => { e.stopPropagation(); openSettingsDialog(tbSettings); });
+lbSettings?.addEventListener('click', (e) => { e.stopPropagation(); openSettingsDialog(lbSettings); });
+btnSettingsClose?.addEventListener('click', closeSettingsPanel);
+btnSettingsDone?.addEventListener('click', closeSettingsPanel);
+settingsOverlay?.addEventListener('click', (e) => { if (e.target === settingsOverlay) closeSettingsPanel(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && settingsOverlay && settingsOverlay.style.display !== 'none') closeSettingsPanel();
+});
 document.getElementById('lbNewChat')?.addEventListener('click', (e) => {
   e.stopPropagation();
   closeSettingsPanel();
   document.querySelector('.fx-nc-listbtn')?.click(); // the footer's "＋ New chat" menu
-});
-document.addEventListener('click', (e) => {
-  if (settingsPanel && settingsPanel.style.display !== 'none' &&
-      !settingsPanel.contains(e.target) && !tbSettings?.contains(e.target) && !lbSettings?.contains(e.target)) closeSettingsPanel();
 });
 
 // Expand/Collapse
@@ -2021,6 +2061,21 @@ function activityIcon(act) {
   return '⚙';
 }
 
+// What the robot acts out for the current step (poses in features.css)
+function activityPose(act) {
+  const t = act.tool || '';
+  if (act.kind === 'compacting' || act.kind === 'writing') return 'type';
+  if (act.kind === 'thinking') return 'think';
+  if (act.kind !== 'tool') return 'run';
+  if (/Bash|PowerShell|command/i.test(t)) return 'hammer';
+  if (/Edit|replace|Write|write_|Notebook/i.test(t)) return 'type';
+  if (/Read|view|read_/i.test(t) && !/url/i.test(t)) return 'read';
+  if (/Grep|Glob|search_web|WebSearch/i.test(t)) return /web/i.test(t) ? 'web' : 'search';
+  if (/search|find|list_dir/i.test(t)) return 'search';
+  if (/Web|url|browser/i.test(t)) return 'web';
+  return 'run';
+}
+
 function renderActivityProgress(row, s, act, verb, target) {
   let run = row.querySelector('.act-runwrap');
   if (!run) {
@@ -2041,10 +2096,13 @@ function renderActivityProgress(row, s, act, verb, target) {
   const hue = typeof robotHueFor === 'function' ? robotHueFor(s) : 0;
   const outfit = typeof window.robotOutfitFor === 'function' ? window.robotOutfitFor(s) : null;
   const bot = run.querySelector('.act-bot');
-  const look = `${hue}|${outfit ? JSON.stringify(outfit) : ''}`;
+  const pose = activityPose(act);
+  const look = `${hue}|${outfit ? JSON.stringify(outfit) : ''}|${pose}`;
   if (bot.dataset.look !== look && typeof window.buildRunnerSvg === 'function') {
     bot.dataset.look = look;
-    bot.innerHTML = window.buildRunnerSvg(hue, outfit);
+    bot.innerHTML = window.buildRunnerSvg(hue, outfit, pose) +
+      (pose === 'think' ? '<span class="act-bubble"><i></i><i></i><i></i></span>' : '');
+    run.className = `act-runwrap pose-${pose}`;
   }
 
   // Finished steps: every time the activity changes, the old one is "done".
@@ -3434,10 +3492,11 @@ async function loadUsage(refresh = false) {
   if (data.claude.available || data.planLimits?.available) {
     usageBody.appendChild(renderPlanLimits(data.planLimits));
   }
+  const showAg = typeof window.isAntigravityEnabled !== 'function' || window.isAntigravityEnabled();
   if (data.claude.available) usageBody.appendChild(renderUsageSection('claude', 'Claude Code', data.claude, data.days, 'replies'));
-  if (data.antigravity.available) usageBody.appendChild(renderUsageSection('antigravity', 'Antigravity', data.antigravity, data.days, 'steps'));
-  if (!data.claude.available && !data.antigravity.available) {
-    usageBody.appendChild(el('div', 'usage-empty', 'No Claude Code or Antigravity logs found.'));
+  if (showAg && data.antigravity.available) usageBody.appendChild(renderUsageSection('antigravity', 'Antigravity', data.antigravity, data.days, 'steps'));
+  if (!data.claude.available && (!showAg || !data.antigravity.available)) {
+    usageBody.appendChild(el('div', 'usage-empty', showAg ? 'No Claude Code or Antigravity logs found.' : 'No Claude Code logs found.'));
   }
   usageBody.appendChild(el('div', 'usage-footnote',
     'Plan limits come live from your Claude account (same as /usage). Token counts and charts are ' +

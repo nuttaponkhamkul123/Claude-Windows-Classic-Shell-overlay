@@ -370,19 +370,21 @@ async function listTranscripts() {
     }
   } catch (_) {}
 
-  for (const root of AG_ROOTS) {
-    const brainDir = path.join(root, 'brain');
-    let dirs = [];
-    try { dirs = await fs.promises.readdir(brainDir, { withFileTypes: true }); } catch (_) { continue; }
-    for (const d of dirs) {
-      if (!d.isDirectory()) continue;
-      const p = path.join(brainDir, d.name, '.system_generated', 'logs', 'transcript.jsonl');
-      try {
-        const st = await fs.promises.stat(p);
-        if (st.mtimeMs >= cutoff) {
-          out.push({ source: 'antigravity', path: p, mtime: st.mtimeMs, size: st.size, uuid: d.name, root });
-        }
-      } catch (_) {}
+  if (getSetting('showAntigravity', true) !== false) {
+    for (const root of AG_ROOTS) {
+      const brainDir = path.join(root, 'brain');
+      let dirs = [];
+      try { dirs = await fs.promises.readdir(brainDir, { withFileTypes: true }); } catch (_) { continue; }
+      for (const d of dirs) {
+        if (!d.isDirectory()) continue;
+        const p = path.join(brainDir, d.name, '.system_generated', 'logs', 'transcript.jsonl');
+        try {
+          const st = await fs.promises.stat(p);
+          if (st.mtimeMs >= cutoff) {
+            out.push({ source: 'antigravity', path: p, mtime: st.mtimeMs, size: st.size, uuid: d.name, root });
+          }
+        } catch (_) {}
+      }
     }
   }
 

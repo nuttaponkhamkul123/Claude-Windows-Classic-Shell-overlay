@@ -11,9 +11,9 @@ const { app } = require('electron');
 
 const ROOT = path.join(__dirname, '..');
 const IGNORE = /(^|[\\/])(node_modules|\.git|\.claude|dist|tools)([\\/]|$)|\.tmp\.|~$|\.log$/i;
-// main-process files: changes need a restart (pinner-mcp.js is run by Claude, not by the HUD)
-const isMainSide = (rel) => /^(main|watcher|features-main|skill-install-main|usage|approval-shell|permission-mcp|preload|notes-preload|snip-preload|run)\.js$/i.test(rel) ||
-  /^main[\\/].+\.js$/i.test(rel);
+// main-process files: changes need a restart (mcp/pinner.js is run by Claude, not by the HUD)
+const isMainSide = (rel) => /^(main|watcher|features-main|skill-install-main|usage|approval-shell|preload|notes-preload|snip-preload|run)\.js$/i.test(rel) ||
+  /^(main|mcp)[\\/].+\.js$/i.test(rel) && !/^mcp[\\/]pinner\.js$/i.test(rel);
 
 function register({ getWin, getNotesWin }) {
   if (app.isPackaged) return;

@@ -76,7 +76,40 @@
   };
   const SLEEVES = { shirt: 1, hoodie: 1, suit: 1, sweater: 1 };
 
-  window.buildRunnerSvg = function (hue, outfit) {
+  // ---- props per activity (see docs/design/agent-stage.html). `arm` goes inside the
+  // front arm so it moves with the hand; `body` sits beside the robot. ----
+  const PROPS = {
+    type: { body: `
+      <rect x="27" y="31" width="16" height="2" rx="1" fill="#8a5a3c" stroke="#3b2618" stroke-width=".6"/>
+      <rect x="29" y="33" width="1.6" height="12" fill="#6b4630"/><rect x="40" y="33" width="1.6" height="12" fill="#6b4630"/>
+      <path d="M29,31L42,31L42,30.2L29,30.2Z" fill="#c9d2dd"/>
+      <path d="M33,30.2L36.2,21.5L44,21.5L41,30.2Z" fill="#2b2f3a" stroke="#14171c" stroke-width=".6"/>
+      <path class="rp-glow" d="M34.2,29.3L36.9,22.4L42.8,22.4L40.2,29.3Z" fill="#5bc0ff"/>
+      <g fill="#fff"><rect class="rp-code" x="37.6" y="23.6" width="3.6" height=".7"/><rect class="rp-code" x="37" y="25.3" width="2.8" height=".7"/><rect class="rp-code" x="36.4" y="27" width="3.4" height=".7"/></g>` },
+    read: { arm: `
+      <g transform="translate(23.2,27.5) rotate(92)"><rect x="-1" y="-4.6" width="9.5" height="9" rx="1" fill="#c0392b" stroke="#6b1d16" stroke-width=".6"/>
+      <rect x="-.2" y="-3.8" width="4" height="7.4" fill="#fffaf0"/><rect class="rp-page" x="3.8" y="-3.8" width="4" height="7.4" fill="#f2ead8"/></g>` },
+    search: { arm: `
+      <g transform="translate(23.5,28)"><path d="M0,0L3,4" stroke="#6b4630" stroke-width="1.6" stroke-linecap="round"/>
+      <circle cx="5" cy="7" r="3.6" fill="rgba(160,220,255,.35)" stroke="#c9a227" stroke-width="1.3"/>
+      <path class="rp-glint" d="M3.4,5.4A2.4,2.4 0 0 1 5.6,4.4" stroke="#fff" stroke-width=".8" fill="none"/></g>` },
+    hammer: { arm: `
+      <g transform="translate(23.6,28.4) rotate(-15)"><rect x="-.7" y="-1" width="1.5" height="9" rx=".6" fill="#8a5a3c"/>
+      <rect x="-3" y="7" width="6.5" height="3.6" rx=".8" fill="#9aa4b1" stroke="#4a5260" stroke-width=".6"/></g>`,
+      body: `
+      <rect x="30" y="38" width="11" height="7" rx="1" fill="#14171c" stroke="#3a414c" stroke-width=".7"/>
+      <path d="M31.6,40.4L33.2,41.6L31.6,42.8M34,42.8H36.6" stroke="#4fd06a" stroke-width=".8" fill="none"/>
+      <g class="rp-spark"><path d="M33,37L30,33M33,37L34.5,32.5M33,37L37,34M33,37L29,36" stroke="#ffd34a" stroke-width=".9" stroke-linecap="round"/></g>` },
+    web: { body: `
+      <circle cx="37" cy="6" r="4.6" fill="#2f6fd6" stroke="#1a3f80" stroke-width=".8"/>
+      <g class="rp-globe"><ellipse cx="37" cy="6" rx="2" ry="4.6" fill="none" stroke="#9fe0ff" stroke-width=".7"/>
+      <path d="M32.4,6H41.6M33.2,3.5H40.8M33.2,8.5H40.8" stroke="#9fe0ff" stroke-width=".6"/></g>
+      <path d="M34.6,3.1A3.2,3.2 0 0 1 37.4,2.2" stroke="#fff" stroke-width=".8" fill="none" opacity=".7"/>` },
+  };
+
+  // pose: run | think | type | read | search | hammer | web (CSS: .pose-<name> in features.css)
+  window.buildRunnerSvg = function (hue, outfit, pose) {
+    const prop = PROPS[pose] || {};
     const sh = (hex) => (hue && typeof shiftHexHue === 'function' ? shiftHexHue(hex, hue) : hex);
     const o = sh(P.outline), main = sh(P.main), light = sh(P.light), mid = sh(P.mid), dark = sh(P.dark), white = P.white;
     const fit = outfit || {};
@@ -92,8 +125,8 @@
     const fillOf = (shape, c) => shape.replace('/>', ` fill="${c}"/>`);
     const UPPER = '<rect x="18.5" y="21" width="3" height="7" rx="1.5"/>';
     const FORE = '<rect class="r-fore" x="18.5" y="26" width="3" height="6" rx="1.5"/>';
-    const limb = (cls, upper, lower, fill) =>
-      `<g class="${cls}">${line(UPPER)}${line(FORE)}${fillOf(UPPER, upper)}${fillOf(FORE, fill)}</g>`;
+    const limb = (cls, upper, lower, fill, held = '') =>
+      `<g class="${cls}">${line(UPPER)}${line(FORE)}${fillOf(UPPER, upper)}${fillOf(FORE, fill)}${held}</g>`;
     const THIGH = '<rect x="18" y="30" width="4" height="8" rx="2"/>';
     const SHIN = '<rect x="18" y="36" width="4" height="8" rx="2"/>';
     const FOOT = '<rect x="17" y="42" width="7.5" height="3" rx="1.5"/>';
@@ -130,7 +163,8 @@
       ${hat}
     </g>
     ${leg('r-leg r-leg-front', legFrontFill)}
-    ${limb('r-arm r-arm-front', armFront, mid, mid)}
+    ${limb('r-arm r-arm-front', armFront, mid, mid, prop.arm)}
+    ${prop.body || ''}
   </g>
 </svg>`;
   };

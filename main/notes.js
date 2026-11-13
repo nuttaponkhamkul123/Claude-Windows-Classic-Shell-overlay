@@ -1,5 +1,5 @@
 // Pinned notes: a side window docked to the LEFT of the HUD that shows the
-// Markdown notes Claude pins with the ovly-pinner MCP tool (pinner-mcp.js).
+// Markdown notes Claude pins with the ovly-pinner MCP tool (mcp/pinner.js).
 // Notes live in ~/.ovly-claude/notes/*.md; this module watches that folder,
 // opens the panel when a new note arrives, and keeps it glued to the HUD.
 
