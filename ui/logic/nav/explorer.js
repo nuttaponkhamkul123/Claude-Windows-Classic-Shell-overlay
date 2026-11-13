@@ -34,12 +34,20 @@
   sIco.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.2"/><path d="M9.6 9.6 14 14"/></svg>';
   search.append(sInput, sIco);
 
+  // "‹" first in the chat toolbar (Shelter style, which hides the address bar's
+  // Back): closes the chat and goes back to the contact list, same as Back
+  const close = el('button', 'tb-btn xb-close', '‹');
+  close.title = 'Back to Contacts';
+  close.addEventListener('click', () => back.click());
+  document.querySelector('#detailView .convo-toolbar')?.prepend(close);
+
   bar.append(nav, addr, search);
   header.after(bar);
   document.body.classList.add('has-explorer-bar');
 
-  // the bar is not part of the window-drag area: stop presses from reaching it
+  // presses don't reach anything behind the bar; its empty space drags the window
   bar.addEventListener('pointerdown', (e) => e.stopPropagation());
+  window.makeHudDraggable?.(bar, 'button, input, textarea, a');
 
   // ---------- state ----------
   let lastChat = null; // last opened conversation (for Forward)

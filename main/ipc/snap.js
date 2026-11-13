@@ -16,7 +16,7 @@ function register(r) {
     setTimeout(() => {
       const latest = ctx.getWatcher() ? ctx.getWatcher().getAllSessions()[0] : null;
       ctx.appState.lastNudgeAt = 0; // bypass the 3-second limit for tests
-      nudge(ctx, latest ? [latest] : []);
+      nudge(ctx, latest ? [latest] : [], true); // a test always shakes, even with Nudge off
     }, 400);
   });
 
@@ -119,9 +119,11 @@ function runSnipSelectors(pairs, focusDisplayId) {
 }
 
 // Finished sessions shake the window, at most once every 3 s.
-function nudge(ctx, sessions) {
+// Settings → Nudge off ("nudge": false) turns it off; the Test Nudge button forces it.
+function nudge(ctx, sessions, force = false) {
   const win = ctx.getWin();
   if (!win || win.isDestroyed()) return;
+  if (!force && require('../../features-main').getSetting('nudge', true) === false) return;
   win.webContents.send('session-nudge', { ids: sessions.map((s) => s.id) });
   // Several finishing together = one shake
   if (Date.now() - ctx.appState.lastNudgeAt < 3000) return;

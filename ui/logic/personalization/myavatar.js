@@ -72,7 +72,8 @@
   menu.addEventListener('click', (e) => e.stopPropagation());
   const close = () => { menu.style.display = 'none'; };
   document.addEventListener('click', (e) => {
-    if (menu.style.display !== 'none' && !menu.contains(e.target) && !ava.contains(e.target)) close();
+    if (menu.style.display !== 'none' && !menu.contains(e.target) && !ava.contains(e.target) &&
+        !document.getElementById('dpUser')?.contains(e.target)) close();
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
 
@@ -113,17 +114,26 @@
     menu.appendChild(reset);
   }
 
-  ava.classList.add('my-ava-trigger');
-  ava.title = 'Click to change your picture';
-  ava.addEventListener('click', (e) => {
-    e.stopPropagation();
+  // Opens under whichever picture was clicked: "My Status" on the contact list, or
+  // your picture in a chat (the Shelter style has no "My Status" area)
+  const openMenu = (from) => {
     if (menu.style.display !== 'none') { close(); return; }
     build();
-    const r = ava.getBoundingClientRect();
-    menu.style.left = Math.max(4, r.left) + 'px';
-    menu.style.top = (r.bottom + 4) + 'px';
     menu.style.display = 'block';
-  });
+    const r = from.getBoundingClientRect();
+    const w = menu.offsetWidth, h = menu.offsetHeight;
+    menu.style.left = Math.max(4, Math.min(r.left, window.innerWidth - w - 4)) + 'px';
+    menu.style.top = (r.bottom + 4 + h > window.innerHeight ? Math.max(4, r.top - h - 4) : r.bottom + 4) + 'px';
+  };
+  ava.classList.add('my-ava-trigger');
+  ava.title = 'Click to change your picture';
+  ava.addEventListener('click', (e) => { e.stopPropagation(); openMenu(ava); });
+  const dpUser = document.getElementById('dpUser');
+  if (dpUser) {
+    dpUser.classList.add('my-ava-trigger');
+    dpUser.title = 'Click to change your picture';
+    dpUser.addEventListener('click', (e) => { e.stopPropagation(); openMenu(dpUser); });
+  }
 
   // load the saved choice
   (api.storeGetAll ? api.storeGetAll() : Promise.resolve({}))

@@ -407,7 +407,12 @@
       header.append(el('span', 'workspace-caret', '📌'), el('span', 'workspace-name', 'Pinned'));
       const body = el('div', 'workspace-body');
       pinnedList.forEach((s) => body.appendChild(buildSessionCard(s)));
-      group.append(header, body);
+      const vaultRoom = typeof buildWorkspaceVaultRoom === 'function'
+        ? buildWorkspaceVaultRoom(pinnedList, { name: '📌 Pinned', total: pinnedList.length })
+        : null;
+      group.append(header);
+      if (vaultRoom) group.append(vaultRoom);
+      group.append(body);
       sessionsContainer.prepend(group);
     }
     // hidden / pinned marks + cost on each card
@@ -458,10 +463,11 @@
   window.addEventListener('blur', closeMenu);
 
   sessionsContainer.addEventListener('contextmenu', (e) => {
-    const row = e.target.closest('.session-row');
+    // list rows, or the Vault view's robots and drawer chips (data-sid)
+    const row = e.target.closest('.session-row, [data-sid]');
     if (!row) return;
     e.preventDefault();
-    const id = row.id.replace(/^card-/, '');
+    const id = row.dataset.sid || row.id.replace(/^card-/, '');
     const s = sessionsList.find((x) => x.id === id);
     const m = meta();
     const isPinned = m.pinned.includes(id), isHidden = m.hidden.includes(id);

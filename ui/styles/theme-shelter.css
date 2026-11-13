@@ -1,0 +1,332 @@
+/* ===================================================================
+   Shelter style (Settings → Style → Shelter, the default).
+   An original "underground base" look to match the Vault view: dark steel
+   panels with rivets, amber accents, teal readouts, condensed
+   industrial lettering. Classic style = the Windows themes (theme-*.css).
+   Built on the plain dark layout (no .theme-aero), loaded last so it wins.
+   =================================================================== */
+body.style-shelter {
+  --sh-bg: #10151c;
+  --sh-panel: #18202a;
+  --sh-panel-2: #1f2834;
+  --sh-inset: #0b1015;
+  --sh-line: #2e3949;
+  --sh-steel: #3a4658;
+  --sh-steel-hi: #56647a;
+  --sh-text: #dfe6ee;
+  --sh-dim: #8796a8;
+  --sh-amber: #f5a524;
+  --sh-amber-deep: #c27a08;
+  --sh-teal: #2dd4bf;
+  --sh-red: #ef5350;
+  --sh-font: "Bahnschrift", "Segoe UI", sans-serif;
+  --sh-mono: "Cascadia Mono", Consolas, monospace;
+  --focus-bg: #161d27;
+  --focus-border: #4a5668;
+}
+
+/* ---------- window frame: riveted steel plate ---------- */
+body.style-shelter .overlay-card {
+  color: var(--sh-text);
+  border: 2px solid var(--sh-steel);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 7px 7px, var(--sh-steel-hi) 0 1.6px, transparent 2.2px),
+    radial-gradient(circle at calc(100% - 7px) 7px, var(--sh-steel-hi) 0 1.6px, transparent 2.2px),
+    radial-gradient(circle at 7px calc(100% - 7px), var(--sh-steel-hi) 0 1.6px, transparent 2.2px),
+    radial-gradient(circle at calc(100% - 7px) calc(100% - 7px), var(--sh-steel-hi) 0 1.6px, transparent 2.2px),
+    linear-gradient(180deg, #151b24 0%, var(--sh-bg) 100%);
+  box-shadow: inset 0 0 0 1px #070a0e, inset 0 1px 0 1px rgba(255, 255, 255, 0.05), 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+body.style-shelter .overlay-card.attention { border-color: var(--sh-amber); box-shadow: inset 0 0 0 1px #070a0e, 0 0 0 1px rgba(245, 165, 36, 0.35), 0 12px 32px rgba(0, 0, 0, 0.6); }
+
+/* ---------- no title bar in Shelter: the slim strip below drags the window, and
+   its ✕ (top left, only while a chat is open) closes the chat ---------- */
+body.style-shelter .pill-header { display: none; }
+body.style-shelter .status-title {
+  font: 600 13px var(--sh-font); letter-spacing: 0.09em; text-transform: uppercase; color: var(--sh-amber);
+}
+body.style-shelter .status-sub, body.style-shelter .badge-count { font-family: var(--sh-font); color: var(--sh-dim); }
+body.style-shelter .btn-icon { color: var(--sh-dim); border-radius: 4px; }
+body.style-shelter .btn-icon:hover { color: #fff; background: #a3302d; }
+
+/* ---------- address bar → control strip with an LCD readout ---------- */
+body.style-shelter .explorer-bar {
+  background: linear-gradient(180deg, #19212b, #141a22); border-bottom: 1px solid #070a0e; box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+  min-height: 16px; padding-top: 4px; padding-bottom: 4px; border-radius: 8px 8px 0 0; cursor: grab;
+}
+/* Shelter: no top strip at all; the toolbars' empty space drags the window */
+body.style-shelter .explorer-bar { display: none; }
+body.style-shelter #popupBody { padding-top: 6px; }
+body.style-shelter .list-toolbar, body.style-shelter .convo-toolbar { cursor: grab; }
+body.style-shelter .list-toolbar button, body.style-shelter .convo-toolbar button { cursor: pointer; }
+/* focus mode: panel flush with the top; the zoomed rooms always stay underneath it */
+body.style-shelter.vault-focus #detailView { top: 4px; }
+body.vault-focus #listView { position: relative; z-index: 0; isolation: isolate; }
+/* "‹" back key, first in the chat toolbar (Shelter only) */
+.convo-toolbar .xb-close { display: none; }
+body.style-shelter .convo-toolbar .xb-close {
+  display: inline-block; flex: none; min-width: 26px; padding: 0 7px;
+  font: 700 15px/1 "Segoe UI", sans-serif; letter-spacing: 0;
+}
+body.style-shelter .xb-orb {
+  border-radius: 5px; border: 1px solid #4a5668;
+  background: linear-gradient(180deg, #34404f 0%, #232c38 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 1px 0 #070a0e;
+}
+body.style-shelter .xb-orb svg { stroke: var(--sh-amber); filter: none; }
+body.style-shelter .xb-orb:hover:not(:disabled) { background: linear-gradient(180deg, #3f4c5e, #2a3442); border-color: var(--sh-amber); }
+body.style-shelter .xb-orb:active:not(:disabled) { background: #1b222c; }
+body.style-shelter .xb-orb:disabled { background: #1c232d; border-color: #2c3542; box-shadow: none; }
+body.style-shelter .xb-orb:disabled svg { stroke: #4b5869; }
+body.style-shelter .xb-address,
+body.style-shelter .xb-search {
+  background: var(--sh-inset); border: 1px solid var(--sh-line); border-radius: 4px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+body.style-shelter .xb-address:hover, body.style-shelter .xb-search:hover, body.style-shelter .xb-search:focus-within { background: #0e141b; border-color: var(--sh-teal); }
+body.style-shelter .xb-crumb { font: 12px var(--sh-font); letter-spacing: 0.03em; color: var(--sh-teal); background: none; border-color: transparent; }
+body.style-shelter .xb-crumb:disabled { color: #a6f0e5; }
+body.style-shelter .xb-crumb:hover:not(:disabled) { background: rgba(45, 212, 191, 0.12); border-color: rgba(45, 212, 191, 0.4); }
+body.style-shelter .xb-sep { color: #46546a; }
+body.style-shelter .xb-addr-ico { background: #18202a; border-color: var(--sh-line); }
+body.style-shelter .xb-refresh { color: var(--sh-dim); border-left-color: var(--sh-line); background: none; }
+body.style-shelter .xb-refresh:hover { color: var(--sh-teal); background: rgba(45, 212, 191, 0.1); }
+body.style-shelter .xb-search-input { color: var(--sh-text); font-family: var(--sh-font); }
+body.style-shelter .xb-search-input::placeholder { color: #5d6b7e; font-style: normal; }
+body.style-shelter .xb-search-ico svg { stroke: var(--sh-dim); }
+
+/* ---------- toolbars: metal key caps ---------- */
+body.style-shelter .list-toolbar,
+body.style-shelter .convo-toolbar {
+  background: #161d26; border-bottom: 1px solid #070a0e; box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+  gap: 5px; padding: 5px 8px;
+}
+body.style-shelter .tb-btn,
+body.style-shelter .tab-btn,
+body.style-shelter .rt-btn.rt-text {
+  font: 500 11px var(--sh-font); letter-spacing: 0.06em; text-transform: uppercase;
+  color: #c9d3df; border: 1px solid #3c4859; border-radius: 4px; padding: 3px 9px;
+  background: linear-gradient(180deg, #2a3442 0%, #202833 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 1px 0 #070a0e;
+}
+body.style-shelter .tb-btn:hover, body.style-shelter .tab-btn:hover, body.style-shelter .rt-btn.rt-text:hover {
+  color: #fff; border-color: var(--sh-amber); background: linear-gradient(180deg, #313d4d, #252e3a);
+}
+body.style-shelter .tb-btn:active, body.style-shelter .tab-btn:active { background: #1a212b; box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6); }
+body.style-shelter .tab-btn.active {
+  color: #241600; border-color: var(--sh-amber-deep); font-weight: 700;
+  background: linear-gradient(180deg, #ffbe4d 0%, var(--sh-amber) 60%, #e08e0b 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 0 8px rgba(245, 165, 36, 0.35);
+}
+body.style-shelter .tabs-bar { gap: 4px; }
+/* tighter where space is short: the chat toolbar and the input box toolbar */
+body.style-shelter .convo-toolbar { gap: 4px; }
+body.style-shelter .convo-toolbar .tb-btn { padding: 3px 7px; letter-spacing: 0.04em; }
+body.style-shelter .reply-toolbar .rt-btn.rt-text {
+  padding: 1px 5px; font-size: 11px; letter-spacing: 0.02em; text-transform: none;
+  background: none; border-color: transparent; box-shadow: none; color: #9fb0c4;
+}
+body.style-shelter .reply-toolbar .rt-btn.rt-text:hover { color: var(--sh-amber); border-color: rgba(245, 165, 36, 0.4); background: rgba(245, 165, 36, 0.08); }
+body.style-shelter .reply-toolbar { flex-wrap: nowrap; min-width: 0; }
+body.style-shelter .reply-toolbar .btn-send { padding: 3px 12px; flex-shrink: 0; }
+
+/* ---------- contact list ---------- */
+body.style-shelter .workspace-header {
+  font: 600 11.5px var(--sh-font); letter-spacing: 0.08em; text-transform: uppercase; color: #c9d3df;
+  background: linear-gradient(90deg, #1d2530 0%, #161d26 100%);
+  padding-top: 4px; padding-bottom: 4px;
+}
+body.style-shelter .workspace-header:hover { color: #fff; background: linear-gradient(90deg, #26303d, #1b232d); }
+body.style-shelter .ws-count { font-family: var(--sh-mono); color: var(--sh-teal); }
+body.style-shelter .popup-footer { background: #131920; border-top: 1px solid var(--sh-line); }
+body.style-shelter .source-label { font: 11px var(--sh-font); letter-spacing: 0.05em; text-transform: uppercase; color: #5f6e82; }
+
+/* primary buttons (New chat, Send): amber pressure plate */
+body.style-shelter .btn-action.primary,
+body.style-shelter .sk-btn.primary {
+  font: 700 11.5px var(--sh-font); letter-spacing: 0.08em; text-transform: uppercase;
+  color: #241600; border: 1px solid #9a5f00; border-radius: 4px;
+  background: linear-gradient(180deg, #ffc35a 0%, var(--sh-amber) 55%, #e08e0b 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 2px 0 #6e4400;
+}
+body.style-shelter .btn-action.primary:hover, body.style-shelter .sk-btn.primary:hover { filter: brightness(1.08); }
+body.style-shelter .btn-action.primary:active, body.style-shelter .sk-btn.primary:active { transform: translateY(1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 1px 0 #6e4400; }
+
+/* ---------- chat: portholes, console, cards ---------- */
+body.style-shelter .dp-frame {
+  border-radius: 12px; border: 3px solid var(--sh-steel); background: var(--sh-inset);
+  box-shadow: inset 0 0 0 2px #070a0e, 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+body.style-shelter .dp-frame.state-idle, body.style-shelter .dp-frame.dp-you { box-shadow: inset 0 0 0 2px #070a0e, 0 0 0 1px #10151c, 0 2px 6px rgba(0, 0, 0, 0.5); }
+body.style-shelter .dp-frame.state-running { border-color: var(--sh-teal); box-shadow: inset 0 0 0 2px #070a0e, 0 0 10px rgba(45, 212, 191, 0.45); }
+body.style-shelter .dp-frame.state-attention { border-color: var(--sh-amber); box-shadow: inset 0 0 0 2px #070a0e, 0 0 10px rgba(245, 165, 36, 0.5); }
+body.style-shelter .convo-name { font: 600 18px var(--sh-font); letter-spacing: 0.02em; color: #fff; }
+body.style-shelter .convo-status { font-family: var(--sh-font); color: var(--sh-teal); }
+body.style-shelter .convo-personal { color: var(--sh-dim); }
+
+body.style-shelter .chat-stream {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 3px),
+    var(--sh-inset);
+  border: 1px solid var(--sh-line); border-radius: 6px; box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+body.style-shelter .chat-bubble { border-radius: 6px; }
+body.style-shelter .chat-bubble.assistant,
+body.style-shelter .chat-bubble.assistant.claude {
+  background: linear-gradient(180deg, #1b2430, #161e28); color: var(--sh-text);
+  border: 1px solid #2d3848;
+}
+body.style-shelter .chat-bubble.user {
+  background: linear-gradient(180deg, #123532, #0f2b29); color: #d9f7f2;
+  border: 1px solid #1f5550;
+}
+body.style-shelter .bubble-meta .meta-name { font: 600 10.5px var(--sh-font); letter-spacing: 0.08em; text-transform: uppercase; color: var(--sh-amber); }
+body.style-shelter .chat-bubble.user .bubble-meta .meta-name { color: var(--sh-teal); }
+body.style-shelter .bubble-meta .meta-time { color: #66768a; }
+body.style-shelter .chat-bubble :not(pre) > code { background: #0a0e13; color: #7fe3d2; border: 1px solid #222c39; }
+body.style-shelter .chat-bubble pre { background: #0a0e13; border: 1px solid #273140; border-radius: 4px; }
+
+/* input: a console with a key-cap toolbar */
+body.style-shelter .reply-box {
+  background: var(--sh-inset); border: 1px solid var(--sh-line); border-radius: 6px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.55);
+}
+body.style-shelter .reply-box:focus-within { border-color: var(--sh-amber); box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(245, 165, 36, 0.3); }
+body.style-shelter .reply-textarea { color: var(--sh-text); background: transparent; }
+body.style-shelter .reply-textarea::placeholder { color: #56657a; }
+body.style-shelter .reply-toolbar { background: #121820; border-top: 1px solid var(--sh-line); border-radius: 0 0 6px 6px; }
+body.style-shelter .rt-btn { color: #9fb0c4; border-radius: 4px; }
+body.style-shelter .rt-btn:hover { color: var(--sh-amber); background: rgba(245, 165, 36, 0.1); }
+
+/* working line + notices: amber readout */
+body.style-shelter #activityRow.activity-row {
+  color: var(--sh-text); background: linear-gradient(180deg, rgba(245, 165, 36, 0.1), rgba(245, 165, 36, 0.04));
+  border: 1px solid rgba(245, 165, 36, 0.4); border-radius: 6px;
+}
+body.style-shelter .activity-verb { font-family: var(--sh-font); letter-spacing: 0.03em; }
+body.style-shelter .activity-target { font-family: var(--sh-mono); background: #0a0e13; color: #7fe3d2; border: 1px solid #222c39; }
+body.style-shelter .activity-meta { font-family: var(--sh-mono); color: var(--sh-amber); opacity: 1; }
+body.style-shelter .convo-infobar { background: rgba(245, 165, 36, 0.12); border: 1px solid rgba(245, 165, 36, 0.45); color: #ffe2a8; border-radius: 5px; }
+
+/* ---------- Settings dialog, menus, panels ---------- */
+body.style-shelter .sk-dialog {
+  color: var(--sh-text); border: 2px solid var(--sh-steel); border-radius: 8px;
+  background: linear-gradient(180deg, #1a222d, #141a22);
+  box-shadow: inset 0 0 0 1px #070a0e, 0 14px 40px rgba(0, 0, 0, 0.65);
+}
+body.style-shelter .sk-head {
+  background: linear-gradient(180deg, #252f3c, #1b232e); border-bottom: 1px solid #070a0e;
+}
+body.style-shelter .sk-title { font: 600 13px var(--sh-font); letter-spacing: 0.09em; text-transform: uppercase; color: var(--sh-amber); }
+body.style-shelter .set-row { color: var(--sh-text); border-radius: 4px; }
+body.style-shelter .set-row:hover { background: rgba(245, 165, 36, 0.08); }
+body.style-shelter .theme-pill { font: 500 11px var(--sh-font); letter-spacing: 0.05em; text-transform: uppercase; color: #c9d3df; background: #202833; border: 1px solid #3c4859; }
+body.style-shelter .theme-pill.active { color: #241600; background: var(--sh-amber); border-color: var(--sh-amber-deep); }
+body.style-shelter .fx-menu,
+body.style-shelter .ctx-menu,
+body.style-shelter .mcp-panel,
+body.style-shelter .usage-panel,
+body.style-shelter .slash-menu {
+  color: var(--sh-text); background: #18202a; border: 1px solid var(--sh-steel); border-radius: 6px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
+}
+body.style-shelter .fx-menu-item, body.style-shelter .ctx-item { color: var(--sh-text); }
+body.style-shelter .fx-menu-item:hover, body.style-shelter .ctx-item:hover:not(:disabled) { background: rgba(245, 165, 36, 0.14); border-color: rgba(245, 165, 36, 0.4); }
+
+/* ---------- scrollbars ---------- */
+body.style-shelter ::-webkit-scrollbar { width: 9px; height: 9px; }
+body.style-shelter ::-webkit-scrollbar-track { background: #0d1218; }
+body.style-shelter ::-webkit-scrollbar-thumb { background: #344052; border: 2px solid #0d1218; border-radius: 5px; }
+body.style-shelter ::-webkit-scrollbar-thumb:hover { background: #4a5668; }
+
+/* ---------- Style setting (Shelter / Classic) ---------- */
+.style-pills { display: flex; gap: 4px; margin: 2px 0 6px 30px; }
+body.style-shelter .theme-sub.theme-pills { display: none; } /* Windows themes only apply to Classic */
+body.style-shelter #btnTheme { display: none; }
+
+/* git status box (top-right of a chat): a small readout panel */
+body.style-shelter .git-box { background: var(--sh-inset); border: 1px solid var(--sh-line); box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5); border-radius: 4px; }
+body.style-shelter .git-branch { color: var(--sh-teal); font-family: var(--sh-mono); }
+body.style-shelter .git-ico, body.style-shelter .git-user { color: var(--sh-dim); }
+body.style-shelter .git-tag { color: var(--sh-dim); background: #18202a; border-color: var(--sh-line); }
+body.style-shelter .git-ahead { color: #7fb8ff; }
+body.style-shelter .git-behind, body.style-shelter .git-dirty { color: var(--sh-amber); }
+body.style-shelter .git-clean { color: #5fd68a; }
+body.style-shelter .git-faint { color: #5f6e82; font-style: normal; }
+
+/* ===================================================================
+   Chat layout (Shelter): see docs/design/shelter-ui.html §10.
+   comms strip on top · full-width transcript · status lip on the console
+   =================================================================== */
+body.style-shelter .convo-side { display: none; }               /* pictures moved into the strip (app.js) */
+body.style-shelter .convo-body { gap: 0; }
+
+/* comms strip: [agent] name/status · folder · context | git | [you] */
+body.style-shelter .convo-contact {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; column-gap: 9px; row-gap: 1px; align-items: center;
+  padding: 6px 8px 7px; border-radius: 6px; position: relative;
+  background: linear-gradient(180deg, #1d2530, #171e27); border: 1px solid var(--sh-line);
+}
+body.style-shelter .convo-contact > * { grid-column: 2; min-width: 0; }
+body.style-shelter .convo-contact > #dpAgent { grid-column: 1; grid-row: 1 / span 4; align-self: center; }
+body.style-shelter .convo-contact > .git-box { grid-column: 3; grid-row: 1 / span 4; position: static; width: auto; max-width: 190px; align-self: center; }
+body.style-shelter .convo-contact > #dpUser { grid-column: 4; grid-row: 1 / span 4; align-self: center; }
+body.style-shelter .convo-contact .dp-frame { width: 38px; height: 38px; padding: 2px; border-width: 2px; border-radius: 8px; }
+body.style-shelter .convo-contact .dp-frame.dp-you { width: 28px; height: 28px; border-radius: 7px; cursor: pointer; }
+body.style-shelter .convo-contact .dp-img { font-size: 14px; border-radius: 5px; }
+body.style-shelter .convo-contact .dp-img svg { width: 70%; height: 70%; }
+body.style-shelter .convo-name { font-size: 15px; }
+body.style-shelter .convo-personal { font-size: 11px; }
+/* context: a thin gauge line instead of its own block */
+body.style-shelter .convo-contact .convo-context { margin-top: 2px; gap: 6px; }
+body.style-shelter .convo-contact .ctx-track { flex: 1 1 auto; height: 3px; max-width: 220px; background: #0a0e13; }
+body.style-shelter .convo-contact .ctx-label { font: 10px var(--sh-mono); color: var(--sh-dim); }
+/* focus mode: the big robot on the left is the agent picture */
+body.style-shelter.vault-focus .convo-contact > #dpAgent { display: none; }
+
+/* status lip: the working line sits on the console's top edge */
+body.style-shelter #activityRow.activity-row { border-radius: 6px 6px 0 0; border-bottom: 0; margin-bottom: -6px; }
+body.style-shelter .reply-box { border-top: 2px solid rgba(245, 165, 36, 0.55); }
+body.style-shelter .reply-section:has(> #activityRow:not([style*="none"])) .reply-box {
+  border-top: 1px solid rgba(245, 165, 36, 0.35); border-top-left-radius: 0; border-top-right-radius: 0;
+  border-color: rgba(245, 165, 36, 0.55);
+}
+
+/* console toolbar: room for Send; Copy lives in the input's right-click menu */
+body.style-shelter #btnCopyOnly { display: none; }
+body.style-shelter .reply-toolbar .rt-plan { width: auto; white-space: nowrap; display: inline-flex; align-items: center; gap: 3px; }
+/* a slimmer lip: smaller runner, less padding (its hat may poke above the lip) */
+body.style-shelter #activityRow.activity-row { padding-top: 7px; padding-bottom: 5px; min-height: 0; }
+body.style-shelter #activityRow .act-runwrap { width: 34px; height: 36px; margin: -6px 2px -4px -4px; }
+body.style-shelter #activityRow .act-bot { left: 2px; bottom: 2px; width: 30px; height: 39px; }
+/* narrow chat panel (focus mode): icon-only Plan, shorter model name */
+body.style-shelter.vault-focus .reply-toolbar .rt-plan { font-size: 0; padding: 0 4px; }
+body.style-shelter.vault-focus .reply-toolbar .rt-plan::before { content: "📝"; font-size: 12px; }
+body.style-shelter.vault-focus .reply-toolbar .rt-model { max-width: 92px; overflow: hidden; text-overflow: ellipsis; }
+
+/* dress-up panel + "My picture" menu */
+body.style-shelter .dress-panel,
+body.style-shelter .my-ava-menu {
+  color: var(--sh-text); background: linear-gradient(180deg, #1a222d, #141a22);
+  border: 2px solid var(--sh-steel); border-radius: 8px; box-shadow: inset 0 0 0 1px #070a0e, 0 14px 36px rgba(0, 0, 0, 0.65);
+}
+body.style-shelter .dress-head { background: linear-gradient(180deg, #252f3c, #1b232e); border-bottom: 1px solid #070a0e; color: var(--sh-text); }
+body.style-shelter .dress-title, body.style-shelter .mam-head { font: 600 12px var(--sh-font); letter-spacing: 0.08em; text-transform: uppercase; color: var(--sh-amber); }
+body.style-shelter .dress-close { color: var(--sh-dim); background: none; border: 0; }
+body.style-shelter .dress-close:hover { color: #fff; background: #a3302d; }
+body.style-shelter .dress-label, body.style-shelter .mam-sub { font: 600 10.5px var(--sh-font); letter-spacing: 0.08em; text-transform: uppercase; color: var(--sh-dim); }
+body.style-shelter .dress-preview { background: var(--sh-inset); border: 1px solid var(--sh-line); box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.55); }
+body.style-shelter .dress-item, body.style-shelter .dress-btn, body.style-shelter .mam-row {
+  color: #c9d3df; background: linear-gradient(180deg, #2a3442, #202833); border: 1px solid #3c4859; border-radius: 4px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+body.style-shelter .dress-item:hover, body.style-shelter .dress-btn:hover, body.style-shelter .mam-row:hover { color: #fff; border-color: var(--sh-amber); }
+body.style-shelter .dress-item.selected { color: #241600; background: linear-gradient(180deg, #ffbe4d, var(--sh-amber)); border-color: var(--sh-amber-deep); font-weight: 600; }
+body.style-shelter .dress-swatch.selected, body.style-shelter .mam-sw.on { outline: 2px solid var(--sh-amber); outline-offset: 1px; }
+body.style-shelter .dress-foot { border-top: 1px solid var(--sh-line); }
+body.style-shelter .dress-hint { color: var(--sh-dim); }
+body.style-shelter .dress-foot { background: #131920; border-radius: 0 0 6px 6px; }
+
+/* rooms: plain steel edge, no coloured stripe on the left */
+body.style-shelter .vault-room { border-left: 1px solid rgba(190, 210, 235, 0.28); }

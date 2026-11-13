@@ -291,13 +291,83 @@ class MultiAISessionWatcher extends EventEmitter {
         if (updated) {
           updated = this.holdRunningAfterSend(updated, existing);
           updated.size = f.size;
+          updated.subagents = existing?.subagents || [];
           this.sessions.set(sessionId, updated);
+          anyChanged = true;
+        }
+      }
+      // Helper agents write their own logs, so check them on every pass
+      const s = this.sessions.get(sessionId);
+      if (s) {
+        const subs = this.readSubagents(f.path);
+        if (JSON.stringify(subs) !== JSON.stringify(s.subagents || [])) {
+          s.subagents = subs;
           anyChanged = true;
         }
       }
     }
 
     return anyChanged;
+  }
+
+  // Helper (sub-)agents of a Claude session: <session>/subagents/agent-<id>.jsonl
+  // plus agent-<id>.meta.json { agentType, description, finished }.
+  // Returns the ones still working, plus ones that finished in the last few seconds
+  // (so the HUD can show their ✓ before they leave).
+  readSubagents(transcriptPath) {
+    const dir = path.join(transcriptPath.replace(/\.jsonl$/, ''), 'subagents');
+    let names;
+    try { names = fs.readdirSync(dir); } catch (_) { return []; }
+    if (!this.subCache) this.subCache = new Map();
+    const now = Date.now();
+    const out = [];
+    for (const n of names) {
+      const m = /^agent-([\w-]+)\.meta\.json$/.exec(n);
+      if (!m) continue;
+      const log = path.join(dir, `agent-${m[1]}.jsonl`);
+      let meta, st;
+      try { st = fs.statSync(log); meta = JSON.parse(fs.readFileSync(path.join(dir, n), 'utf8')); } catch (_) { continue; }
+      const age = now - st.mtimeMs;
+      if (meta.finished ? age > 6000 : age > 10 * 60 * 1000) continue;
+      let c = this.subCache.get(log);
+      if (!c || c.size !== st.size) {
+        c = { size: st.size, startedAt: c?.startedAt || st.birthtimeMs || st.mtimeMs, step: this.subagentStep(log, st.size) };
+        this.subCache.set(log, c);
+      }
+      out.push({
+        id: m[1],
+        type: meta.agentType || 'agent',
+        task: String(meta.description || '').slice(0, 120),
+        finished: !!meta.finished,
+        startedAt: c.startedAt,
+        ...c.step,
+      });
+    }
+    return out.sort((a, b) => a.startedAt - b.startedAt);
+  }
+
+  // The helper's current step from the end of its log: { tool, target } or {} (thinking)
+  subagentStep(log, size) {
+    try {
+      const len = Math.min(size, 32768);
+      const buf = Buffer.alloc(len);
+      const fd = fs.openSync(log, 'r');
+      fs.readSync(fd, buf, 0, len, size - len);
+      fs.closeSync(fd);
+      const lines = buf.toString('utf8').split('\n').reverse();
+      for (const l of lines) {
+        let e;
+        try { e = JSON.parse(l); } catch (_) { continue; }
+        if (e.type === 'user' && !e.isMeta) return {}; // a tool just returned → thinking
+        if (e.type !== 'assistant' || !Array.isArray(e.message?.content)) continue;
+        const t = [...e.message.content].reverse().find((b) => b.type === 'tool_use');
+        if (!t) return {};
+        const i = t.input || {};
+        const target = String(i.command || i.file_path || i.pattern || i.query || i.url || i.description || '').split('\n')[0].slice(0, 100);
+        return { tool: t.name, target };
+      }
+    } catch (_) {}
+    return {};
   }
 
   parseClaudeSession(filePath, mtime, prevSession) {

@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Shelter UI: components and structure</title>
+<!-- Design reference for the HUD's Shelter style (ui/styles/theme-shelter.css).
+     Self-contained: same tokens as the app; each component is labelled with the
+     class it maps to. Open in a browser. -->
+<style>
+  :root {
+    --sh-bg: #10151c; --sh-panel: #18202a; --sh-panel-2: #1f2834; --sh-inset: #0b1015;
+    --sh-line: #2e3949; --sh-steel: #3a4658; --sh-steel-hi: #56647a;
+    --sh-text: #dfe6ee; --sh-dim: #8796a8;
+    --sh-amber: #f5a524; --sh-amber-deep: #c27a08; --sh-teal: #2dd4bf; --sh-red: #ef5350; --sh-green: #5fd68a;
+    --sh-font: "Bahnschrift", "Segoe UI", sans-serif;
+    --sh-mono: "Cascadia Mono", Consolas, monospace;
+    --hazard: repeating-linear-gradient(135deg, var(--sh-amber) 0 7px, #14181f 7px 14px);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0d12; color: var(--sh-text); font: 13px/1.5 "Segoe UI", sans-serif; }
+  .page { max-width: 1060px; margin: 0 auto; padding: 26px 28px 60px; }
+  h1 { font: 600 24px var(--sh-font); letter-spacing: .06em; text-transform: uppercase; color: var(--sh-amber); margin: 0; }
+  .lead { color: var(--sh-dim); margin: 4px 0 0; max-width: 760px; }
+  .hz { height: 4px; background: var(--hazard); margin: 14px 0 6px; border-radius: 1px; }
+  h2 { font: 600 15px var(--sh-font); letter-spacing: .1em; text-transform: uppercase; color: #c9d3df; margin: 34px 0 4px; display: flex; align-items: center; gap: 10px; }
+  h2 .no { font-family: var(--sh-mono); color: var(--sh-amber); font-size: 12px; }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--sh-line); }
+  .sec-note { color: var(--sh-dim); margin: 0 0 14px; max-width: 800px; }
+  .grid { display: grid; gap: 14px; }
+  .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .card { background: #121820; border: 1px solid #222b37; border-radius: 8px; padding: 14px; }
+  .card h3 { font: 600 12px var(--sh-font); letter-spacing: .08em; text-transform: uppercase; color: #c9d3df; margin: 0 0 2px; }
+  .cls { font: 11px var(--sh-mono); color: #6f8aa6; display: block; margin-bottom: 10px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .rule { font-size: 12px; color: var(--sh-dim); margin-top: 10px; }
+  .rule b { color: #c9d3df; font-weight: 600; }
+  .do { color: var(--sh-green); } .dont { color: var(--sh-red); }
+
+  /* ---------- tokens ---------- */
+  .swatch { border-radius: 6px; overflow: hidden; border: 1px solid #222b37; }
+  .swatch .chip { height: 44px; }
+  .swatch .meta { padding: 6px 8px; background: #121820; font-size: 11.5px; }
+  .swatch .meta b { display: block; font: 600 11px var(--sh-font); letter-spacing: .06em; text-transform: uppercase; }
+  .swatch .meta code { font: 10.5px var(--sh-mono); color: var(--sh-dim); }
+  .type-row { display: flex; align-items: baseline; gap: 16px; padding: 7px 0; border-bottom: 1px solid #1c242f; }
+  .type-row .spec { width: 230px; flex: none; font: 11px var(--sh-mono); color: var(--sh-dim); }
+
+  /* ---------- components (mirroring theme-shelter.css) ---------- */
+  .plate {
+    border: 2px solid var(--sh-steel); border-radius: 10px;
+    background:
+      radial-gradient(circle at 7px 7px, var(--sh-steel-hi) 0 1.6px, transparent 2.2px),
+      radial-gradient(circle at calc(100% - 7px) 7px, var(--sh-steel-hi) 0 1.6px, transparent 2.2px),
+      radial-gradient(circle at 7px calc(100% - 7px), var(--sh-steel-hi) 0 1.6px, transparent 2.2px),
+      radial-gradient(circle at calc(100% - 7px) calc(100% - 7px), var(--sh-steel-hi) 0 1.6px, transparent 2.2px),
+      linear-gradient(180deg, #151b24 0%, var(--sh-bg) 100%);
+    box-shadow: inset 0 0 0 1px #070a0e, 0 12px 32px rgba(0,0,0,.6);
+  }
+  .titlebar { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; background: linear-gradient(180deg, #252f3c, #1b232e); border-bottom: 1px solid #070a0e; border-radius: 8px 8px 0 0; }
+  .titlebar .t { font: 600 13px var(--sh-font); letter-spacing: .09em; text-transform: uppercase; color: var(--sh-amber); }
+  .titlebar .x { margin-left: auto; color: var(--sh-dim); width: 22px; height: 20px; display: grid; place-items: center; border-radius: 4px; }
+  .titlebar .x:hover { background: #a3302d; color: #fff; }
+
+  .key { font: 500 11px var(--sh-font); letter-spacing: .06em; text-transform: uppercase; color: #c9d3df; border: 1px solid #3c4859; border-radius: 4px; padding: 3px 9px; background: linear-gradient(180deg, #2a3442, #202833); box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 1px 0 #070a0e; cursor: pointer; }
+  .key:hover, .key.hover { color: #fff; border-color: var(--sh-amber); background: linear-gradient(180deg, #313d4d, #252e3a); }
+  .key.pressed { background: #1a212b; box-shadow: inset 0 1px 3px rgba(0,0,0,.6); }
+  .key.on { color: #241600; border-color: var(--sh-amber-deep); font-weight: 700; background: linear-gradient(180deg, #ffbe4d, var(--sh-amber) 60%, #e08e0b); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 0 8px rgba(245,165,36,.35); }
+  .key:disabled { opacity: .4; cursor: default; }
+  .primary { font: 700 11.5px var(--sh-font); letter-spacing: .08em; text-transform: uppercase; color: #241600; border: 1px solid #9a5f00; border-radius: 4px; padding: 5px 14px; background: linear-gradient(180deg, #ffc35a, var(--sh-amber) 55%, #e08e0b); box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 2px 0 #6e4400; cursor: pointer; }
+  .primary:active { transform: translateY(1px); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 1px 0 #6e4400; }
+  .danger { font: 700 11.5px var(--sh-font); letter-spacing: .08em; text-transform: uppercase; color: #fff; border: 1px solid #7a1d1b; border-radius: 4px; padding: 5px 14px; background: linear-gradient(180deg, #e2554f, #b32f2a); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 2px 0 #4f1311; }
+  .ghost { font: 11px "Segoe UI", sans-serif; color: #9fb0c4; background: none; border: 1px solid transparent; border-radius: 4px; padding: 1px 6px; }
+  .ghost:hover { color: var(--sh-amber); border-color: rgba(245,165,36,.4); background: rgba(245,165,36,.08); }
+  .orb { width: 24px; height: 22px; display: inline-grid; place-items: center; border-radius: 5px; border: 1px solid #4a5668; background: linear-gradient(180deg, #34404f, #232c38); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 1px 0 #070a0e; color: var(--sh-amber); font-weight: 700; }
+  .orb.off { background: #1c232d; border-color: #2c3542; color: #4b5869; box-shadow: none; }
+
+  .inset { background: var(--sh-inset); border: 1px solid var(--sh-line); border-radius: 4px; box-shadow: inset 0 2px 4px rgba(0,0,0,.6); }
+  .lcd { display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; font: 12px var(--sh-font); letter-spacing: .03em; color: var(--sh-teal); }
+  .lcd .sep { color: #46546a; font-size: 9px; }
+  .lcd .cur { color: #a6f0e5; }
+  .field { height: 26px; width: 100%; padding: 0 8px; color: var(--sh-text); font: 12.5px var(--sh-font); outline: none; }
+  .field::placeholder { color: #5d6b7e; }
+  .field:focus { border-color: var(--sh-amber); box-shadow: inset 0 2px 4px rgba(0,0,0,.6), 0 0 0 1px rgba(245,165,36,.3); }
+
+  .plaque { display: flex; align-items: center; gap: 8px; padding: 5px 10px; font: 600 11.5px var(--sh-font); letter-spacing: .08em; text-transform: uppercase; color: #c9d3df; background: linear-gradient(90deg, #1d2530, #161d26); border-left: 3px solid var(--sh-amber); }
+  .plaque .cnt { margin-left: auto; font: 11px var(--sh-mono); color: var(--sh-teal); }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 0 7px; height: 18px; border-radius: 9px; font: 600 10.5px var(--sh-font); letter-spacing: .04em; }
+  .b-run { color: #9ff3e7; background: rgba(45,212,191,.14); border: 1px solid rgba(45,212,191,.45); }
+  .b-attn { color: #ffd38a; background: rgba(245,165,36,.16); border: 1px solid rgba(245,165,36,.55); }
+  .b-idle { color: var(--sh-dim); background: #1b222c; border: 1px solid #2c3542; }
+  .b-err { color: #ffb4b0; background: rgba(239,83,80,.14); border: 1px solid rgba(239,83,80,.5); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
+
+  .porthole { width: 64px; height: 64px; border-radius: 12px; border: 3px solid var(--sh-steel); background: var(--sh-inset); box-shadow: inset 0 0 0 2px #070a0e, 0 2px 6px rgba(0,0,0,.5); display: grid; place-items: center; overflow: hidden; }
+  .porthole.run { border-color: var(--sh-teal); box-shadow: inset 0 0 0 2px #070a0e, 0 0 10px rgba(45,212,191,.45); }
+  .porthole.attn { border-color: var(--sh-amber); box-shadow: inset 0 0 0 2px #070a0e, 0 0 10px rgba(245,165,36,.5); }
+  .porthole svg.runner { width: 40px; height: 52px; overflow: visible; }
+
+  .stream { padding: 10px; border-radius: 6px; background: repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px, transparent 1px 3px), var(--sh-inset); border: 1px solid var(--sh-line); box-shadow: inset 0 2px 8px rgba(0,0,0,.6); display: flex; flex-direction: column; gap: 8px; }
+  .msg { max-width: 82%; padding: 7px 10px 8px; border-radius: 6px; font-size: 12.5px; }
+  .msg .who { font: 600 10.5px var(--sh-font); letter-spacing: .08em; text-transform: uppercase; }
+  .msg .when { color: #66768a; font-size: 10.5px; margin-left: 6px; }
+  .msg.ai { background: linear-gradient(180deg, #1b2430, #161e28); border: 1px solid #2d3848; }
+  .msg.ai .who { color: var(--sh-amber); }
+  .msg.me { align-self: flex-end; background: linear-gradient(180deg, #123532, #0f2b29); color: #d9f7f2; border: 1px solid #1f5550; }
+  .msg.me .who { color: var(--sh-teal); }
+  .msg code { font: 11.5px var(--sh-mono); background: #0a0e13; color: #7fe3d2; border: 1px solid #222c39; border-radius: 3px; padding: 0 4px; }
+  .msg pre { margin: 6px 0 2px; padding: 6px 8px; font: 11.5px var(--sh-mono); background: #0a0e13; border: 1px solid #273140; border-radius: 4px; color: #cfe; }
+
+  .console { background: var(--sh-inset); border: 1px solid var(--sh-amber); border-radius: 6px; box-shadow: inset 0 2px 6px rgba(0,0,0,.55), 0 0 0 1px rgba(245,165,36,.3); }
+  .console .ta { padding: 8px 10px; min-height: 40px; color: #56657a; font-size: 12.5px; }
+  .console .bar { display: flex; align-items: center; gap: 4px; padding: 4px 6px; background: #121820; border-top: 1px solid var(--sh-line); border-radius: 0 0 6px 6px; }
+  .console .bar .sp { flex: 1; }
+  .ico { width: 22px; height: 20px; display: inline-grid; place-items: center; color: #9fb0c4; border-radius: 4px; font-size: 12px; }
+  .ico:hover { color: var(--sh-amber); background: rgba(245,165,36,.1); }
+
+  .readout { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; background: linear-gradient(180deg, rgba(245,165,36,.1), rgba(245,165,36,.04)); border: 1px solid rgba(245,165,36,.4); }
+  .readout .verb { font: 600 12px var(--sh-font); letter-spacing: .03em; }
+  .readout .tgt { flex: 1; min-width: 0; font: 11.5px var(--sh-mono); background: #0a0e13; color: #7fe3d2; border: 1px solid #222c39; border-radius: 3px; padding: 1px 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .readout .t { font: 11.5px var(--sh-mono); color: var(--sh-amber); }
+  .notice { padding: 6px 10px; border-radius: 5px; background: rgba(245,165,36,.12); border: 1px solid rgba(245,165,36,.45); color: #ffe2a8; font-size: 12.5px; }
+  .notice.err { background: rgba(239,83,80,.12); border-color: rgba(239,83,80,.45); color: #ffc9c6; }
+
+  .menu { width: 190px; padding: 4px; background: #18202a; border: 1px solid var(--sh-steel); border-radius: 6px; box-shadow: 0 10px 26px rgba(0,0,0,.6); }
+  .menu .it { display: flex; gap: 8px; align-items: center; padding: 4px 8px; border: 1px solid transparent; border-radius: 4px; font-size: 12.5px; }
+  .menu .it.hover { background: rgba(245,165,36,.14); border-color: rgba(245,165,36,.4); }
+  .menu .it .k { margin-left: auto; font: 10.5px var(--sh-mono); color: #66768a; }
+  .menu .sep { height: 1px; margin: 4px 6px; background: var(--sh-line); }
+
+  .toggle { width: 34px; height: 18px; border-radius: 3px; background: #1b222c; border: 1px solid #3c4859; position: relative; box-shadow: inset 0 1px 3px rgba(0,0,0,.6); }
+  .toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 12px; border-radius: 2px; background: linear-gradient(180deg, #56647a, #3a4658); transition: left .15s; }
+  .toggle.on { background: rgba(245,165,36,.25); border-color: var(--sh-amber-deep); }
+  .toggle.on::after { left: 16px; background: linear-gradient(180deg, #ffc35a, var(--sh-amber)); }
+
+  .gauge { height: 10px; border-radius: 2px; background: #0a0e13; border: 1px solid var(--sh-line); overflow: hidden; position: relative; }
+  .gauge i { position: absolute; inset: 0 auto 0 0; background: repeating-linear-gradient(90deg, var(--sh-teal) 0 6px, rgba(45,212,191,.6) 6px 8px); }
+  .gauge.warn i { background: repeating-linear-gradient(90deg, var(--sh-amber) 0 6px, rgba(245,165,36,.6) 6px 8px); }
+  .gauge .zone { position: absolute; right: 0; top: 0; bottom: 0; width: 18%; background: repeating-linear-gradient(135deg, rgba(239,83,80,.35) 0 4px, transparent 4px 8px); }
+
+  .toast { width: 300px; border-radius: 6px; overflow: hidden; background: #18202a; border: 1px solid var(--sh-amber); box-shadow: 0 8px 22px rgba(0,0,0,.6); }
+  .toast .th { display: none; }
+  .toast .tb { padding: 8px 10px; }
+  .toast .tt { font: 600 12px var(--sh-font); letter-spacing: .06em; text-transform: uppercase; color: var(--sh-amber); }
+  .toast pre { margin: 5px 0 8px; font: 11.5px var(--sh-mono); color: #7fe3d2; background: #0a0e13; border: 1px solid #222c39; border-radius: 3px; padding: 4px 6px; white-space: pre-wrap; }
+
+  .room { position: relative; height: 84px; background: linear-gradient(180deg, #171e2b, #232d3f 76%, #131822); border: 1px solid rgba(190,210,235,.28); border-left: 3px solid var(--sh-amber); overflow: hidden; }
+  .room::before { content: ""; position: absolute; inset: 0 0 auto; height: 7px; background: linear-gradient(180deg, #4b5568, #2b3343); }
+  .room::after { content: ""; position: absolute; inset: auto 0 0; height: 8px; background: linear-gradient(#3b4456, #232a36); }
+  .room .tag { position: absolute; left: 10px; top: 11px; z-index: 2; padding: 1px 7px; border-radius: 4px; font: 600 10.5px var(--sh-font); background: rgba(12,18,30,.72); border: 1px solid rgba(148,163,184,.28); }
+  .room .tag b { color: var(--sh-amber); font-size: 9px; letter-spacing: .06em; margin-left: 5px; }
+  .room .bot { position: absolute; bottom: 7px; width: 26px; height: 34px; }
+  .room .bot svg { width: 100%; height: 100%; overflow: visible; }
+  .drawer { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; padding: 4px 8px 5px; background: #1a1f28; border: 1px solid rgba(190,210,235,.18); border-top: 0; }
+  .drawer .lbl { font: 600 10.5px var(--sh-font); color: var(--sh-dim); }
+  .vchip { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 7px 0 3px; border-radius: 9px; font-size: 11px; background: #262d39; border: 1px solid #333c4b; }
+  .vchip i { width: 12px; height: 12px; border-radius: 50%; }
+
+  /* ---------- structure wireframes ---------- */
+  .wire { position: relative; width: 300px; height: 470px; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
+  .wire .zone { position: relative; margin: 0; border-bottom: 1px dashed rgba(245,165,36,.25); display: flex; align-items: center; padding: 0 8px; font-size: 10.5px; color: var(--sh-dim); }
+  .wire .lbl { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); font: 600 9.5px var(--sh-mono); color: var(--sh-amber); background: rgba(10,13,18,.85); border: 1px solid rgba(245,165,36,.4); padding: 0 5px; border-radius: 3px; }
+  .wire-legend { font-size: 12px; color: var(--sh-dim); }
+  .wire-legend li { margin: 4px 0; }
+  .wire-legend b { color: #c9d3df; font-weight: 600; }
+  .wire-legend code { font: 11px var(--sh-mono); color: #8fb3d6; }
+
+  /* ---------- chat box redesign ---------- */
+  .cb-compare { display: grid; grid-template-columns: 300px 30px 300px 1fr; gap: 12px; align-items: start; }
+  .cb-cap { margin-bottom: 6px; }
+  .cb-arrow { align-self: center; font: 600 24px var(--sh-font); color: var(--sh-amber); text-align: center; }
+  .cb-notes ol { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; }
+  .cb-notes li { margin: 6px 0; }
+  .cb-notes b { color: #c9d3df; }
+  .cb-h3 { font: 600 12px var(--sh-font); letter-spacing: .08em; text-transform: uppercase; color: #c9d3df; margin: 18px 0 8px; }
+  .cb-frame { width: 300px; height: 480px; display: flex; flex-direction: column; overflow: hidden; font-size: 11.5px; }
+  .cb-frame .tbar { height: 26px; flex: none; display: flex; align-items: center; gap: 4px; padding: 0 6px; background: #161d26; border-bottom: 1px solid #070a0e; }
+  .cb-frame .tbar .key { padding: 1px 6px; font-size: 9.5px; }
+  .cb-frame .body { flex: 1; display: flex; gap: 6px; padding: 6px; min-height: 0; }
+  .cb-frame .col { display: flex; flex-direction: column; justify-content: space-between; width: 62px; flex: none; }
+  .cb-frame .col .porthole { width: 62px; height: 62px; }
+  .cb-frame .main { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .cb-frame .stream { flex: 1; padding: 6px; gap: 6px; min-height: 0; overflow: hidden; }
+  .cb-frame .msg { font-size: 11px; padding: 5px 7px; max-width: 88%; }
+  .cb-frame .msg .who { font-size: 9.5px; }
+  .squeeze { color: var(--sh-red); font: 600 9.5px var(--sh-font); }
+  .warnmark { position: relative; outline: 1px dashed rgba(239, 83, 80, .8); outline-offset: 1px; }
+
+  .cs { display: flex; align-items: center; gap: 8px; padding: 5px 8px; background: linear-gradient(180deg, #1d2530, #171e27); border: 1px solid var(--sh-line); border-radius: 6px; position: relative; }
+  .cs .ph { width: 32px; height: 32px; flex: none; border-radius: 8px; border: 2px solid var(--sh-teal); background: var(--sh-inset); box-shadow: 0 0 8px rgba(45,212,191,.4); display: grid; place-items: center; overflow: hidden; }
+  .cs.attn .ph { border-color: var(--sh-amber); box-shadow: 0 0 8px rgba(245,165,36,.5); }
+  .cs .ph svg { width: 22px; height: 29px; overflow: visible; }
+  .cs .nm { font: 600 14px var(--sh-font); }
+  .cs .ro { font: 10.5px var(--sh-mono); color: #7fe3d2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cs .txt { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+  .cs .me { width: 22px; height: 22px; flex: none; border-radius: 6px; border: 2px solid var(--sh-steel); background: #2a3442; display: grid; place-items: center; font-size: 11px; color: var(--sh-dim); }
+  .cs .gauge-line { position: absolute; left: 8px; right: 8px; bottom: -1px; height: 3px; border-radius: 2px; background: #0a0e13; overflow: hidden; }
+  .cs .gauge-line i { position: absolute; inset: 0 auto 0 0; width: 46%; background: var(--sh-teal); }
+
+  .cn { border-radius: 6px; background: var(--sh-inset); border: 1px solid var(--sh-line); box-shadow: inset 0 2px 6px rgba(0,0,0,.55); position: relative; }
+  .cn.working { border-color: rgba(245,165,36,.7); }
+  .cn .lip { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px 0 4px; border-radius: 6px 6px 0 0; background: linear-gradient(180deg, rgba(245,165,36,.16), rgba(245,165,36,.06)); border-bottom: 1px solid rgba(245,165,36,.35); }
+  .cn .lip .rb { width: 22px; height: 29px; margin-top: -10px; flex: none; }
+  .cn .lip .rb svg { width: 100%; height: 100%; overflow: visible; }
+  .cn .lip .v { font: 600 11px var(--sh-font); white-space: nowrap; }
+  .cn .lip .tg { flex: 1; min-width: 0; font: 10.5px var(--sh-mono); color: #7fe3d2; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .cn .lip .tm { font: 10.5px var(--sh-mono); color: var(--sh-amber); }
+  .cn:not(.working) .lip { height: 2px; padding: 0; background: var(--sh-amber); opacity: .55; border: 0; }
+  .cn:not(.working) .lip > * { display: none; }
+  .cn .ta { padding: 7px 9px; min-height: 34px; color: #56657a; font-size: 11.5px; }
+  .cn .bar { display: flex; align-items: center; gap: 2px; padding: 3px 5px; background: #121820; border-top: 1px solid var(--sh-line); border-radius: 0 0 6px 6px; }
+  .cn .bar .sp { flex: 1; }
+  .cn .bar .ghost { font-size: 10.5px; padding: 1px 4px; }
+  .cn .bar .ico { width: 20px; }
+  .cn .bar .primary { padding: 2px 10px; font-size: 10.5px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Shelter UI</h1>
+  <p class="lead">Components and screen structure for the HUD's Shelter style: an underground base with riveted steel panels, amber accents and teal readouts. Each component lists the app class it maps to, so this page can be checked against <code style="font:11px var(--sh-mono);color:#8fb3d6">ui/styles/theme-shelter.css</code>.</p>
+  <div style="height:1px;background:var(--sh-line);margin:14px 0 6px"></div>
+
+  <!-- ============================== 1. TOKENS ============================== -->
+  <h2><span class="no">01</span> Colour</h2>
+  <p class="sec-note">Steel greys for everything structural. <b style="color:var(--sh-amber)">Amber</b> marks action and needs-you. <b style="color:var(--sh-teal)">Teal</b> marks live data and working. Red is only for danger and errors.</p>
+  <div class="grid g3" id="swatches"></div>
+
+  <h2><span class="no">02</span> Type</h2>
+  <div class="card">
+    <div class="type-row"><span class="spec">Bahnschrift 600 · 13 · caps +.09em</span><span style="font:600 13px var(--sh-font);letter-spacing:.09em;text-transform:uppercase;color:var(--sh-amber)">Title bar · dialog title</span></div>
+    <div class="type-row"><span class="spec">Bahnschrift 600 · 18</span><span style="font:600 18px var(--sh-font)">Contact name in a chat</span></div>
+    <div class="type-row"><span class="spec">Bahnschrift 600 · 11.5 · caps +.08em</span><span style="font:600 11.5px var(--sh-font);letter-spacing:.08em;text-transform:uppercase">Workspace plaque · section label</span></div>
+    <div class="type-row"><span class="spec">Bahnschrift 500 · 11 · caps +.06em</span><span style="font:500 11px var(--sh-font);letter-spacing:.06em;text-transform:uppercase">Key-cap buttons · tabs</span></div>
+    <div class="type-row"><span class="spec">Segoe UI 400 · 12.5</span><span>Message text and anything you read for long. Stays in sentence case, not condensed.</span></div>
+    <div class="type-row"><span class="spec">Cascadia Mono · 11.5</span><span style="font:11.5px var(--sh-mono);color:#7fe3d2">npm test · src/app.js · 0:42</span></div>
+    <p class="rule"><b>Rule:</b> condensed caps for labels and controls only. <span class="do">✓</span> Messages and inputs use Segoe UI. <span class="dont">✗</span> No all-caps paragraphs.</p>
+  </div>
+
+  <!-- ============================== 2. COMPONENTS ============================== -->
+  <h2><span class="no">03</span> Frame and top strip</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Riveted plate</h3><span class="cls">.overlay-card · .sk-dialog</span>
+      <div class="plate" style="height:120px">
+        <div class="titlebar" style="height:16px"></div>
+      </div>
+      <p class="rule">Steel 2px border, inner black hairline, a rivet in each corner. Border turns <b style="color:var(--sh-amber)">amber</b> when a chat needs you (<code style="font:11px var(--sh-mono)">.attention</code>).</p>
+    </div>
+    <div class="card">
+      <h3>Top strip</h3><span class="cls">.explorer-bar (Shelter: no title bar, no address, no search)</span>
+      <div class="titlebar" style="height:16px"></div>
+      <p class="rule">A slim, empty steel strip you drag the window by. No hazard stripes anywhere.</p>
+      <h3 style="margin-top:14px">Back key ‹</h3><span class="cls">.convo-toolbar .xb-close (first, before Skills)</span>
+      <div class="row"><button class="key" style="font:700 15px/1 Segoe UI;padding:3px 9px">‹</button><button class="key hover" style="font:700 15px/1 Segoe UI;padding:3px 9px">‹</button><button class="key">Skills ▾</button><span style="font-size:11px;color:var(--sh-dim)">normal · hover · then Skills. Goes back to the contact list.</span></div>
+    </div>
+  </div>
+
+  <h2><span class="no">04</span> Buttons</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Key cap</h3><span class="cls">.tb-btn · .tab-btn</span>
+      <div class="row"><button class="key">Settings</button><button class="key hover">Hover</button><button class="key pressed">Pressed</button><button class="key on">Selected</button><button class="key" disabled>Disabled</button></div>
+      <p class="rule">Toolbars and tabs. Selected tab = amber cap. Hover = amber edge only.</p>
+    </div>
+    <div class="card">
+      <h3>Primary · danger · quiet</h3><span class="cls">.btn-action.primary · .sk-btn.primary · .rt-btn.rt-text</span>
+      <div class="row"><button class="primary">+ New chat</button><button class="primary">Send</button><button class="danger">Deny</button><button class="ghost">Usage ▴</button><button class="ghost">Copy</button></div>
+      <p class="rule">One amber pressure plate per screen (New chat on the list, Send in a chat). Quiet text buttons where space is tight (input toolbar).</p>
+    </div>
+    <div class="card">
+      <h3>Nav and icon buttons</h3><span class="cls">.xb-orb · .rt-btn</span>
+      <div class="row"><span class="orb">‹</span><span class="orb off">›</span><span class="ico">📎</span><span class="ico">/</span><span class="ico">✂</span><span class="ico">⚡</span></div>
+    </div>
+    <div class="card">
+      <h3>Switch</h3><span class="cls">.set-row .set-check</span>
+      <div class="row"><span class="toggle on"></span><span style="font-size:12px">On</span><span class="toggle"></span><span style="font-size:12px">Off</span></div>
+      <p class="rule">A lever, square not round: amber when on.</p>
+    </div>
+  </div>
+
+  <h2><span class="no">05</span> Fields and readouts</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Address readout <span class="badge b-idle">Classic only</span></h3><span class="cls">.xb-address · .xb-crumb (hidden in Shelter)</span>
+      <div class="row" style="flex-wrap:nowrap">
+        <span class="orb">‹</span><span class="orb off">›</span>
+        <div class="inset lcd" style="flex:1"><span>🤖</span><span>AI HUD</span><span class="sep">▸</span><span>big-app</span><span class="sep">▸</span><span class="cur">Fix login flow</span></div>
+      </div>
+      <p class="rule">Where you are, as an LCD: teal text in a sunken black box. The current place is brighter.</p>
+    </div>
+    <div class="card">
+      <h3>Text field</h3><span class="cls">.xb-search · .fx-rename · inputs</span>
+      <input class="inset field" placeholder="Search conversations">
+      <div style="height:8px"></div>
+      <input class="inset field" value="Focused field" style="border-color:var(--sh-amber);box-shadow:inset 0 2px 4px rgba(0,0,0,.6),0 0 0 1px rgba(245,165,36,.3)">
+    </div>
+    <div class="card">
+      <h3>Status badges</h3><span class="cls">.status-pill · counts</span>
+      <div class="row"><span class="badge b-run"><span class="dot"></span>Running</span><span class="badge b-attn"><span class="dot"></span>Needs you</span><span class="badge b-idle">Idle</span><span class="badge b-err">Failed</span></div>
+    </div>
+    <div class="card">
+      <h3>Gauge</h3><span class="cls">.convo-context .ctx-track · usage bars</span>
+      <div class="gauge"><i style="width:46%"></i><span class="zone"></span></div>
+      <div style="height:8px"></div>
+      <div class="gauge warn"><i style="width:84%"></i><span class="zone"></span></div>
+      <p class="rule">Segmented fill. Teal normally, amber past 80%. The striped red end = auto-compact zone.</p>
+    </div>
+  </div>
+
+  <h2><span class="no">06</span> Contact list</h2>
+  <div class="grid g2">
+    <div class="card" style="grid-column: span 2">
+      <h3>Workspace plaque, room, drawer</h3><span class="cls">.workspace-header · .vault-room · .vault-drawer · .vault-chip</span>
+      <div class="plaque">▾ big-app <span class="badge b-attn" style="height:16px">1 needs you</span><span class="cnt">(2/9)</span></div>
+      <div class="room" id="demoRoom"><span class="tag">big-app<b>TOOL FORGE · 2/9</b></span></div>
+      <div class="drawer"><span class="lbl">+3 more:</span><span class="vchip"><i style="background:#62b6d8"></i>Tests</span><span class="vchip" style="border-color:#ff9a1f"><i style="background:#d86262"></i>i18n</span><span class="vchip" style="border-color:rgba(30,167,232,.6)"><i style="background:#8bd862"></i>Deploy</span></div>
+      <p class="rule">Plaque = name, live counts, click to collapse. Room = up to 6 robots. Drawer = the rest as chips (amber border = needs you, blue = running).</p>
+    </div>
+  </div>
+
+  <h2><span class="no">07</span> Chat</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Portholes</h3><span class="cls">.dp-frame (.state-idle / -running / -attention)</span>
+      <div class="row" id="portholes"></div>
+      <p class="rule">Idle steel · working teal glow · needs-you amber glow.</p>
+    </div>
+    <div class="card">
+      <h3>Working readout · notices</h3><span class="cls">#activityRow · .convo-infobar</span>
+      <div class="readout"><span class="verb">Running a command</span><span class="tgt">npm test -- --watch=false</span><span class="t">0:42</span></div>
+      <div style="height:8px"></div>
+      <div class="notice">Claude is waiting for your answer.</div>
+      <div style="height:6px"></div>
+      <div class="notice err">Couldn't deliver the message. Retry?</div>
+    </div>
+    <div class="card" style="grid-column: span 2">
+      <h3>Transcript</h3><span class="cls">.chat-stream · .chat-bubble.assistant / .user</span>
+      <div class="stream">
+        <div class="msg ai"><span class="who">Claude</span><span class="when">2m ago</span><div>Fixed the timer in <code>renderActivity</code> and added a test.</div><pre>npm test  ✓ 42 passed</pre></div>
+        <div class="msg me"><span class="who">You</span><span class="when">just now</span><div>Great, now update the README.</div></div>
+      </div>
+      <p class="rule">Claude = steel card on the left, name in amber. You = teal card on the right. Code = teal on black. Faint scanlines in the background, low enough not to hurt reading.</p>
+    </div>
+    <div class="card" style="grid-column: span 2">
+      <h3>Input console</h3><span class="cls">.reply-box · .reply-textarea · .reply-toolbar</span>
+      <div class="console"><div class="ta">Type a message… ( / for commands · 📎, drop or Ctrl+V to attach files)</div>
+        <div class="bar"><span class="ico">📎</span><span class="ico">/</span><span class="ico">✂</span><button class="ghost">Usage ▴</button><button class="ghost">Opus 5.5 · medium ▾</button><span class="sp"></span><button class="ghost">Copy</button><button class="primary" style="padding:3px 12px">Send</button></div></div>
+      <p class="rule">Amber outline while typing. Toolbar uses quiet buttons so it fits a narrow HUD; Send is the only plate.</p>
+    </div>
+  </div>
+
+  <h2><span class="no">08</span> Overlays</h2>
+  <div class="grid g3">
+    <div class="card">
+      <h3>Menu</h3><span class="cls">.fx-menu · .ctx-menu · .mcp-panel</span>
+      <div class="menu"><div class="it">📌 Pin to top</div><div class="it hover">✎ Rename…</div><div class="it">⧉ Copy<span class="k">Ctrl+C</span></div><div class="sep"></div><div class="it">🙈 Hide</div></div>
+    </div>
+    <div class="card">
+      <h3>Approval</h3><span class="cls">.approval-toasts</span>
+      <div class="toast"><div class="th"></div><div class="tb"><div class="tt">Claude wants to run</div><pre>git push origin master</pre><div class="row"><button class="primary" style="padding:3px 12px">Allow</button><button class="danger" style="padding:3px 12px">Deny</button><button class="ghost">Open</button></div></div></div>
+    </div>
+    <div class="card">
+      <h3>Dialog</h3><span class="cls">.sk-dialog · .settings-card</span>
+      <div class="plate" style="overflow:hidden">
+        <div class="titlebar"><span class="t">⚙ Settings</span><span class="x">✕</span></div>
+        <div style="padding:8px 10px;font-size:12px">
+          <div style="font:600 10.5px var(--sh-font);letter-spacing:.08em;text-transform:uppercase;color:var(--sh-dim);margin-bottom:4px">Appearance</div>
+          <div class="row"><button class="key on">Shelter</button><button class="key">Classic</button></div>
+          <div class="row" style="justify-content:space-between;margin-top:8px">Chime <span class="toggle on"></span></div>
+          <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="primary" style="padding:3px 12px">Done</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== 3. STRUCTURE ============================== -->
+  <h2><span class="no">09</span> Screen structure</h2>
+  <p class="sec-note">The same frame holds every screen. Zones top to bottom; amber tags are the element ids/classes.</p>
+  <div class="grid g3" id="wires"></div>
+
+  <h2><span class="no">10</span> Chat box layout (redesign)</h2>
+  <p class="sec-note">Today the chat keeps the old messenger layout: a column of two big profile pictures on the left, a separate "working" box, and the input below it. At a normal HUD width that column eats ~90px, so the input toolbar runs out of room. The redesign gives the full width to the conversation and merges the status into the input.</p>
+  <div class="cb-compare">
+    <div>
+      <div class="cb-cap"><span class="badge b-idle">Today</span></div>
+      <div class="cb-frame plate" id="cbToday"></div>
+    </div>
+    <div class="cb-arrow">→</div>
+    <div>
+      <div class="cb-cap"><span class="badge b-attn">Proposed</span></div>
+      <div class="cb-frame plate" id="cbNew"></div>
+    </div>
+    <div class="cb-notes">
+      <h3>What moves where</h3>
+      <ol>
+        <li><b>Comms strip</b> (top, 40px): small porthole with the robot, name, status badge, and folder · branch as one readout line. Replaces the big agent picture and the floating git box.</li>
+        <li><b>Context gauge</b> as a 3px line under the strip, not a separate row.</li>
+        <li><b>Transcript</b> uses the full width. Claude's cards on the left, yours on the right; no picture column.</li>
+        <li><b>Status lip</b>: the working line becomes the top edge of the input console. The runner robot sits on it. When idle the lip shrinks to a thin amber line, so nothing jumps.</li>
+        <li><b>Console toolbar</b>: tools on the left (📎 / ✂ ⚡), then model and usage, then <b>Send</b>. Copy and the rest move into a ⋯ menu.</li>
+        <li><b>Your picture</b> moves into the strip's right end (small), where it also opens My Avatar.</li>
+      </ol>
+      <p class="rule"><b>Gained:</b> ~90px for messages and the toolbar; one box fewer; nothing overlaps.</p>
+    </div>
+  </div>
+
+  <h3 class="cb-h3">Anatomy</h3>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Comms strip</h3><span class="cls">new: .comms-strip (replaces .convo-side + .convo-contact + .git-box)</span>
+      <div class="cs" id="csDemo"></div>
+      <div style="height:6px"></div>
+      <div class="cs attn" id="csDemo2"></div>
+      <p class="rule">Porthole glow = state (teal working, amber needs you). Name in Bahnschrift 14; readout line in mono: <code style="font:11px var(--sh-mono);color:#7fe3d2">big-app · main ↑2 ●3</code>. Click the name to rename; click the readout to open the folder.</p>
+    </div>
+    <div class="card">
+      <h3>Console with status lip</h3><span class="cls">new: .reply-box .status-lip (absorbs #activityRow)</span>
+      <div class="cn working" id="cnDemo"></div>
+      <div style="height:10px"></div>
+      <div class="cn" id="cnIdle"></div>
+      <p class="rule">Working: lip shows robot · verb · target · time, amber. Idle: lip collapses to a 2px line. Needs you: lip turns amber with the question and Allow / Deny when it's a tool approval.</p>
+    </div>
+  </div>
+
+  <h3 class="cb-h3">Focus mode (robot clicked)</h3>
+  <div class="card">
+    <div class="row" style="align-items:flex-start;gap:18px">
+      <div class="cb-frame plate" id="cbFocus" style="width:520px"></div>
+      <p class="rule" style="flex:1;margin:0">Same panel, narrower: the strip's porthole is dropped (the big robot on the left <i>is</i> the porthole) and the pointer comes out of the strip toward it. The status lip still sits on the console, so you see the robot working on the left and its readout at the bottom of the panel.</p>
+    </div>
+  </div>
+
+  <h2><span class="no">11</span> Rules</h2>
+  <div class="card">
+    <ul class="wire-legend" style="margin:0;padding-left:18px">
+      <li><b>One amber plate per screen.</b> Everything else is a steel key cap or a quiet button.</li>
+      <li><b>Amber means "you".</b> Needs input, selected, your next action. Teal means "it's alive": working, live values, links.</li>
+      <li><b>Sunken = data, raised = control.</b> Readouts, fields and the transcript are inset black; buttons are raised steel.</li>
+      <li><b>No hazard stripes, no edge stripes.</b> Steel borders only; colour comes from text, badges and glows.</li>
+      <li><b>Readable first.</b> Messages stay Segoe UI 12.5 on a dark card with ≥ 7:1 contrast; decoration (rivets, scanlines) stays faint.</li>
+      <li><b>Original look.</b> Our robots, rooms and furniture. No characters, logos, door shapes or colour schemes from existing games.</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  function shiftHexHue(hex, deg) {
+    const n = parseInt(hex.slice(1), 16); let r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let h = 0, s = 0; const l = (mx + mn) / 2;
+    if (mx !== mn) { const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn);
+      h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; }
+    h = (h + deg + 360) % 360;
+    const f = (p, q, t) => { t = (t + 1) % 1; return t < 1/6 ? p + (q - p) * 6 * t : t < 1/2 ? q : t < 2/3 ? p + (q - p) * (2/3 - t) * 6 : p; };
+    const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q, k = h / 360;
+    return '#' + [f(p, q, k + 1/3), f(p, q, k), f(p, q, k - 1/3)].map((v) => Math.round(v * 255).toString(16).padStart(2, '0')).join('');
+  }
+</script>
+<script src="../../ui/lib/robot-runner.js"></script>
+<script>
+  // colour swatches
+  const SW = [
+    ['Base', '#10151c', '--sh-bg', 'window background'], ['Panel', '#18202a', '--sh-panel', 'cards, menus, dialogs'],
+    ['Inset', '#0b1015', '--sh-inset', 'fields, readouts, transcript'], ['Steel', '#3a4658', '--sh-steel', 'frames, borders'],
+    ['Line', '#2e3949', '--sh-line', 'dividers'], ['Text', '#dfe6ee', '--sh-text', 'main text'],
+    ['Dim text', '#8796a8', '--sh-dim', 'labels, hints'], ['Amber', '#f5a524', '--sh-amber', 'action · selected · needs you'],
+    ['Teal', '#2dd4bf', '--sh-teal', 'live data · working'], ['Red', '#ef5350', '--sh-red', 'danger, errors only'],
+  ];
+  document.getElementById('swatches').innerHTML = SW.map(([n, hex, v, use]) =>
+    `<div class="swatch"><div class="chip" style="background:${hex}"></div><div class="meta"><b>${n}</b><code>${v} ${hex}</code><div style="color:var(--sh-dim)">${use}</div></div></div>`).join('');
+
+  // robots in the demo room + portholes (same drawing as the HUD)
+  const bot = (hue, outfit, pose) => (window.buildRunnerSvg ? buildRunnerSvg(hue, outfit, pose) : '');
+  const room = document.getElementById('demoRoom');
+  [[22, 0, { hat: 'cap', hatColor: '#e0483e' }, 'run'], [46, 150, { clothes: 'hoodie', clothesColor: '#3faa4a' }, 'run'], [70, 260, { glasses: 'round', glassesColor: '#3a3f4b' }, 'run'], [88, 40, null, 'run']]
+    .forEach(([x, h, o, p]) => room.insertAdjacentHTML('beforeend', `<span class="bot" style="left:${x}%">${bot(h, o, p)}</span>`));
+  document.getElementById('portholes').innerHTML = ['', 'run', 'attn'].map((c, i) =>
+    `<div style="text-align:center"><div class="porthole ${c}">${bot([0, 150, 40][i], i === 0 ? { hat: 'beanie', hatColor: '#3b82f6' } : null, 'run')}</div><div style="font-size:11px;color:var(--sh-dim);margin-top:4px">${['idle', 'working', 'needs you'][i]}</div></div>`).join('');
+
+  // wireframes: [label, height px, tag, note, extra style]
+  const WIRES = {
+    'Contact list': [
+      ['drag strip', 22, '.explorer-bar', '', 'background:#161d26'],
+      ['SETTINGS · NEW CHAT · GROUP · VIEW · NOTES', 30, '#listToolbar', '', 'background:#161d26'],
+      ['ALL · RUNNING · IDLE · NEEDS INPUT', 32, '.tabs-bar', '', ''],
+      ['▾ BIG-APP  (2/9)', 24, '.workspace-header', '', 'background:linear-gradient(90deg,#1d2530,#161d26);border-left:3px solid #f5a524'],
+      ['room with robots', 84, '.vault-room', '', 'background:linear-gradient(180deg,#171e2b,#232d3f)'],
+      ['+3 more chips', 24, '.vault-drawer', '', 'background:#1a1f28'],
+      ['▸ SECOND  (0/3)  (collapsed)', 24, '.workspace-header', '', 'background:linear-gradient(90deg,#1d2530,#161d26);border-left:3px solid #f5a524'],
+      ['', 0, '#sessionsContainer', 'scrolls', 'flex:1'],
+      ['hint · + NEW CHAT', 34, '.popup-footer', '', 'background:#131920'],
+    ],
+    'Chat (redesigned, see 10)': [
+      ['drag strip', 22, '.explorer-bar', '', 'background:#161d26'],
+      ['‹ · SKILLS · NEW CHAT · SETTINGS · NOTES … MCP', 30, '.convo-toolbar', '', 'background:#161d26'],
+      ['[◉] Name · RUNNING · big-app · main ↑2   [you]', 40, '.comms-strip', 'gauge line under it', 'background:linear-gradient(180deg,#1d2530,#171e27);margin:4px 6px 0;border-bottom:3px solid #2dd4bf'],
+      ['transcript, full width', 0, '#chatStream', 'scrolls, inset', 'flex:1;background:#0b1015;margin:5px 6px 0;border:1px solid #2e3949'],
+      ['robot · Running a command · npm test · 0:42', 26, '.status-lip', 'collapses when idle', 'background:rgba(245,165,36,.12);margin:5px 6px 0;border:1px solid rgba(245,165,36,.6);border-bottom:0'],
+      ['input · 📎 / ✂ ⚡ · model · usage · ⋯ · SEND', 62, '.reply-box', '', 'background:#0b1015;margin:0 6px 6px;border:1px solid rgba(245,165,36,.6)'],
+    ],
+    'Focus (robot clicked)': [
+      ['drag strip', 22, '.explorer-bar', '', 'background:#161d26'],
+      ['', 0, 'body.vault-focus', '', 'flex:1;padding:0;align-items:stretch'],
+    ],
+  };
+  const wires = document.getElementById('wires');
+  for (const [name, zones] of Object.entries(WIRES)) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<h3>${name}</h3><span class="cls">&nbsp;</span>`;
+    const w = document.createElement('div');
+    w.className = 'wire plate';
+    for (const [txt, h, tag, note, st] of zones) {
+      const z = document.createElement('div');
+      z.className = 'zone';
+      z.style.cssText = (h ? `height:${h}px;flex:none;` : '') + (st || '');
+      z.innerHTML = `<span>${txt}${note ? ` <i style="opacity:.6">(${note})</i>` : ''}</span><span class="lbl">${tag}</span>`;
+      w.appendChild(z);
+    }
+    if (name.startsWith('Focus')) {
+      const z = w.lastChild;
+      z.innerHTML = `<div style="position:relative;flex:1;display:flex">
+        <div style="width:34%;background:linear-gradient(180deg,#171e2b,#232d3f);display:grid;place-items:center;position:relative">
+          <div style="width:52px;height:68px">${bot(150, { clothes: 'hoodie', clothesColor: '#3faa4a' }, 'run')}</div>
+          <span class="lbl" style="top:12px;transform:none;right:auto;left:4px">#listView ×2.1</span></div>
+        <div style="flex:1;margin:6px;background:#161d27;border:1px solid #4a5668;border-radius:8px;position:relative;box-shadow:-10px 0 26px rgba(0,0,0,.45);padding:8px;font-size:10.5px;color:var(--sh-dim)">
+          <span style="position:absolute;left:-12px;top:40%;border:11px solid transparent;border-left:0;border-right:12px solid #4a5668"></span>
+          chat panel: header, transcript, input<br><br>pointer aims at the robot<br>other robots in the strip switch chats<br>click empty space = close the chat
+          <span class="lbl" style="top:12px;transform:none">#detailView</span></div></div>`;
+    }
+    card.appendChild(w);
+    wires.appendChild(card);
+  }
+
+  // ---------- 10. chat box: today vs proposed ----------
+  const LEAD = { clothes: 'hoodie', clothesColor: '#3faa4a' };
+  const toolbar = '<div class="tbar"><button class="key" style="font-size:12px;padding:0 6px">‹</button><button class="key">Skills ▾</button><button class="key">New chat</button><button class="key">Settings</button><span style="flex:1"></span><button class="key">MCP</button></div>';
+  const msgs = `<div class="msg ai"><span class="who">Claude</span><div>Fixed the timer in <code>renderActivity</code> and added a test.</div></div>
+    <div class="msg me"><span class="who">You</span><div>Great, update the README too.</div></div>
+    <div class="msg ai"><span class="who">Claude</span><div>Updating README.md now.</div></div>`;
+  const lip = (on) => `<div class="cn${on ? ' working' : ''}">
+      <div class="lip"><span class="rb">${bot(150, LEAD, 'type')}</span><span class="v">Editing</span><span class="tg">README.md</span><span class="tm">0:42</span></div>
+      <div class="ta">Type a message…</div>
+      <div class="bar"><span class="ico">📎</span><span class="ico">/</span><span class="ico">✂</span><span class="ico">⚡</span><button class="ghost">Opus 5.5 ▾</button><button class="ghost">Usage</button><span class="sp"></span><button class="ghost">⋯</button><button class="primary">Send</button></div></div>`;
+  const strip = (attn, withPh = true) => `<div class="cs${attn ? ' attn' : ''}">${withPh ? `<span class="ph">${bot(150, LEAD, attn ? 'think' : 'run')}</span>` : ''}
+      <span class="txt"><span><span class="nm">Claude</span> <span class="badge ${attn ? 'b-attn' : 'b-run'}" style="height:15px;font-size:9.5px"><span class="dot"></span>${attn ? 'Needs you' : 'Running'}</span></span>
+      <span class="ro">big-app · main ↑2 ●3</span></span><span class="me">👤</span><span class="gauge-line"><i></i></span></div>`;
+
+  document.getElementById('cbToday').innerHTML = toolbar +
+    `<div class="body"><div class="col"><div class="porthole run">${bot(150, LEAD, 'run')}</div><div class="porthole" style="font-size:22px;color:var(--sh-dim)">👤</div></div>
+      <div class="main"><div style="display:flex;justify-content:space-between;gap:4px"><div><b style="font:600 13px var(--sh-font)">Claude</b> <span style="color:var(--sh-teal)">(Running)</span><div style="color:var(--sh-dim);font-size:10px">big-app C:\\work\\big…</div></div><div class="inset warnmark" style="font-size:9.5px;padding:2px 5px;color:#5f6e82;height:20px">git box</div></div>
+      <div class="stream">${msgs}</div>
+      <div class="readout warnmark" style="padding:4px 6px"><span class="verb" style="font-size:10.5px">Editing</span><span class="tgt" style="font-size:10px">README.md</span></div>
+      <div class="console" style="border-color:var(--sh-line)"><div class="ta" style="min-height:30px;font-size:10.5px;padding:5px 7px">Type a message…</div>
+        <div class="bar warnmark" style="padding:3px 4px;gap:1px"><span class="ico" style="width:16px">📎</span><span class="ico" style="width:16px">/</span><span class="ico" style="width:16px">✂</span><button class="ghost" style="font-size:9.5px;padding:0 2px">Usage</button><button class="ghost" style="font-size:9.5px;padding:0 2px">Opus 5.5…</button><span class="sp"></span><button class="ghost" style="font-size:9.5px;padding:0 2px">Co</button><button class="primary" style="padding:1px 5px;font-size:9.5px">Se</button></div></div>
+      <div class="squeeze">↑ toolbar cut off · ↑ two status boxes · ↑ git box overlaps</div>
+      </div></div>`;
+
+  document.getElementById('cbNew').innerHTML = toolbar +
+    `<div class="body" style="flex-direction:column;gap:5px">${strip(false)}<div class="stream">${msgs}</div>${lip(true)}</div>`;
+  document.getElementById('csDemo').outerHTML = strip(false);
+  document.getElementById('csDemo2').outerHTML = strip(true);
+  document.getElementById('cnDemo').outerHTML = lip(true);
+  document.getElementById('cnIdle').outerHTML = lip(false);
+
+  // focus mode with the new panel
+  document.getElementById('cbFocus').innerHTML =
+    `<div style="flex:1;display:flex;min-height:0">
+      <div style="width:150px;flex:none;background:linear-gradient(180deg,#171e2b,#232d3f 76%,#131822);position:relative">
+        <div style="position:absolute;left:46px;top:2px;width:58px;height:76px">${bot(150, LEAD, 'type')}</div>
+        <span style="position:absolute;left:0;right:0;bottom:0;height:8px;background:linear-gradient(#3b4456,#232a36)"></span></div>
+      <div style="flex:1;margin:6px;display:flex;flex-direction:column;gap:5px;padding:6px;background:#161d27;border:1px solid #4a5668;border-radius:8px;position:relative;box-shadow:-10px 0 26px rgba(0,0,0,.45);min-width:0">
+        <span style="position:absolute;left:-12px;top:22px;border:11px solid transparent;border-left:0;border-right:12px solid #4a5668"></span>
+        ${strip(false, false)}<div class="stream" style="flex:1;padding:6px;gap:6px">${msgs}</div>${lip(true)}</div></div>`;
+</script>
+</body>
+</html>

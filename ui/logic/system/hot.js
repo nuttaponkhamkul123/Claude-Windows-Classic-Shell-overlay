@@ -27,6 +27,7 @@
       const stream = document.getElementById('chatStream');
       sessionStorage.setItem(KEY, JSON.stringify({
         chat: (typeof currentActiveSession !== 'undefined' && currentActiveSession && !currentActiveSession.draft) ? currentActiveSession.id : null,
+        focus: document.body.classList.contains('vault-focus'), // chat was open beside its robot
         draft: box ? box.value : '',
         atBottom: stream ? stream.scrollHeight - stream.scrollTop - stream.clientHeight < 80 : true,
       }));
@@ -42,7 +43,13 @@
       const list = typeof sessionsList !== 'undefined' ? sessionsList : [];
       if (saved.chat && !list.length && Date.now() - started < 6000) { setTimeout(restore, 150); return; }
       const s = saved.chat && list.find((x) => x.id === saved.chat);
-      if (s && typeof showDetailView === 'function') showDetailView(s);
+      if (s && saved.focus && typeof openVaultFocus === 'function') {
+        // reopen beside its robot; the robots may need a moment to be drawn
+        if (!openVaultFocus(s)) {
+          if (Date.now() - started < 6000) { setTimeout(restore, 150); return; }
+          showDetailView(s);
+        }
+      } else if (s && typeof showDetailView === 'function') showDetailView(s);
       const box = document.getElementById('replyTextarea');
       if (box && saved.draft) { box.value = saved.draft; box.dispatchEvent(new Event('input', { bubbles: true })); }
       if (saved.atBottom) {
@@ -56,18 +63,27 @@
 
   // ---- main-process change: ask, never restart on our own ----
   let bar = null;
+  const setHotFlag = (on) => {
+    document.body.classList.toggle('has-hot-update', !!on);
+    if (typeof updateMiniAvatar === 'function') updateMiniAvatar();
+  };
   api.onHotUpdateReady((files) => {
     if (!bar) {
       bar = document.createElement('div');
       bar.className = 'hot-bar';
-      bar.innerHTML = '<span class="hot-ico">⟳</span><span class="hot-text"></span><button class="hot-go">Restart</button><button class="hot-later" title="Hide until the next change">Later</button>';
+      bar.innerHTML = '<span class="hot-ico">⟳</span><span class="hot-text"></span><span class="hot-actions"><button class="hot-go">Restart</button><button class="hot-later" title="Hide until the next change">Later</button></span>';
       bar.querySelector('.hot-go').addEventListener('click', () => {
         bar.remove(); bar = null;
+        setHotFlag(false);
         document.getElementById('btnRestartApp')?.click(); // asks first if a reply is still running
       });
-      bar.querySelector('.hot-later').addEventListener('click', () => { bar.remove(); bar = null; });
+      bar.querySelector('.hot-later').addEventListener('click', () => {
+        bar.remove(); bar = null;
+        setHotFlag(false);
+      });
       document.body.appendChild(bar);
     }
+    setHotFlag(true);
     const names = [...new Set(files.map((f) => f.split('/').pop()))];
     const t = bar.querySelector('.hot-text');
     t.textContent = `Update ready: ${names.slice(0, 3).join(', ')}${names.length > 3 ? ` +${names.length - 3}` : ''} changed. Restart to apply.`;

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Vault view: improvement plan</title>
+<!-- Plan for the contact list's "Vault" view (body.list-grid): workspaces drawn as
+     underground rooms with the session robots inside. Open in a browser. -->
+<link rel="stylesheet" href="../../ui/styles/features.css">
+<style>
+  body { margin: 0; padding: 22px 26px 40px; background: #16191e; color: #e3e7ee; font: 13px/1.5 "Segoe UI", sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 2px; }
+  h2 { font-size: 15px; margin: 28px 0 10px; color: #9cc3f0; border-bottom: 1px solid #2c333e; padding-bottom: 4px; }
+  h3 { font-size: 13px; margin: 0 0 4px; }
+  p { margin: 4px 0; }
+  .sub { opacity: .65; margin-bottom: 10px; }
+  .wrap { max-width: 980px; }
+  code { font: 11.5px Consolas, monospace; background: #232831; padding: 0 4px; border-radius: 3px; color: #b9d4f5; }
+
+  /* ---------- findings ---------- */
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid #262c35; }
+  th { color: #8b96a6; font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; }
+  .sev { display: inline-block; min-width: 54px; text-align: center; padding: 0 6px; border-radius: 8px; font-size: 11px; font-weight: 700; }
+  .sev.high { background: #5a1f22; color: #ffb4b0; }
+  .sev.med { background: #4f3c12; color: #ffd98a; }
+  .sev.low { background: #243246; color: #a9c7ee; }
+  .ok { color: #7fd99a; }
+
+  /* ---------- phase cards ---------- */
+  .phase { background: #1d2128; border: 1px solid #2c333e; border-radius: 8px; padding: 12px 14px; margin: 10px 0; }
+  .phase-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  .phase-head b { font-size: 14px; }
+  .size { font-size: 11px; padding: 0 7px; border-radius: 8px; background: #2a3342; color: #a9c7ee; }
+  .phase ul { margin: 4px 0 0; padding-left: 18px; }
+  .phase li { margin: 5px 0; }
+  .phase li small { display: block; opacity: .6; }
+  .done-when { margin-top: 8px; font-size: 12px; color: #9fdcb1; }
+
+  /* ---------- mock-up ---------- */
+  .mock { width: 460px; border-radius: 8px; overflow: hidden; border: 1px solid #39414e; background: #10141b; box-shadow: 0 6px 20px rgba(0,0,0,.4); }
+  .mock-pair { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }
+  .mock-cap { font-size: 12px; opacity: .7; margin: 6px 0 0; max-width: 460px; }
+  .floor-head { display: flex; align-items: center; gap: 7px; height: 24px; padding: 0 8px; font-size: 12px; background: linear-gradient(#2a3140, #222834); border-bottom: 1px solid #0b0e13; }
+  .floor-head .caret { opacity: .6; font-size: 10px; }
+  .floor-head .name { font-weight: 700; }
+  .floor-head .chip { font-size: 10.5px; padding: 0 6px; border-radius: 8px; background: #2d3747; }
+  .floor-head .chip.run { background: #133a52; color: #8fd3ff; }
+  .floor-head .chip.attn { background: #4f3410; color: #ffc46b; }
+  .floor-head .menu { margin-left: auto; opacity: .55; }
+  .floor { position: relative; display: flex; height: 92px; background: #141a24; }
+  .room { position: relative; flex: 1; border-right: 4px solid #2a3240; overflow: hidden;
+    background: linear-gradient(180deg, var(--tint) 0%, #1b2230 70%, #121720 100%); }
+  .room::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 5px; background: #3a4354; box-shadow: 0 2px 8px var(--glow); }
+  .room::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 7px; background: linear-gradient(#3b4456, #232a36); }
+  .room .label { position: absolute; left: 6px; top: 8px; font: 700 8.5px "Segoe UI", sans-serif; letter-spacing: .07em; color: var(--glow); }
+  .room.work { --tint: rgba(245,158,11,.14); --glow: #f5a524; flex: 1.35; }
+  .room.study { --tint: rgba(16,185,129,.14); --glow: #34d399; }
+  .room.rest { --tint: rgba(148,163,184,.08); --glow: #94a3b8; }
+  .gate { position: relative; width: 74px; flex: none; background: linear-gradient(180deg, rgba(249,115,22,.18), #1b2230 70%, #121720); }
+  .gate::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 7px; background: linear-gradient(#3b4456, #232a36); }
+  .gate .label { position: absolute; left: 6px; top: 8px; font: 700 8.5px "Segoe UI", sans-serif; letter-spacing: .07em; color: #fb923c; }
+  .gate .btns { position: absolute; left: 6px; right: 6px; top: 21px; display: flex; gap: 3px; z-index: 2; }
+  .gate .btns span { flex: 1; text-align: center; font-size: 9.5px; font-weight: 700; border-radius: 3px; padding: 1px 0; }
+  .gate .allow { background: #1f6f3a; color: #d6ffe2; }
+  .gate .deny { background: #5b2323; color: #ffd2d2; }
+  .who { position: absolute; bottom: 7px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }
+  .who > div { width: 28px; height: 36px; }
+  .who .runner { overflow: visible; display: block; }
+  .who .runner * { transform-box: view-box; }
+  .who .tag { margin-top: -1px; font: 600 8.5px "Segoe UI", sans-serif; white-space: nowrap; padding: 0 4px; border-radius: 5px; background: rgba(10,14,20,.8); }
+  .who .doing { font: 8px Consolas, monospace; opacity: .75; white-space: nowrap; max-width: 76px; overflow: hidden; text-overflow: ellipsis; }
+  .who .ping { position: absolute; top: -6px; right: -6px; width: 13px; height: 13px; border-radius: 50%; background: #ff9a1f; color: #2b1800; font: 800 9px/13px "Segoe UI"; text-align: center; animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { transform: scale(1.18); } }
+  .drawer { display: flex; align-items: center; gap: 5px; padding: 5px 8px; background: #1a1f28; border-top: 1px solid #0b0e13; font-size: 11px; }
+  .drawer .mini { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px 1px 2px; border-radius: 9px; background: #262d39; }
+  .drawer .mini i { width: 14px; height: 14px; border-radius: 50%; background: var(--c); }
+  .floor.collapsed { height: 0; }
+  .today { opacity: .55; font-size: 11px; }
+
+  .guard { background: #1f1a12; border: 1px solid #4a3a1a; border-radius: 8px; padding: 10px 14px; }
+  .guard li { margin: 3px 0; }
+  .q li { margin: 6px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Vault view: improvement plan</h1>
+  <p class="sub">The contact list's default view: each workspace is an underground room, and every chat is a robot inside it. Today (13 Nov 2026) it looks good, but it hides too much. This plan fixes that first, then makes the rooms actually tell you what each robot is doing.</p>
+
+  <h2>1 · Where it stands today</h2>
+  <p>What already works well: <span class="ok">✓</span> robots keep their colour and outfit · <span class="ok">✓</span> working robots act out their tool (hammer, desk, book…) · <span class="ok">✓</span> idle robots wander and fidget · <span class="ok">✓</span> needs-you robots show a “!” · <span class="ok">✓</span> furniture is seeded per workspace so it doesn't jump around.</p>
+  <table>
+    <tr><th style="width:70px">Severity</th><th>Problem</th><th>Why it matters</th></tr>
+    <tr><td><span class="sev high">High</span></td><td>Only the first 6 chats in a workspace get a robot; the “+N” badge does nothing.</td><td>Chat 7 and later can't be opened from Vault view at all.</td></tr>
+    <tr><td><span class="sev high">High</span></td><td>The workspace header is hidden in Vault view, and a collapsed workspace hides its room.</td><td>Collapse a workspace in List view, switch to Vault, and it's gone with no way to bring it back.</td></tr>
+    <tr><td><span class="sev high">High</span></td><td>Right-click, rename, pin and the message preview only exist on the hidden list rows.</td><td>Vault view is the default, so everyday actions need a trip to List view.</td></tr>
+    <tr><td><span class="sev med">Medium</span></td><td>The whole room changes type (Tool Forge, Coding Lab…) to match whichever robot is “lead”.</td><td>With two robots doing different things, one is always in the wrong room, and the room flips colour every time the lead switches tool.</td></tr>
+    <tr><td><span class="sev med">Medium</span></td><td>Every update (about once a second while anything runs) rebuilds every room from scratch.</td><td>Running robots restart their walk, tooltips vanish under the mouse, and it costs CPU with many workspaces.</td></tr>
+    <tr><td><span class="sev med">Medium</span></td><td>You can only tell what a robot is doing from its pose or a hover tooltip.</td><td>“Hammering” could be a 2-second <code>ls</code> or a 10-minute test run; there's no text.</td></tr>
+    <tr><td><span class="sev low">Low</span></td><td>Rooms are dark-only; robots can't be reached with the keyboard; the idle wander timer keeps running when the HUD is hidden.</td><td>Looks off in the Windows 7 / XP themes; accessibility; battery.</td></tr>
+  </table>
+
+  <h2>2 · Where it's going</h2>
+  <div class="mock-pair">
+    <div>
+      <div class="mock" id="mockA"></div>
+      <p class="mock-cap"><b>One floor per workspace</b>, split into rooms by <i>what's being done</i>: a workshop (editing, commands), a study (reading, searching, web), a rest room (idle) and an approval gate. Each robot walks to the room that matches its current step, so every robot is always in the right place. A header strip brings back the name, counts, collapse and the ⋯ menu.</p>
+    </div>
+    <div>
+      <div class="mock" id="mockB"></div>
+      <p class="mock-cap"><b>Busy workspace + collapsed one.</b> Up to 6 robots on the floor; the rest sit in a drawer underneath as small clickable chips, so every chat is reachable. Collapsed workspaces keep their header with live counts.</p>
+    </div>
+  </div>
+
+  <h2>3 · The plan</h2>
+
+  <div class="phase">
+    <div class="phase-head"><b>Phase 1 · Nothing hidden</b><span class="size">small · about a day</span></div>
+    <p>Fix the three high-severity problems before adding anything.</p>
+    <ul>
+      <li>Show a slim header strip above each room in Vault view: caret, name, “2 running · 1 needs you · 5”, ⋯ menu. Clicking it collapses or expands, same as List view.
+        <small><code>ui/styles/features.css</code> (stop hiding <code>.workspace-header</code>), <code>ui/app.js</code> <code>renderSessionCards</code></small></li>
+      <li>Overflow drawer: chats beyond the 6 on the floor appear under the room as small avatar chips; clicking one opens the chat.
+        <small><code>buildWorkspaceVaultRoom</code>: turn <code>.vault-more</code> into a drawer</small></li>
+      <li>Right-click a robot = the same menu as a list row (rename, pin, open folder, close…). Reuse the row's menu code instead of copying it.
+        <small>Pull the row's context-menu handler out of <code>buildSessionCard</code> into a shared function</small></li>
+      <li>Robots become buttons: Tab moves between them, Enter opens the chat, and the tooltip shows the chat title and its latest message.</li>
+    </ul>
+    <p class="done-when">Done when: every chat in every workspace can be opened, renamed and pinned from Vault view, including collapsed workspaces and workspaces with more than 6 chats.</p>
+  </div>
+
+  <div class="phase">
+    <div class="phase-head"><b>Phase 2 · Calm, cheap updates</b><span class="size">small–medium · 1–2 days</span></div>
+    <ul>
+      <li>Update rooms in place: keep each robot's element (keyed by chat id) and change only its pose, position and labels. Rebuild a room only when chats are added or removed.
+        <small>Same approach as the activity card's <code>dataset.look</code> check</small></li>
+      <li>Pause the idle-wander timer and all room animations when the HUD is hidden, minimised or showing a chat (<code>document.hidden</code> + a class on <code>body</code>).</li>
+      <li>Add a light room palette for Windows 7 / XP (pale walls, steel-blue frame), keeping the dark one for Vista Dark / Dark.</li>
+    </ul>
+    <p class="done-when">Done when: a robot walking across the room doesn't restart when another chat updates, and the HUD uses no measurable CPU while hidden.</p>
+  </div>
+
+  <div class="phase">
+    <div class="phase-head"><b>Phase 3 · Rooms by activity</b><span class="size">medium · 2–3 days</span></div>
+    <ul>
+      <li>Split each floor into fixed rooms: <b>Workshop</b> (Edit, Write, Bash), <b>Study</b> (Read, Grep, Glob, web), <b>Rest</b> (idle), plus an <b>Approval gate</b> that only appears when a chat needs you. The room no longer depends on a “lead” robot.</li>
+      <li>When a robot's tool changes, it walks (or runs) from its current room to the new one instead of teleporting. It walks along the floor, using the existing <code>pose-walk</code> and <code>left</code> transitions.</li>
+      <li>A one-line label under each working robot: the tool plus a short target (“Bash · npm test”, “Read · app.js”), from <code>describeActivity()</code>.</li>
+      <li>At the approval gate, the robot raises its hand (the “wait” pose from <code>agent-stage.html</code>) with Allow / Deny buttons right there, using the same approval handling as the toast.</li>
+      <li>Helper agents from the team stage follow their lead robot as small robots in the same room.</li>
+    </ul>
+    <p class="done-when">Done when: with three chats doing different things, each robot stands in the room that matches its step, and approving from the gate works.</p>
+  </div>
+
+  <div class="phase">
+    <div class="phase-head"><b>Phase 4 · Nice to have</b><span class="size">optional</span></div>
+    <ul>
+      <li>Floor gauges under the header: context used, tokens and cost today for that workspace (real numbers from <code>usage.js</code>, not a game economy).</li>
+      <li>Drag a robot to another workspace's floor to pin it there, or onto the gate to “ask for attention”.</li>
+      <li>A “done” moment: when a chat finishes, its robot waves a ✓, then walks to the rest room.</li>
+      <li>Zoom: <kbd>Ctrl</kbd>+scroll switches between big rooms and a dense “many workspaces” mode.</li>
+    </ul>
+  </div>
+
+  <h2>4 · Keep it ours</h2>
+  <div class="guard">
+    <p>The view is <i>inspired by</i> base-building games (cut-away rooms, little workers), and that genre is fine to borrow from. To keep it an original design rather than a copy of a specific game:</p>
+    <ul>
+      <li>Keep our own robots, furniture (GPU racks, diff desks, MCP docks) and room names. Don't use another game's characters, logos, mascots, door shapes or colour scheme.</li>
+      <li>Rename the code comment and plaque wording that names a specific game (<code>features.css</code> line ~1019, “Fallout Shelter–style…”). Calling it “Vault view” is fine.</li>
+      <li>Gauges show real HUD data (context, tokens, cost). Don't copy another game's resource system.</li>
+    </ul>
+  </div>
+
+  <h2>5 · Questions before starting</h2>
+  <ul class="q">
+    <li><b>Room split:</b> are Workshop / Study / Rest / Gate the right four, or should commands (hammering) get a room of their own?</li>
+    <li><b>Approving from the gate:</b> should Allow / Deny live on the floor, or only open the chat?</li>
+    <li><b>Robots per floor:</b> 6 visible plus a drawer, or should the floor get wider and scroll sideways?</li>
+  </ul>
+</div>
+
+<script>
+  // same colour shift as the HUD (app.js shiftHexHue)
+  function shiftHexHue(hex, deg) {
+    const n = parseInt(hex.slice(1), 16); let r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let h = 0, s = 0; const l = (mx + mn) / 2;
+    if (mx !== mn) { const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn);
+      h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; }
+    h = (h + deg + 360) % 360;
+    const f = (p, q, t) => { t = (t + 1) % 1; return t < 1/6 ? p + (q - p) * 6 * t : t < 1/2 ? q : t < 2/3 ? p + (q - p) * (2/3 - t) * 6 : p; };
+    const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q, k = h / 360;
+    return '#' + [f(p, q, k + 1/3), f(p, q, k), f(p, q, k - 1/3)].map((v) => Math.round(v * 255).toString(16).padStart(2, '0')).join('');
+  }
+</script>
+<script src="../../ui/lib/robot-runner.js"></script>
+<script>
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  // a robot in a room: x = % across the room
+  function who(x, hue, outfit, pose, name, doing, ping) {
+    return `<div class="who vault-stage" style="left:${x}%"><div class="pose-${pose}" style="position:relative">${buildRunnerSvg(hue, outfit, pose)}${ping ? '<span class="ping">!</span>' : ''}</div>` +
+      `<span class="tag">${esc(name)}</span>${doing ? `<span class="doing">${esc(doing)}</span>` : ''}</div>`;
+  }
+  const head = (name, run, attn, total, open = true) =>
+    `<div class="floor-head"><span class="caret">${open ? '▼' : '▶'}</span><span class="name">${esc(name)}</span>` +
+    (run ? `<span class="chip run">${run} running</span>` : '') + (attn ? `<span class="chip attn">${attn} needs you</span>` : '') +
+    `<span class="chip">${total}</span><span class="menu">⋯</span></div>`;
+
+  document.getElementById('mockA').innerHTML =
+    head('ovly-claude', 2, 1, 4) +
+    `<div class="floor">
+      <div class="room work"><span class="label">WORKSHOP</span>
+        ${who(25, 0, { hat: 'cap', hatColor: '#e0483e' }, 'hammer', 'HUD fixes', 'Bash · npm test')}
+        ${who(76, 150, { clothes: 'hoodie', clothesColor: '#3faa4a' }, 'type', 'Notes v2', 'Edit · notes.js')}
+      </div>
+      <div class="room study"><span class="label">STUDY</span></div>
+      <div class="room rest"><span class="label">REST</span>
+        ${who(50, 260, { glasses: 'round', glassesColor: '#3a3f4b' }, 'think', 'README', '')}
+      </div>
+      <div class="gate"><span class="label">APPROVAL</span>
+        ${who(50, 40, { hat: 'beanie', hatColor: '#3b82f6' }, 'web', 'Release', '', true)}
+        <div class="btns"><span class="allow">Allow</span><span class="deny">Deny</span></div>
+      </div>
+    </div>`;
+
+  document.getElementById('mockB').innerHTML =
+    head('Fiori app', 3, 0, 9) +
+    `<div class="floor">
+      <div class="room work"><span class="label">WORKSHOP</span>
+        ${who(28, 200, null, 'type', 'Upload UI', 'Write · view.xml')}
+        ${who(72, 90, { hat: 'tophat', hatColor: '#2b2f3a' }, 'hammer', 'Build', 'Bash · npm run build')}
+      </div>
+      <div class="room study"><span class="label">STUDY</span>
+        ${who(50, 310, { glasses: 'nerd', glassesColor: '#3a3f4b' }, 'read', 'ABAP trace', 'Read · zcl_upload')}
+      </div>
+      <div class="room rest"><span class="label">REST</span>
+        ${who(32, 20, null, 'think', 'Docs', '')}
+        ${who(72, 120, { hat: 'party', hatColor: '#e0483e' }, 'done', 'Fixes', '')}
+      </div>
+    </div>
+    <div class="drawer"><span class="today">+4 more:</span>
+      <span class="mini" style="--c:#62b6d8"><i></i>Tests</span><span class="mini" style="--c:#d86262"><i></i>i18n</span>
+      <span class="mini" style="--c:#8bd862"><i></i>Deploy</span><span class="mini" style="--c:#c462d8"><i></i>Spike</span></div>` +
+    head('scratch', 0, 0, 2, false);
+</script>
+</body>
+</html>

@@ -1412,13 +1412,18 @@ let dragTimer = null;
 let dragInfo = null;          // { startCursor, moved }
 let dockState = { docked: false, side: null, restore: null }; // restore = {width,height}
 let boundsAnim = null;
+let dockSwapTimer = null;
 // Extra width of the mini tab while it shows Allow / Deny buttons next to the avatar
 let miniExtra = 0;
 const miniWidth = () => MINI_SIZE + miniExtra;
 
-function sendDockState() {
+function sendDockState(phase) {
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('dock-state', { docked: dockState.docked, side: dockState.side });
+    mainWindow.webContents.send('dock-state', {
+      docked: dockState.docked,
+      side: dockState.side,
+      phase: phase || (dockState.docked ? 'docked' : 'open'),
+    });
   }
 }
 
@@ -1426,28 +1431,69 @@ function workAreaAt(point) {
   return screen.getDisplayNearestPoint(point).workArea;
 }
 
-// Animate window bounds. easeOutBack gives the little "magnet snap" overshoot.
-function animateBounds(target, { duration = 220, ease = 'back' } = {}) {
+// Animate window bounds.
+// ease: 'sticky' (viscous magnetic pull + velvety settle), 'out' (cubic-out), 'back' (overshoot)
+// anchor: 'left' | 'right' | null — keeps the docked edge glued to the screen edge with zero wobble
+// followDrag: when true, x/y track dragInfo.livePos so dragging the mini bar out animates live under the cursor
+function animateBounds(target, { duration = 320, ease = 'sticky', anchor = null, staggerHeight = false, followDrag = false } = {}) {
   if (!mainWindow) return;
   if (boundsAnim) clearInterval(boundsAnim);
   const from = mainWindow.getBounds();
-  const start = Date.now();
+  const start = performance.now();
+  const stickyEase = (t) => {
+    // Gentle magnetic ease-in for the first 15%, then smooth quartic settle
+    if (t < 0.15) {
+      const u = t / 0.15;
+      return 0.05 * u * u;
+    }
+    const u = (t - 0.15) / 0.85;
+    return 0.05 + 0.95 * (1 - Math.pow(1 - u, 3.6));
+  };
   const easeFn = ease === 'back'
     ? (t) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); }
-    : (t) => 1 - Math.pow(1 - t, 3);
+    : ease === 'sticky'
+      ? stickyEase
+      : (t) => 1 - Math.pow(1 - t, 3);
+
+  const rightEdge = target.x + target.width;
+  let lastTx = target.x;
+  let lastTy = target.y;
   boundsAnim = setInterval(() => {
     if (!mainWindow || mainWindow.isDestroyed()) { clearInterval(boundsAnim); boundsAnim = null; return; }
-    const t = Math.min(1, (Date.now() - start) / duration);
+    const t = Math.min(1, (performance.now() - start) / duration);
     const k = easeFn(t);
-    const lerp = (a, b) => Math.round(a + (b - a) * k);
+    const kh = staggerHeight ? easeFn(Math.pow(t, 1.15)) : k;
+    const lerp = (a, b, f = k) => Math.round(a + (b - a) * f);
+    const width = Math.max(1, lerp(from.width, target.width, k));
+    const height = Math.max(1, lerp(from.height, target.height, kh));
+    if (followDrag && dragInfo?.livePos) {
+      lastTx = dragInfo.livePos.x;
+      lastTy = dragInfo.livePos.y;
+    }
+    const tx = lastTx;
+    const ty = lastTy;
+    let x = lerp(from.x, tx, k);
+    if (!followDrag) {
+      if (anchor === 'left') x = target.x;
+      else if (anchor === 'right') x = rightEdge - width;
+    }
     mainWindow.setBounds({
-      x: lerp(from.x, target.x),
-      y: lerp(from.y, target.y),
-      width: Math.max(1, lerp(from.width, target.width)),
-      height: Math.max(1, lerp(from.height, target.height)),
+      x,
+      y: lerp(from.y, ty, kh),
+      width,
+      height,
     });
-    if (t >= 1) { clearInterval(boundsAnim); boundsAnim = null; mainWindow.setBounds(target); }
-  }, 10);
+    if (t >= 1) {
+      clearInterval(boundsAnim);
+      boundsAnim = null;
+      mainWindow.setBounds({
+        x: tx,
+        y: ty,
+        width: target.width,
+        height: target.height,
+      });
+    }
+  }, 8);
 }
 
 function clampY(y, height, wa) {
@@ -1456,15 +1502,21 @@ function clampY(y, height, wa) {
 
 function dockToEdge(side) {
   if (!mainWindow) return;
+  if (dockSwapTimer) { clearTimeout(dockSwapTimer); dockSwapTimer = null; }
   const b = mainWindow.getBounds();
   const wa = workAreaAt({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
-  dockState = { docked: true, side, restore: { width: b.width, height: b.height } };
-  sendDockState(); // renderer switches to the mini tab first
+  dockState = { docked: false, side, restore: { width: b.width, height: b.height } };
+  sendDockState('docking'); // fade & compress full HUD toward the edge first
+  dockState.docked = true;
   mainWindow.setMinimumSize(1, 1);
   mainWindow.setResizable(false);
   const y = clampY(b.y, MINI_SIZE, wa);
   const x = side === 'left' ? wa.x : wa.x + wa.width - miniWidth();
-  animateBounds({ x, y, width: miniWidth(), height: MINI_SIZE }, { duration: 260, ease: 'back' });
+  animateBounds({ x, y, width: miniWidth(), height: MINI_SIZE }, { duration: 340, ease: 'sticky', anchor: side, staggerHeight: true });
+  dockSwapTimer = setTimeout(() => {
+    dockSwapTimer = null;
+    if (dockState.docked) sendDockState('docked');
+  }, 135);
 }
 
 // Renderer: the mini tab needs `px` extra width (approval buttons) — grow/shrink
@@ -1482,6 +1534,7 @@ ipcMain.on('set-mini-extra', (_e, px) => {
 
 function undock({ keepPosition = false } = {}) {
   if (!mainWindow || !dockState.docked) return;
+  if (dockSwapTimer) { clearTimeout(dockSwapTimer); dockSwapTimer = null; }
   const b = mainWindow.getBounds();
   const wa = workAreaAt({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
   const { width, height } = dockState.restore || { width: currentWidth, height: COMPACT_HEIGHT };
@@ -1493,8 +1546,13 @@ function undock({ keepPosition = false } = {}) {
   let x = keepPosition ? b.x : side === 'left' ? wa.x : side === 'right' ? wa.x + wa.width - width : b.x;
   x = Math.min(Math.max(x, wa.x), wa.x + wa.width - width);
   const y = clampY(b.y, Math.min(height, wa.height), wa);
-  animateBounds({ x, y, width, height }, { duration: 200, ease: 'out' });
-  setTimeout(sendDockState, 60);
+  animateBounds({ x, y, width, height }, { duration: 300, ease: 'sticky', anchor: keepPosition ? null : side });
+  dockSwapTimer = setTimeout(() => {
+    dockSwapTimer = null;
+    if (!dockState.docked && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('dock-state', { docked: false, side, phase: 'undocking' });
+    }
+  }, 45);
 }
 
 function stopWindowDrag() {
@@ -1504,17 +1562,56 @@ function stopWindowDrag() {
   }
 }
 
+const DETACH_DIST = 48;
+
+function detachMiniWhileDragging(p, wa) {
+  if (!mainWindow || !dockState.docked || !dragInfo) return;
+  if (dockSwapTimer) { clearTimeout(dockSwapTimer); dockSwapTimer = null; }
+  const { width, height } = dockState.restore || { width: currentWidth, height: COMPACT_HEIGHT };
+  const side = dockState.side;
+  dockState = { docked: false, side: null, restore: null };
+  mainWindow.setResizable(true);
+  mainWindow.setMinimumSize(...MIN_FULL_SIZE);
+
+  // Keep cursor anchored on the header pill as the mini bar blooms into the full HUD
+  const oldW = dragInfo.width;
+  dragInfo.offsetX = side === 'right'
+    ? Math.max(24, Math.min(width - 24, width - (oldW - dragInfo.offsetX)))
+    : Math.max(24, Math.min(width - 24, dragInfo.offsetX));
+  dragInfo.offsetY = Math.min(dragInfo.offsetY, 48);
+  dragInfo.width = width;
+  dragInfo.height = height;
+
+  let x = Math.min(Math.max(p.x - dragInfo.offsetX, wa.x), wa.x + wa.width - width);
+  let y = Math.min(Math.max(p.y - dragInfo.offsetY, wa.y), wa.y + wa.height - Math.min(height, 64));
+  dragInfo.livePos = { x, y };
+
+  animateBounds({ x, y, width, height }, { duration: 300, ease: 'sticky', followDrag: true });
+  dockSwapTimer = setTimeout(() => {
+    dockSwapTimer = null;
+    if (!dockState.docked && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('dock-state', { docked: false, side, phase: 'undocking' });
+    }
+  }, 40);
+}
+
 ipcMain.on('window-drag-start', () => {
   if (!mainWindow) return;
   stopWindowDrag();
+  if (dockSwapTimer) { clearTimeout(dockSwapTimer); dockSwapTimer = null; }
   if (boundsAnim) { clearInterval(boundsAnim); boundsAnim = null; }
   const cursor = screen.getCursorScreenPoint();
   const bounds = mainWindow.getBounds();
-  const offsetX = cursor.x - bounds.x;
-  const offsetY = cursor.y - bounds.y;
   // Fixed size while dragging: avoids the Windows high-DPI "window grows while moving" bug
-  const { width, height } = bounds;
-  dragInfo = { startCursor: cursor, moved: false };
+  dragInfo = {
+    startCursor: cursor,
+    moved: false,
+    offsetX: cursor.x - bounds.x,
+    offsetY: cursor.y - bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+    livePos: null,
+  };
 
   dragTimer = setInterval(() => {
     if (!mainWindow || mainWindow.isDestroyed()) return stopWindowDrag();
@@ -1525,14 +1622,38 @@ ipcMain.on('window-drag-start', () => {
     if (!dragInfo.moved) return;
 
     const wa = workAreaAt(p);
-    let x = p.x - offsetX;
-    let y = p.y - offsetY;
-    // Magnet: pull flush onto the left/right edge when close
-    if (Math.abs(x - wa.x) <= SNAP_DIST) x = wa.x;
-    else if (Math.abs(x + width - (wa.x + wa.width)) <= SNAP_DIST) x = wa.x + wa.width - width;
+    let x = p.x - dragInfo.offsetX;
+    let y = p.y - dragInfo.offsetY;
+
+    if (dockState.docked) {
+      const pull = dockState.side === 'left'
+        ? x - wa.x
+        : (wa.x + wa.width) - (x + dragInfo.width);
+      if (pull > DETACH_DIST) {
+        detachMiniWhileDragging(p, wa);
+        return;
+      }
+      // Sticky resistance while peeling off the docked edge
+      if (pull > 0) {
+        const resist = Math.round(pull * 0.28);
+        x = dockState.side === 'left'
+          ? wa.x + resist
+          : wa.x + wa.width - dragInfo.width - resist;
+      } else {
+        x = dockState.side === 'left' ? wa.x : wa.x + wa.width - dragInfo.width;
+      }
+    } else {
+      // Magnet: pull flush onto the left/right edge when close
+      if (Math.abs(x - wa.x) <= SNAP_DIST) x = wa.x;
+      else if (Math.abs(x + dragInfo.width - (wa.x + wa.width)) <= SNAP_DIST) x = wa.x + wa.width - dragInfo.width;
+    }
+
     // Keep the title bar on screen vertically
-    y = Math.min(Math.max(y, wa.y), wa.y + wa.height - Math.min(height, 64));
-    mainWindow.setBounds({ x, y, width, height });
+    y = Math.min(Math.max(y, wa.y), wa.y + wa.height - Math.min(dragInfo.height, 64));
+    dragInfo.livePos = { x, y };
+    if (!boundsAnim) {
+      mainWindow.setBounds({ x, y, width: dragInfo.width, height: dragInfo.height });
+    }
   }, 10);
 });
 

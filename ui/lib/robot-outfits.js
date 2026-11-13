@@ -18,6 +18,13 @@
       { id: 'party', label: 'Party', icon: '🥳', color: '#7a4fd6' },
       { id: 'crown', label: 'Crown', icon: '👑', color: '#e0483e' },
       { id: 'headphones', label: 'Headphones', icon: '🎧', color: '#e0483e' },
+      { id: 'hardhat', label: 'Hard hat', icon: '⛑️', color: '#f2c230' },
+      { id: 'cowboy', label: 'Cowboy', icon: '🤠', color: '#8a5a3c' },
+      { id: 'wizard', label: 'Wizard', icon: '🧙', color: '#7a4fd6' },
+      { id: 'chef', label: 'Chef', icon: '👨‍🍳', color: '#e0483e' },
+      { id: 'propeller', label: 'Propeller', icon: '🌀', color: '#2f6fd6' },
+      { id: 'bow', label: 'Bow', icon: '🎀', color: '#e85a9c' },
+      { id: 'halo', label: 'Halo', icon: '😇', color: '#f2c230' },
     ],
     glasses: [
       { id: 'round', label: 'Round', icon: '👓', color: '#3a3f4b' },
@@ -142,6 +149,104 @@
           <path d="M${f(g.cx - g.rx + 2)},${f(y)} A${f(g.rx + 6)} ${f(g.ry + 10)} 0 0 1 ${f(g.cx + g.rx - 2)},${f(y)}" fill="none" stroke="#3a3f4b" stroke-width="6"/>
           <rect x="${f(g.cx - g.rx - 12)}" y="${f(y - 26)}" width="24" height="50" rx="10" fill="${c}" stroke="${g.OL}" stroke-width="4"/>
           <rect x="${f(g.cx + g.rx - 12)}" y="${f(y - 26)}" width="24" height="50" rx="10" fill="${c}" stroke="${g.OL}" stroke-width="4"/>
+        </g>`,
+      };
+    },
+    hardhat(g, c) {
+      const R1 = g.rx + 7, R2 = g.ry + 7, yb = g.top + g.ry * 0.5;
+      const w = R1 * Math.sqrt(Math.max(0, 1 - ((g.hy - yb) / R2) ** 2));
+      return {
+        top: g.top - 16, hideHair: true,
+        svg: `<g stroke="${g.OL}" stroke-width="4" stroke-linejoin="round">
+          <path d="M${f(g.cx - w)},${f(yb)} A${f(R1)} ${f(R2)} 0 0 1 ${f(g.cx + w)},${f(yb)} Z" fill="${c}"/>
+          <rect x="${f(g.cx - 9)}" y="${f(g.top - 6)}" width="18" height="${f(yb - g.top + 4)}" rx="5" fill="${shade(c, -0.18)}"/>
+          <path d="M${f(g.cx - w * 0.62)},${f(yb - 10)} Q${f(g.cx - w * 0.55)},${f(g.top + 8)} ${f(g.cx - w * 0.2)},${f(g.top + 2)}" stroke="#ffffff" stroke-opacity="0.45" stroke-width="5" fill="none"/>
+          <rect x="${f(g.cx - w - 12)}" y="${f(yb - 4)}" width="${f(2 * w + 24)}" height="13" rx="6" fill="${shade(c, -0.12)}"/>
+        </g>`,
+      };
+    },
+    cowboy(g, c) {
+      const b = g.top + 16, cw = g.rx * 0.62, x = (d) => f(g.cx + d);
+      const L = g.cx - g.rx * 1.38, R = g.cx + g.rx * 1.38;
+      return {
+        top: b - 56, hideHair: true,
+        svg: `<g stroke="${g.OL}" stroke-width="4" stroke-linejoin="round">
+          <path d="M${x(-cw)},${f(b)} L${x(-cw * 0.85)},${f(b - 46)} Q${x(-cw * 0.4)},${f(b - 52)} ${x(0)},${f(b - 38)} Q${x(cw * 0.4)},${f(b - 52)} ${x(cw * 0.85)},${f(b - 46)} L${x(cw)},${f(b)} Z" fill="${c}"/>
+          <rect x="${x(-cw)}" y="${f(b - 14)}" width="${f(cw * 2)}" height="11" fill="${shade(c, -0.4)}"/>
+          <path d="M${f(L)},${f(b - 16)} Q${f(g.cx)},${f(b + 16)} ${f(R)},${f(b - 16)} Q${f(R - 6)},${f(b + 12)} ${f(g.cx)},${f(b + 18)} Q${f(L + 6)},${f(b + 12)} ${f(L)},${f(b - 16)} Z" fill="${shade(c, -0.12)}"/>
+        </g>`,
+      };
+    },
+    wizard(g, c) {
+      const b = g.top + 14, hw = g.rx * 0.66, apexX = g.cx + 26, apexY = b - 108;
+      const star = (sx, sy, r) => {
+        const p = [];
+        for (let i = 0; i < 10; i++) {
+          const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r;
+          p.push(`${f(sx + Math.cos(a) * rr)},${f(sy + Math.sin(a) * rr)}`);
+        }
+        return `<polygon points="${p.join(' ')}" fill="#f2c230" stroke="none"/>`;
+      };
+      return {
+        top: apexY - 10, hideHair: true,
+        svg: `<g stroke="${g.OL}" stroke-width="4" stroke-linejoin="round">
+          <ellipse cx="${f(g.cx)}" cy="${f(b)}" rx="${f(g.rx * 1.18)}" ry="12" fill="${shade(c, -0.25)}"/>
+          <path d="M${f(g.cx - hw)},${f(b - 2)} Q${f(g.cx - 6)},${f(b - 60)} ${f(apexX)},${f(apexY)} Q${f(g.cx + 14)},${f(b - 56)} ${f(g.cx + hw)},${f(b - 2)} Z" fill="${c}"/>
+          ${star(g.cx - 14, b - 28, 9)}${star(g.cx + 12, b - 54, 6.5)}${star(g.cx + 2, b - 14, 5)}
+        </g>`,
+      };
+    },
+    chef(g, c) {
+      const b = g.top + 16, w = g.rx * 0.78, x = (d) => f(g.cx + d);
+      return {
+        top: b - 82, hideHair: true,
+        svg: `<g stroke="${g.OL}" stroke-width="4" stroke-linejoin="round">
+          <circle cx="${x(-w * 0.55)}" cy="${f(b - 44)}" r="${f(w * 0.48)}" fill="#f7f7f7"/>
+          <circle cx="${x(w * 0.55)}" cy="${f(b - 44)}" r="${f(w * 0.48)}" fill="#f7f7f7"/>
+          <circle cx="${x(0)}" cy="${f(b - 56)}" r="${f(w * 0.55)}" fill="#f7f7f7"/>
+          <rect x="${x(-w)}" y="${f(b - 32)}" width="${f(w * 2)}" height="34" rx="6" fill="#f7f7f7"/>
+          <path d="M${x(-w * 0.45)},${f(b - 26)} V${f(b - 4)} M${x(w * 0.45)},${f(b - 26)} V${f(b - 4)}" stroke="#d9dde3" stroke-width="3"/>
+          <rect x="${x(-w)}" y="${f(b - 10)}" width="${f(w * 2)}" height="8" fill="${c}" stroke-width="3"/>
+        </g>`,
+      };
+    },
+    propeller(g, c) {
+      const R1 = g.rx + 5, R2 = g.ry + 5, yb = g.top + g.ry * 0.55;
+      const w = R1 * Math.sqrt(Math.max(0, 1 - ((g.hy - yb) / R2) ** 2));
+      const sy = g.top - 18;
+      return {
+        top: sy - 14, hideHair: true,
+        svg: `<g stroke="${g.OL}" stroke-width="4" stroke-linejoin="round">
+          <path d="M${f(g.cx - w)},${f(yb)} A${f(R1)} ${f(R2)} 0 0 1 ${f(g.cx + w)},${f(yb)} Z" fill="${c}"/>
+          <path d="M${f(g.cx)},${f(g.top - 2)} L${f(g.cx - w * 0.55)},${f(yb)} L${f(g.cx + w * 0.55)},${f(yb)} Z" fill="#f2c230" stroke-width="3"/>
+          <path d="M${f(g.cx)},${f(g.top - 2)} L${f(g.cx - w * 0.14)},${f(yb)} L${f(g.cx + w * 0.14)},${f(yb)} Z" fill="#e0483e" stroke-width="3"/>
+          <rect x="${f(g.cx - 3)}" y="${f(sy)}" width="6" height="${f(g.top - sy)}" fill="#3a3f4b" stroke-width="2.5"/>
+          <ellipse cx="${f(g.cx - 24)}" cy="${f(sy)}" rx="24" ry="7" fill="#f2c230" transform="rotate(-6 ${f(g.cx)} ${f(sy)})"/>
+          <ellipse cx="${f(g.cx + 24)}" cy="${f(sy)}" rx="24" ry="7" fill="#e0483e" transform="rotate(-6 ${f(g.cx)} ${f(sy)})"/>
+          <circle cx="${f(g.cx)}" cy="${f(sy)}" r="6" fill="#3a3f4b" stroke-width="3"/>
+        </g>`,
+      };
+    },
+    bow(g, c) {
+      const bx = g.cx + g.rx * 0.48, by = g.top + 10;
+      return {
+        top: by - 30, hideHair: false,
+        svg: `<g stroke="${g.OL}" stroke-width="4" stroke-linejoin="round" transform="rotate(-14 ${f(bx)} ${f(by)})">
+          <path d="M${f(bx)},${f(by)} C${f(bx - 22)},${f(by - 34)} ${f(bx - 46)},${f(by - 14)} ${f(bx - 38)},${f(by + 4)} C${f(bx - 32)},${f(by + 18)} ${f(bx - 14)},${f(by + 10)} ${f(bx)},${f(by)} Z" fill="${c}"/>
+          <path d="M${f(bx)},${f(by)} C${f(bx + 22)},${f(by - 34)} ${f(bx + 46)},${f(by - 14)} ${f(bx + 38)},${f(by + 4)} C${f(bx + 32)},${f(by + 18)} ${f(bx + 14)},${f(by + 10)} ${f(bx)},${f(by)} Z" fill="${c}"/>
+          <path d="M${f(bx - 30)},${f(by - 6)} Q${f(bx - 20)},${f(by - 2)} ${f(bx - 8)},${f(by - 2)} M${f(bx + 30)},${f(by - 6)} Q${f(bx + 20)},${f(by - 2)} ${f(bx + 8)},${f(by - 2)}" stroke="${shade(c, -0.3)}" stroke-width="3" fill="none"/>
+          <circle cx="${f(bx)}" cy="${f(by)}" r="10" fill="${shade(c, -0.15)}"/>
+        </g>`,
+      };
+    },
+    halo(g, c) {
+      const y = g.top - 22;
+      return {
+        top: y - 14, hideHair: false,
+        svg: `<g fill="none">
+          <ellipse cx="${f(g.cx)}" cy="${f(y)}" rx="${f(g.rx * 0.62)}" ry="12" stroke="${c}" stroke-opacity="0.35" stroke-width="18"/>
+          <ellipse cx="${f(g.cx)}" cy="${f(y)}" rx="${f(g.rx * 0.62)}" ry="12" stroke="${g.OL}" stroke-width="12"/>
+          <ellipse cx="${f(g.cx)}" cy="${f(y)}" rx="${f(g.rx * 0.62)}" ry="12" stroke="${c}" stroke-width="6"/>
         </g>`,
       };
     },

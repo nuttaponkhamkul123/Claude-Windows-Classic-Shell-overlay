@@ -709,8 +709,8 @@ body.theme-vista .ctx-sep, body:not(.theme-aero) .ctx-sep { background: #4a5060;
 
 /* ===== Activity card (running robot + recent steps) ===== */
 #activityRow.activity-row {
-  height: auto; min-height: 26px; flex-wrap: wrap; row-gap: 5px; padding: 5px 8px 6px;
-  border-radius: 5px; position: relative; overflow: hidden;
+  height: auto; min-height: 26px; flex-wrap: wrap; row-gap: 5px; padding: 14px 8px 6px;
+  border-radius: 5px; position: relative; overflow: visible; /* tall hats may poke out the top */
 }
 #activityRow .activity-verb { font-size: 12px; }
 #activityRow .act-progress { order: 10; flex-basis: 100%; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
@@ -726,21 +726,24 @@ body.theme-vista .ctx-sep, body:not(.theme-aero) .ctx-sep { background: #4a5060;
 #activityRow > .infobar-icon.busy { display: none; } /* the robot replaces the spinner */
 
 /* ----- run cycle (0.5s): legs stride + knees fold, arms counter-swing, body bobs per step ----- */
-#activityRow .runner { width: 100%; height: 100%; overflow: visible; display: block; }
-#activityRow .runner * { transform-box: view-box; }
+:is(#activityRow, .vault-stage) .runner { width: 100%; height: 100%; overflow: visible; display: block; }
+:is(#activityRow, .vault-stage) .runner * { transform-box: view-box; }
 
-#activityRow .r-body { transform-origin: 20px 45px; }
-#activityRow .r-leg { transform-origin: 20px 31px; }
-#activityRow .r-shin { transform-origin: 20px 37px; }
-#activityRow .r-arm { transform-origin: 20px 22px; }
-#activityRow .r-fore { transform-origin: 20px 27px; transform: rotate(-75deg); }
-#activityRow .pose-run .r-body { animation: r-bob .25s ease-in-out infinite alternate; }
-#activityRow .pose-run .r-leg { animation: r-thigh .5s linear infinite; }
-#activityRow .pose-run .r-shin { animation: r-knee .5s linear infinite; }
-#activityRow .pose-run .r-arm { animation: r-arm .5s ease-in-out infinite; }
-#activityRow .pose-run .r-fore { animation: r-elbow .5s ease-in-out infinite; }
+:is(#activityRow, .vault-stage) .r-body { transform-origin: 20px 45px; }
+:is(#activityRow, .vault-stage) .r-leg { transform-origin: 20px 31px; }
+:is(#activityRow, .vault-stage) .r-shin { transform-origin: 20px 37px; }
+:is(#activityRow, .vault-stage) .r-arm { transform-origin: 20px 22px; }
+:is(#activityRow, .vault-stage) .r-fore { transform-origin: 20px 27px; transform: rotate(-75deg); }
+:is(#activityRow, .vault-stage) .pose-run .r-body { animation: r-bob .25s ease-in-out infinite alternate; }
+:is(#activityRow, .vault-stage) .pose-run .r-leg { animation: r-thigh .5s linear infinite; }
+:is(#activityRow, .vault-stage) .pose-run .r-shin { animation: r-knee .5s linear infinite; }
+:is(#activityRow, .vault-stage) .pose-run .r-arm { animation: r-arm .5s ease-in-out infinite; }
+:is(#activityRow, .vault-stage) .pose-run .r-fore { animation: r-elbow .5s ease-in-out infinite; }
 /* the back limbs are half a stride behind */
-#activityRow .pose-run .r-leg-back, #activityRow .pose-run .r-leg-back .r-shin, #activityRow .pose-run .r-arm-front, #activityRow .pose-run .r-arm-front .r-fore { animation-delay: -.25s; }
+:is(#activityRow, .vault-stage) .pose-run .r-leg-back,
+:is(#activityRow, .vault-stage) .pose-run .r-leg-back .r-shin,
+:is(#activityRow, .vault-stage) .pose-run .r-arm-front,
+:is(#activityRow, .vault-stage) .pose-run .r-arm-front .r-fore { animation-delay: -.25s; }
 
 @keyframes r-thigh {          /* - = forward, + = back */
   0%   { transform: rotate(-32deg); }
@@ -763,7 +766,7 @@ body.theme-vista .ctx-sep, body:not(.theme-aero) .ctx-sep { background: #4a5060;
   from { transform: translateY(0) rotate(7deg); }
   to   { transform: translateY(-2.5px) rotate(9deg); }
 }
-@media (prefers-reduced-motion: reduce) { #activityRow .runner * { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { :is(#activityRow, .vault-stage) .runner *, .vault-walker { animation: none !important; } }
 
 
 /* ----- runner stays on the left, running in place ----- */
@@ -856,8 +859,27 @@ body.theme-vista #activityRow .act-stack-ico, body:not(.theme-aero) #activityRow
 }
 .hot-ico { font-size: 14px; }
 .hot-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hot-actions { display: flex; align-items: center; gap: 6px; flex: none; }
 .hot-bar button { font: 11.5px "Segoe UI", sans-serif; padding: 2px 10px; border-radius: 3px; cursor: pointer; border: 1px solid #b8962f; background: linear-gradient(#fffdf5, #f3e2a8); color: #3b2a00; }
 .hot-bar .hot-go { font-weight: 600; background: linear-gradient(#5bb1ff, #2a86d6); border-color: #1a5f9e; color: #fff; }
+
+/* Docked mini tab: tuck the update-ready Restart UI cleanly beside the avatar */
+body.docked .mini-dock.has-hot-update { justify-content: flex-start; padding: 0 8px 0 12px; box-sizing: border-box; }
+body.dock-right .mini-dock.has-hot-update { justify-content: flex-end; padding: 0 12px 0 8px; }
+.mini-dock.has-hot-update .mini-orb { flex: none; }
+.mini-dock.has-hot-update .mini-count { display: none !important; }
+body.docked .hot-bar {
+  left: 68px; right: 10px; top: 50%; transform: translateY(-50%);
+  max-width: none; padding: 5px 7px; gap: 4px;
+  flex-direction: column; align-items: stretch;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+body.docked.dock-right .hot-bar { left: 10px; right: 68px; }
+body.docked .hot-bar .hot-ico { display: none; }
+body.docked .hot-bar .hot-text { font-size: 11px; font-weight: 600; text-align: center; }
+body.docked .hot-bar .hot-actions { justify-content: center; gap: 5px; }
+body.docked .hot-bar button { flex: 1; padding: 2px 6px; font-size: 11px; }
+body.docked:has(.mini-dock.has-approval) .hot-bar { display: none; }
 .hot-toast {
   position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 10050;
   padding: 5px 12px; border-radius: 12px; font: 11.5px "Segoe UI", sans-serif;
@@ -887,16 +909,16 @@ body.theme-vista #activityRow .act-stack-ico, body:not(.theme-aero) #activityRow
 #activityRow .pose-search .act-ground { animation-duration: 1s; }
 
 /* TYPE (Edit / Write / compacting): tapping at a little desk */
-#activityRow .pose-type .r-body { transform: rotate(4deg); }
-#activityRow .pose-type .r-arm-front { animation: rp-tap .2s ease-in-out infinite alternate; }
-#activityRow .pose-type .r-arm-back { animation: rp-tap .2s ease-in-out infinite alternate-reverse; }
-#activityRow .pose-type .r-fore { animation: rp-keys .2s ease-in-out infinite alternate; }
-#activityRow .pose-type .r-arm-back .r-fore { animation-direction: alternate-reverse; }
-#activityRow .pose-type .r-head { animation: rp-look 1.4s ease-in-out infinite alternate; }
-#activityRow .rp-glow { animation: rp-glow 1.2s ease-in-out infinite alternate; }
-#activityRow .rp-code { animation: rp-code 1.6s steps(1) infinite; }
-#activityRow .rp-code:nth-of-type(2) { animation-delay: -.5s; }
-#activityRow .rp-code:nth-of-type(3) { animation-delay: -1s; }
+:is(#activityRow, .vault-stage) .pose-type .r-body, .vault-stage.pose-type .r-body { transform: rotate(4deg); }
+:is(#activityRow, .vault-stage) .pose-type .r-arm-front, .vault-stage.pose-type .r-arm-front { animation: rp-tap .2s ease-in-out infinite alternate; }
+:is(#activityRow, .vault-stage) .pose-type .r-arm-back, .vault-stage.pose-type .r-arm-back { animation: rp-tap .2s ease-in-out infinite alternate-reverse; }
+:is(#activityRow, .vault-stage) .pose-type .r-fore, .vault-stage.pose-type .r-fore { animation: rp-keys .2s ease-in-out infinite alternate; }
+:is(#activityRow, .vault-stage) .pose-type .r-arm-back .r-fore, .vault-stage.pose-type .r-arm-back .r-fore { animation-direction: alternate-reverse; }
+:is(#activityRow, .vault-stage) .pose-type .r-head, .vault-stage.pose-type .r-head { animation: rp-look 1.4s ease-in-out infinite alternate; }
+:is(#activityRow, .vault-stage) .rp-glow { animation: rp-glow 1.2s ease-in-out infinite alternate; }
+:is(#activityRow, .vault-stage) .rp-code { animation: rp-code 1.6s steps(1) infinite; }
+:is(#activityRow, .vault-stage) .rp-code:nth-of-type(2) { animation-delay: -.5s; }
+:is(#activityRow, .vault-stage) .rp-code:nth-of-type(3) { animation-delay: -1s; }
 @keyframes rp-tap { from { transform: rotate(-52deg); } to { transform: rotate(-62deg); } }
 @keyframes rp-keys { from { transform: rotate(-40deg); } to { transform: rotate(-58deg); } }
 @keyframes rp-look { from { transform: rotate(4deg); } to { transform: rotate(10deg); } }
@@ -904,20 +926,29 @@ body.theme-vista #activityRow .act-stack-ico, body:not(.theme-aero) #activityRow
 @keyframes rp-code { 0% { opacity: 0; } 30% { opacity: 1; } }
 
 /* READ: holding a book, turning pages */
-#activityRow .pose-read .r-arm-front, #activityRow .pose-read .r-arm-back { transform: rotate(-92deg); }
-#activityRow .pose-read .r-head { animation: rp-readnod 2.4s ease-in-out infinite; }
-#activityRow .rp-page { transform-box: fill-box; transform-origin: 0 50%; animation: rp-flip 2.4s ease-in-out infinite; }
+:is(#activityRow, .vault-stage) .pose-read .r-arm-front,
+:is(#activityRow, .vault-stage) .pose-read .r-arm-back,
+.vault-stage.pose-read .r-arm-front,
+.vault-stage.pose-read .r-arm-back { transform: rotate(-92deg); }
+:is(#activityRow, .vault-stage) .pose-read .r-head, .vault-stage.pose-read .r-head { animation: rp-readnod 2.4s ease-in-out infinite; }
+:is(#activityRow, .vault-stage) .rp-page { transform-box: fill-box; transform-origin: 0 50%; animation: rp-flip 2.4s ease-in-out infinite; }
 @keyframes rp-readnod { 0%, 80%, 100% { transform: rotate(9deg); } 90% { transform: rotate(3deg); } }
 @keyframes rp-flip { 0%, 75% { transform: scaleX(1); } 88% { transform: scaleX(-1); } 100% { transform: scaleX(-1); opacity: 0; } }
 
-/* SEARCH (Grep / Glob / find): slow walk with a magnifying glass */
-#activityRow .pose-search .r-body { animation: r-bob .5s ease-in-out infinite alternate; }
-#activityRow .pose-search .r-leg { animation: rp-walk 1s ease-in-out infinite; }
-#activityRow .pose-search .r-leg-back { animation-delay: -.5s; }
-#activityRow .pose-search .r-arm-front { animation: rp-scan 2s ease-in-out infinite; }
-#activityRow .pose-search .r-arm-back { animation: rp-walkarm 1s ease-in-out infinite; }
-#activityRow .pose-search .r-arm-back .r-fore { animation: rp-walkelbow 1s ease-in-out infinite; }
-#activityRow .rp-glint { animation: rp-glint 2s ease-in-out infinite; }
+/* SEARCH (Grep / Glob / find) & WALK (idle stroll): relaxed walk */
+:is(#activityRow, .vault-stage) .pose-search .r-body,
+.vault-stage .pose-walk .r-body { animation: r-bob .5s ease-in-out infinite alternate; }
+:is(#activityRow, .vault-stage) .pose-search .r-leg,
+.vault-stage .pose-walk .r-leg { animation: rp-walk 1s ease-in-out infinite; }
+:is(#activityRow, .vault-stage) .pose-search .r-leg-back,
+.vault-stage .pose-walk .r-leg-back { animation-delay: -.5s; }
+:is(#activityRow, .vault-stage) .pose-search .r-arm-front { animation: rp-scan 2s ease-in-out infinite; }
+:is(#activityRow, .vault-stage) .pose-search .r-arm-back,
+.vault-stage .pose-walk .r-arm-back { animation: rp-walkarm 1s ease-in-out infinite; }
+.vault-stage .pose-walk .r-arm-front { animation: rp-walkarm 1s ease-in-out infinite reverse; }
+:is(#activityRow, .vault-stage) .pose-search .r-arm-back .r-fore,
+.vault-stage .pose-walk .r-fore { animation: rp-walkelbow 1s ease-in-out infinite; }
+:is(#activityRow, .vault-stage) .rp-glint { animation: rp-glint 2s ease-in-out infinite; }
 @keyframes rp-walk { 0%, 100% { transform: rotate(-16deg); } 50% { transform: rotate(16deg); } }
 @keyframes rp-walkarm { 0%, 100% { transform: rotate(22deg); } 50% { transform: rotate(-18deg); } }
 @keyframes rp-walkelbow { 0%, 100% { transform: rotate(-35deg); } 50% { transform: rotate(-70deg); } }
@@ -925,30 +956,432 @@ body.theme-vista #activityRow .act-stack-ico, body:not(.theme-aero) #activityRow
 @keyframes rp-glint { 0%, 60%, 100% { opacity: 0; } 70% { opacity: 1; } }
 
 /* HAMMER (Bash / PowerShell): hammering the terminal, sparks on impact */
-#activityRow .pose-hammer .r-body { animation: rp-brace .55s ease-in infinite; }
-#activityRow .pose-hammer .r-arm-front { animation: rp-hammer .55s cubic-bezier(.6,0,.9,.4) infinite; }
-#activityRow .pose-hammer .r-arm-front .r-fore { animation: rp-strike .55s cubic-bezier(.6,0,.9,.4) infinite; }
-#activityRow .pose-hammer .r-arm-back { transform: rotate(-30deg); }
-#activityRow .rp-spark { opacity: 0; transform-origin: 33px 37px; animation: rp-spark .55s linear infinite; }
+:is(#activityRow, .vault-stage) .pose-hammer .r-body, .vault-stage.pose-hammer .r-body { animation: rp-brace .55s ease-in infinite; }
+:is(#activityRow, .vault-stage) .pose-hammer .r-arm-front, .vault-stage.pose-hammer .r-arm-front { animation: rp-hammer .55s cubic-bezier(.6,0,.9,.4) infinite; }
+:is(#activityRow, .vault-stage) .pose-hammer .r-arm-front .r-fore, .vault-stage.pose-hammer .r-arm-front .r-fore { animation: rp-strike .55s cubic-bezier(.6,0,.9,.4) infinite; }
+:is(#activityRow, .vault-stage) .pose-hammer .r-arm-back, .vault-stage.pose-hammer .r-arm-back { transform: rotate(-30deg); }
+:is(#activityRow, .vault-stage) .rp-spark { opacity: 0; transform-origin: 33px 37px; animation: rp-spark .55s linear infinite; }
 @keyframes rp-hammer { 0%, 100% { transform: rotate(-165deg); } 70% { transform: rotate(-58deg); } }
 @keyframes rp-strike { 0%, 100% { transform: rotate(-120deg); } 70% { transform: rotate(-20deg); } }
 @keyframes rp-brace { 0%, 60%, 100% { transform: rotate(3deg); } 72% { transform: rotate(8deg) translateY(1px); } }
 @keyframes rp-spark { 0%, 66% { opacity: 0; transform: scale(.3); } 72% { opacity: 1; transform: scale(1); } 90%, 100% { opacity: 0; transform: scale(1.4); } }
 
 /* WEB (WebSearch / WebFetch / browser): spinning a globe on one finger */
-#activityRow .pose-web .r-arm-front { transform: rotate(-128deg); }
-#activityRow .pose-web .r-arm-back { animation: rp-tap 1s ease-in-out infinite alternate; }
-#activityRow .rp-globe { transform-origin: 37px 6px; animation: rp-spin 1.2s linear infinite; }
+:is(#activityRow, .vault-stage) .pose-web .r-arm-front, .vault-stage.pose-web .r-arm-front { transform: rotate(-128deg); }
+:is(#activityRow, .vault-stage) .pose-web .r-arm-back, .vault-stage.pose-web .r-arm-back { animation: rp-tap 1s ease-in-out infinite alternate; }
+:is(#activityRow, .vault-stage) .rp-globe { transform-origin: 37px 6px; animation: rp-spin 1.2s linear infinite; }
 @keyframes rp-spin { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(-1); } }
 
 /* THINK (no tool yet): hand on chin, "…" bubble */
-#activityRow .pose-think .r-arm-front { transform: rotate(-128deg); }
-#activityRow .pose-think .r-head { transform: rotate(-6deg); }
-#activityRow .act-bubble {
+:is(#activityRow, .vault-stage) .pose-think .r-arm-front, .vault-stage.pose-think .r-arm-front { transform: rotate(-128deg); }
+:is(#activityRow, .vault-stage) .pose-think .r-head, .vault-stage.pose-think .r-head { transform: rotate(-6deg); }
+:is(#activityRow, .vault-stage) .act-bubble {
   position: absolute; left: 30px; top: 0; height: 13px; padding: 0 4px; border-radius: 7px;
   display: inline-flex; align-items: center; gap: 2px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.35);
 }
-#activityRow .act-bubble i { width: 3px; height: 3px; border-radius: 50%; background: #1a2b57; animation: rp-dot 1s infinite; }
-#activityRow .act-bubble i:nth-child(2) { animation-delay: .2s; }
-#activityRow .act-bubble i:nth-child(3) { animation-delay: .4s; }
+:is(#activityRow, .vault-stage) .act-bubble i { width: 3px; height: 3px; border-radius: 50%; background: #1a2b57; animation: rp-dot 1s infinite; }
+:is(#activityRow, .vault-stage) .act-bubble i:nth-child(2) { animation-delay: .2s; }
+:is(#activityRow, .vault-stage) .act-bubble i:nth-child(3) { animation-delay: .4s; }
 @keyframes rp-dot { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-2px); } }
+
+/* DONE (a helper finished / attention): waves */
+:is(#activityRow, .vault-stage) .pose-done .r-arm-front, .vault-stage.pose-done .r-arm-front { transform: rotate(-150deg); }
+:is(#activityRow, .vault-stage) .pose-done .r-arm-front .r-fore, .vault-stage.pose-done .r-arm-front .r-fore { animation: rp-forewave .35s ease-in-out infinite alternate; }
+@keyframes rp-forewave { from { transform: rotate(-10deg); } to { transform: rotate(-70deg); } }
+#activityRow .act-bubble.ok { font: 700 9px "Segoe UI", sans-serif; color: #fff; background: #3aa357; }
+
+/* ===== Team stage: helper agents under the lead robot ===== */
+#activityRow .act-team { order: 9; flex-basis: 100%; position: relative; display: flex; align-items: flex-end; gap: 6px; min-width: 0; padding: 0 0 1px 40px; }
+/* dashed hand-off line from the lead down to the helpers, a "page" travelling along it */
+#activityRow .team-line {
+  position: absolute; left: 17px; top: -6px; bottom: 28px; width: 20px; opacity: .55;
+  border-left: 2px dashed currentColor; border-bottom: 2px dashed currentColor; border-bottom-left-radius: 7px;
+}
+#activityRow .team-line i {
+  position: absolute; bottom: -5px; left: 0; width: 6px; height: 8px; border-radius: 1px;
+  background: #fff; border: 1px solid #8a96a6; animation: team-carry 1.8s ease-in-out infinite;
+}
+@keyframes team-carry { 0% { left: -4px; opacity: 0; } 15%, 85% { opacity: 1; } 100% { left: 16px; opacity: 0; } }
+#activityRow .team-mates { display: flex; gap: 4px; min-width: 0; overflow: visible; }
+#activityRow .team-mate { display: flex; flex-direction: column; align-items: center; gap: 1px; width: 66px; min-width: 0; }
+#activityRow .team-bot { position: relative; display: block; width: 26px; height: 34px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
+#activityRow .team-bot .act-bubble { left: 19px; top: -5px; transform: scale(.8); transform-origin: 0 100%; }
+#activityRow .team-tag {
+  max-width: 100%; padding: 0 5px; border-radius: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font: 600 9.5px "Segoe UI", sans-serif; background: rgba(127, 140, 160, .22);
+}
+#activityRow .team-task { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9.5px; opacity: .7; }
+#activityRow .team-more {
+  align-self: center; height: 18px; padding: 0 6px; border-radius: 9px; cursor: default;
+  font: 600 10px "Segoe UI", sans-serif; color: inherit; background: rgba(127, 140, 160, .2); border: 1px solid rgba(127, 140, 160, .45);
+}
+
+/* ===== Fallout Shelter–style Vault Room (stacked floors, no grid cards in Vault view) ===== */
+body.list-compact .vault-room,
+body:not(.list-grid) #listView .vault-room,
+.workspace-group.collapsed .vault-room { display: none; }
+
+body.list-grid #listView .sessions-container { gap: 0 !important; }
+body.list-grid #listView .workspace-group { gap: 0 !important; }
+body.list-grid #listView .workspace-group > .workspace-body { display: none !important; }
+/* the header stays: name, counts, click = collapse/expand (a collapsed room would otherwise be unreachable) */
+body.list-grid #listView .workspace-group > .workspace-header { margin: 0; border-radius: 0; }
+body.list-grid #listView .workspace-group:not(:first-child) > .workspace-header { border-top: 1px solid rgba(0, 0, 0, 0.35); }
+
+.vault-room {
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+  height: 88px;
+  margin: 0;
+  border-radius: 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, #171e2b 0%, #232d3f 76%, #131822 100%);
+  border: 1px solid rgba(190, 210, 235, 0.28);
+  border-left: 3px solid var(--vault-accent, rgba(148, 163, 184, 0.55));
+  box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.65);
+}
+
+.vault-room.room-forge   { --vault-accent: #f59e0b; --vault-tint: rgba(245, 158, 11, 0.16); }
+.vault-room.room-lab     { --vault-accent: #06b6d4; --vault-tint: rgba(6, 182, 212, 0.16); }
+.vault-room.room-library { --vault-accent: #eab308; --vault-tint: rgba(234, 179, 8, 0.14); }
+.vault-room.room-recon   { --vault-accent: #10b981; --vault-tint: rgba(16, 185, 129, 0.16); }
+.vault-room.room-comms   { --vault-accent: #8b5cf6; --vault-tint: rgba(139, 92, 246, 0.16); }
+.vault-room.room-command { --vault-accent: #3b82f6; --vault-tint: rgba(59, 130, 246, 0.15); }
+.vault-room.room-corridor{ --vault-accent: #38bdf8; --vault-tint: rgba(56, 189, 248, 0.15); }
+.vault-room.room-alert   { --vault-accent: #f97316; --vault-tint: rgba(249, 115, 22, 0.22); }
+.vault-room.room-lounge  { --vault-accent: rgba(148, 163, 184, 0.55); --vault-tint: rgba(148, 163, 184, 0.08); }
+
+.vault-ceiling {
+  position: absolute;
+  left: 0; right: 0; top: 0; height: 7px;
+  background: linear-gradient(180deg, #4b5568 0%, #2b3343 100%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.55);
+  z-index: 2;
+}
+.vault-ceiling::after {
+  content: "";
+  position: absolute;
+  left: 16%; right: 16%; bottom: -2px; height: 2px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(90deg, var(--vault-accent, #94a3b8) 0 28px, transparent 28px 54px);
+  box-shadow: 0 3px 12px 1px var(--vault-accent, #94a3b8);
+  opacity: 0.9;
+}
+
+.vault-wall {
+  position: absolute;
+  inset: 7px 6px 8px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 38px, rgba(0, 0, 0, 0.22) 38px 40px),
+    radial-gradient(ellipse at 50% 15%, var(--vault-tint, rgba(255,255,255,0.06)), transparent 78%);
+  z-index: 0;
+}
+.vault-furn {
+  position: absolute;
+  bottom: 0;
+  width: 64px;
+  height: 56px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  opacity: 0.92;
+}
+.vault-stage .pose-stand .r-leg,
+.vault-stage .pose-stand .r-shin { animation: none !important; }
+.vault-stage .pose-stand .r-body { animation: rp-breathe 2.6s ease-in-out infinite alternate; }
+@keyframes rp-breathe { from { transform: translateY(0); } to { transform: translateY(-1px); } }
+
+/* Steel elevator / room frame pillars on left & right */
+.vault-shaft {
+  position: absolute;
+  top: 7px; bottom: 8px; width: 6px;
+  background: repeating-linear-gradient(180deg, #333c4d 0 6px, #1e2430 6px 8px);
+  border-inline: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 2;
+}
+.vault-shaft.left { left: 0; }
+.vault-shaft.right { right: 0; }
+
+/* Stamped Fallout Shelter room plaque (workspace name + room type) */
+.vault-plaque {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font: 600 10.5px/1.2 "Segoe UI", sans-serif;
+  color: #f1f5f9;
+  background: rgba(12, 18, 30, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  pointer-events: none;
+  z-index: 2;
+}
+.vault-ws-name {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vault-ws-tag {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--vault-accent, #94a3b8);
+  opacity: 0.95;
+}
+
+/* chats beyond the 6 on the floor: clickable chips under the room */
+body.list-compact .vault-drawer,
+body:not(.list-grid) #listView .vault-drawer,
+.workspace-group.collapsed .vault-drawer { display: none; }
+.vault-drawer {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+  padding: 4px 8px 5px; background: #1a1f28; border: 1px solid rgba(190, 210, 235, 0.18); border-top: 0;
+}
+.vault-drawer-label { font: 600 10.5px "Segoe UI", sans-serif; color: #94a3b8; margin-right: 2px; }
+.vault-chip {
+  display: inline-flex; align-items: center; gap: 4px; max-width: 150px; height: 18px; padding: 0 7px 0 3px;
+  border-radius: 9px; cursor: pointer; font: 11px "Segoe UI", sans-serif; color: #e2e8f0;
+  background: #262d39; border: 1px solid #333c4b;
+}
+.vault-chip:hover, .vault-chip:focus-visible { background: #31405a; border-color: #4f6a94; outline: none; }
+.vault-chip i { flex-shrink: 0; width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.4); }
+.vault-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vault-chip.is-running { border-color: rgba(30, 167, 232, 0.6); }
+.vault-chip.is-attn { border-color: #ff9a1f; box-shadow: 0 0 6px rgba(255, 154, 31, 0.45); }
+/* robots are focusable buttons */
+.vault-walker { cursor: pointer; }
+.vault-walker:focus-visible { outline: 2px solid #5bb1ff; outline-offset: 2px; border-radius: 6px; }
+
+.vault-room.room-alert .vault-ceiling::after {
+  animation: rp-glow 0.45s ease-in-out infinite alternate;
+}
+
+.vault-floor {
+  position: absolute;
+  left: 0; right: 0; bottom: 0; height: 8px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.1) 0, transparent 2px),
+    repeating-linear-gradient(90deg, #3b4454 0 14px, #2a313e 14px 15px);
+  border-top: 1px solid rgba(203, 213, 225, 0.36);
+  z-index: 2;
+}
+
+.vault-walker {
+  position: absolute;
+  left: 50%;
+  bottom: 9px;
+  width: 36px;
+  height: 44px;
+  transform: translateX(-50%);
+  cursor: pointer;
+  z-index: 3;
+  transition: filter 0.15s, bottom 0.15s;
+}
+.vault-walker:hover {
+  filter: drop-shadow(0 0 6px rgba(255, 230, 120, 0.75)) brightness(1.12);
+  bottom: 11px;
+  z-index: 5;
+}
+.vault-bot {
+  position: relative;
+  display: block;
+  width: 36px;
+  height: 44px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
+}
+.vault-name {
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  transform: translateX(-50%);
+  padding: 0 4px;
+  border-radius: 3px;
+  font: 600 8.5px/1.2 "Segoe UI", sans-serif;
+  color: rgba(226, 232, 240, 0.85);
+  background: rgba(10, 14, 24, 0.72);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0.85;
+}
+.vault-walker:hover .vault-name { opacity: 1; color: #fff; }
+.vault-shadow {
+  position: absolute;
+  left: 6px; right: 6px; bottom: -2px; height: 4px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.48);
+  pointer-events: none;
+}
+.vault-ping {
+  position: absolute;
+  right: -2px; top: -4px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #f97316;
+  color: #fff;
+  font: 800 9px/12px "Segoe UI", sans-serif;
+  text-align: center;
+  box-shadow: 0 0 6px rgba(249, 115, 22, 0.9);
+  animation: rp-dot 0.9s infinite;
+}
+.vault-stage .act-bubble {
+  left: 25px; top: -4px; transform: scale(0.8); transform-origin: 0 100%;
+}
+.vault-emote {
+  position: absolute;
+  left: 22px; top: -6px;
+  padding: 0 4px;
+  border-radius: 7px;
+  font-size: 9px;
+  line-height: 13px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  animation: rp-dot 1.4s ease-in-out infinite;
+}
+
+/* Active searching / running dwellers patrol across the workspace room */
+.vault-walker.pose-search:not([data-idle="1"]) {
+  animation: vault-patrol 10.5s ease-in-out infinite;
+}
+.vault-walker.pose-run:not([data-idle="1"]) {
+  animation: vault-patrol 6.5s linear infinite;
+}
+.vault-walker.pose-search:not([data-idle="1"]) .vault-bot,
+.vault-walker.pose-run:not([data-idle="1"]) .vault-bot {
+  animation: vault-face 15s steps(1) infinite;
+  animation-duration: inherit;
+  animation-delay: inherit;
+}
+
+@keyframes vault-patrol {
+  0%   { left: 10%; }
+  47%  { left: 90%; }
+  50%  { left: 90%; }
+  97%  { left: 10%; }
+  100% { left: 10%; }
+}
+
+@keyframes vault-face {
+  0%, 48%   { transform: scaleX(1); }
+  50%, 98%  { transform: scaleX(-1); }
+  100%      { transform: scaleX(1); }
+}
+
+/* ===== Vault → chat zoom (zoomIntoChat / zoomOutToRobot in app.js) ===== */
+.vault-zoom-ghost { position: fixed !important; margin: 0 !important; z-index: 10005; pointer-events: none; will-change: transform, opacity; }
+.vault-zoom-ghost .vault-walker:not(.zoom-target) { opacity: .55; transition: opacity .2s; }
+.vault-zoom-ghost .zoom-target { z-index: 5; filter: drop-shadow(0 0 6px rgba(120, 200, 255, .9)); }
+/* the robot you came back to gives a little hop */
+.vault-walker.zoom-landed .vault-bot { animation: vz-hop .45s cubic-bezier(.3,1.6,.5,1) .3s; }
+.vault-chip.zoom-landed { box-shadow: 0 0 0 2px #5bb1ff; }
+@keyframes vz-hop { 0%, 100% { translate: 0 0; } 45% { translate: 0 -7px; } }
+
+/* ===== Vault focus mode: rooms zoomed on the robot (left), chat panel with a pointer (right) ===== */
+body.vault-focus { --focus-bg: #1b2029; --focus-border: #3d4a5e; }
+body.vault-focus.theme-aero:not(.theme-vista), body.vault-focus.theme-xp { --focus-bg: #f6f9fd; --focus-border: #9db8d9; }
+body.vault-focus #popupBody { position: relative; overflow: hidden; }
+body.vault-focus #listView { display: flex; transform-origin: 0 0; }
+body.vault-focus #detailView {
+  position: absolute; z-index: 6; top: 6px; right: 6px; bottom: 6px; left: var(--focus-strip, 150px);
+  padding: 8px 10px 10px; border-radius: 8px;
+  background: var(--focus-bg); border: 1px solid var(--focus-border);
+  box-shadow: -10px 0 26px rgba(0, 0, 0, 0.45);
+}
+/* the pointer: border-coloured triangle with a background-coloured one inside */
+body.vault-focus #detailView::before,
+body.vault-focus #detailView::after {
+  content: ""; position: absolute; top: calc(var(--focus-tail, 120px) - 6px - 11px);
+  border-style: solid; border-color: transparent; border-width: 11px 12px 11px 0; pointer-events: none;
+}
+body.vault-focus #detailView::before { left: -13px; border-right-color: var(--focus-border); }
+body.vault-focus #detailView::after { left: -11px; border-right-color: var(--focus-bg); }
+/* the robot being talked to stands still, lit up */
+body.vault-focus .vault-walker.is-focus { animation: none !important; z-index: 6; }
+body.vault-focus .vault-walker.is-focus .vault-bot { filter: drop-shadow(0 0 3px rgba(120, 200, 255, 0.95)); }
+
+/* ===== Vault: robots use the room's furniture for their task (app.js TASK_FURNITURE) ===== */
+.vault-stage .r-prop-body { display: none; }                 /* the real desk/terminal/dock is right there */
+.vault-walker[data-working="1"] { animation: none !important; } /* no more patrolling across the room */
+.vault-walker[data-working="1"] .vault-bot { animation: none; }
+.vault-furn.furn-spawn { animation: furn-pop 0.5s cubic-bezier(.3, 1.5, .5, 1) 0.12s backwards; transform-origin: 50% 100%; }
+@keyframes furn-pop { from { transform: translateX(-50%) scale(0.2); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 0.92; } }
+
+/* ===== Vault: more physical movement ===== */
+/* step cycle matched to the walking pace (app.js WALK_PX_PER_SEC = 26): ~10px per step, feet stay planted */
+.vault-stage .pose-walk .r-leg { animation: vw-leg .8s linear infinite; }
+.vault-stage .pose-walk .r-leg-back { animation-delay: -.4s; }
+.vault-stage .pose-walk .r-shin { animation: vw-knee .8s linear infinite; }
+.vault-stage .pose-walk .r-leg-back .r-shin { animation-delay: -.4s; }
+.vault-stage .pose-walk .r-arm-back { animation: vw-arm .8s ease-in-out infinite; }
+.vault-stage .pose-walk .r-arm-front { animation: vw-arm .8s ease-in-out infinite; animation-delay: -.4s; }
+.vault-stage .pose-walk .r-body { animation: vw-bob .4s ease-in-out infinite alternate; }
+@keyframes vw-leg { 0%, 100% { transform: rotate(-24deg); } 50% { transform: rotate(24deg); } }
+@keyframes vw-knee { 0%, 45%, 100% { transform: rotate(0deg); } 70% { transform: rotate(38deg); } }
+@keyframes vw-arm { 0%, 100% { transform: rotate(20deg); } 50% { transform: rotate(-20deg); } }
+@keyframes vw-bob { from { transform: translateY(0) rotate(3deg); } to { transform: translateY(-1.5px) rotate(4deg); } }
+
+
+/* walking robots stay full size; when they pass someone they draw on top */
+.vault-walker.is-walking { z-index: 4; }
+
+/* reaching in to start a task: lean toward the furniture, then settle */
+.vault-walker.engage .vault-bot svg { animation: vw-engage .5s ease-out; transform-origin: 50% 100%; }
+@keyframes vw-engage { 0% { transform: rotate(0); } 45% { transform: rotate(7deg) translateX(1.5px); } 100% { transform: rotate(0); } }
+
+/* ===== Vault: furniture reacts while a robot uses it (app.js marks .in-use) ===== */
+.vault-room.room-alert-on { --vault-accent: #f97316; --vault-tint: rgba(249, 115, 22, 0.2); }
+.vault-room.room-alert-on .vault-ceiling::after { animation: rp-glow 0.45s ease-in-out infinite alternate; }
+
+.vault-furn { transition: filter .4s ease; }
+.vault-furn:not(.in-use) { filter: brightness(.8) saturate(.75); }               /* idle: powered down */
+.vault-furn.in-use { filter: brightness(1.12) drop-shadow(0 0 5px rgba(120, 200, 255, .35)); }
+.vault-furn * { transform-box: fill-box; }
+
+/* idle: no motion at all */
+.vault-furn .f-cursor, .vault-furn .f-bubbles { opacity: 0; }
+
+/* desk: screens brighten, code scrolls up */
+.vault-furn.in-use .f-screen { fill: #0b3b5c; }
+.vault-furn.in-use .f-code { animation: f-scroll 1.6s steps(4) infinite; }
+.vault-furn.in-use .f-code-2 { animation-duration: 2.1s; animation-delay: -.7s; }
+@keyframes f-scroll { 0% { transform: translateY(1.5px); opacity: .7; } 50% { opacity: 1; } 100% { transform: translateY(-3px); opacity: .7; } }
+
+/* terminal: output "prints" line by line, cursor blinks */
+.vault-furn.in-use .f-term { stroke-dasharray: 60; animation: f-print 2.2s linear infinite; }
+.vault-furn.in-use .f-cursor { animation: f-blink .8s steps(1) infinite; }
+@keyframes f-print { 0% { stroke-dashoffset: 60; } 70%, 100% { stroke-dashoffset: 0; } }
+@keyframes f-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+
+/* GPU rack + MCP dock: LEDs flicker fast, fan spins */
+.vault-furn .f-led { opacity: .45; }
+.vault-furn.in-use .f-led { animation: f-led .35s steps(2) infinite; }
+.vault-furn.in-use .f-led:nth-of-type(2n) { animation-duration: .55s; }
+.vault-furn.in-use .f-led:nth-of-type(3n) { animation-duration: .27s; }
+@keyframes f-led { 0% { opacity: 1; } 100% { opacity: .25; } }
+.vault-furn.in-use .f-fan { transform-origin: 50% 50%; animation: f-spin .6s linear infinite; }
+@keyframes f-spin { to { transform: rotate(360deg); } }
+.vault-furn.in-use .f-cable { stroke-dasharray: 3 3; animation: f-flow .5s linear infinite; }
+@keyframes f-flow { to { stroke-dashoffset: -6; } }
+
+/* whiteboard: the graph gets drawn, again and again */
+.vault-furn.in-use .f-draw { stroke-dasharray: 70; animation: f-print 3s ease-in-out infinite; }
+
+/* vector pods + context tank: liquid surges, bubbles rise */
+.vault-furn.in-use .f-fluid { transform-origin: 50% 100%; animation: f-surge 1.4s ease-in-out infinite alternate; }
+.vault-furn.in-use .f-fluid-2 { animation-delay: -.7s; }
+@keyframes f-surge { from { transform: scaleY(.82); opacity: .5; } to { transform: scaleY(1); opacity: .85; } }
+.vault-furn.in-use .f-bubbles { opacity: 1; }
+.vault-furn.in-use .f-bubbles circle { animation: f-bubble 1.6s ease-in infinite; }
+.vault-furn.in-use .f-bubbles circle:nth-child(2) { animation-delay: -.55s; }
+.vault-furn.in-use .f-bubbles circle:nth-child(3) { animation-delay: -1.1s; }
+@keyframes f-bubble { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-18px); opacity: 0; } }
+
+/* forge: the fire roars */
+.vault-furn.in-use .f-fire { transform-origin: 50% 50%; animation: f-fire .3s ease-in-out infinite alternate; }
+@keyframes f-fire { from { transform: scale(.9); opacity: .55; } to { transform: scale(1.1); opacity: .9; } }
+
+@media (prefers-reduced-motion: reduce) { .vault-furn * { animation: none !important; } }

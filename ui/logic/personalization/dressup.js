@@ -27,7 +27,7 @@
     session = null;
   }
   document.addEventListener('click', (e) => {
-    if (panel.style.display !== 'none' && !panel.contains(e.target) && !dp.contains(e.target)) close();
+    if (panel.style.display !== 'none' && !panel.contains(e.target) && !dp.contains(e.target) && !anchor.contains(e.target)) close();
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && panel.style.display !== 'none') close(); });
 
@@ -69,6 +69,26 @@
     prev.append(img);
 
     const opts = el('div', 'dress-options');
+
+    // Body colour (this chat only): Auto = the colour picked from the chat's id
+    const colSec = el('div', 'dress-section');
+    colSec.append(el('div', 'dress-label', 'Body colour'));
+    const colRow = el('div', 'dress-swatches dress-body-colours');
+    const hasColour = typeof window.hasRobotHue === 'function' && window.hasRobotHue(session.id);
+    const auto = el('button', 'dress-item' + (hasColour ? '' : ' selected'), 'Auto');
+    auto.title = 'The colour this chat gets automatically';
+    auto.addEventListener('click', () => { window.setRobotHue?.(session.id, null); render(); });
+    colRow.append(auto);
+    for (let h = 0; h < 360; h += 30) {
+      const s = el('button', 'dress-swatch' + (hasColour && robotHueFor(session) === h ? ' selected' : ''));
+      s.style.background = typeof shiftHexHue === 'function' ? shiftHexHue('#62b6d8', h) : `hsl(${(197 + h) % 360} 60% 62%)`;
+      s.title = 'Body colour';
+      s.addEventListener('click', () => { window.setRobotHue?.(session.id, h); render(); });
+      colRow.append(s);
+    }
+    colSec.append(colRow);
+    opts.append(colSec);
+
     for (const [kind, label] of KINDS) {
       const sec = el('div', 'dress-section');
       sec.append(el('div', 'dress-label', label));
@@ -130,8 +150,9 @@
     renderPreview();
   }
 
+  let anchor = dp; // what the panel opens next to (the chat picture, or the big robot in focus mode)
   function place() {
-    const r = dp.getBoundingClientRect();
+    const r = anchor.getBoundingClientRect();
     const w = panel.offsetWidth, h = panel.offsetHeight;
     let left = r.right + 8, top = r.top;
     if (left + w > window.innerWidth - 6) left = Math.max(6, window.innerWidth - w - 6);
@@ -140,16 +161,18 @@
     panel.style.top = top + 'px';
   }
 
-  dp.addEventListener('click', (e) => {
-    e.stopPropagation();
+  function open(from) {
     const s = currentActiveSession;
     if (!s) return;
     if (panel.style.display !== 'none' && session && session.id === s.id) { close(); return; }
+    anchor = from || dp;
     session = s;
     outfit = currentOutfitOf(s);
     render();
     panel.style.display = '';
     place();
-  });
+  }
+  dp.addEventListener('click', (e) => { e.stopPropagation(); open(dp); });
+  window.openDressUp = open; // focus mode: click the big robot you're chatting with
   window.addEventListener('resize', () => { if (panel.style.display !== 'none') place(); });
 })();

@@ -108,6 +108,7 @@ function setExpanded() {
 
 // Switch between List and Detail view
 function showListView() {
+  const fromChat = detailView.classList.contains('active');
   usageOpen = false;
   document.getElementById('usageView')?.classList.remove('active');
   detailView.classList.remove('active');
@@ -117,6 +118,8 @@ function showListView() {
   updateHeader();
   renderQuickChips();
   updateMiniAvatar();
+  if (closeVaultFocus()) vaultZoomFrom = null;
+  else if (fromChat) zoomOutToRobot(); else vaultZoomFrom = null;
 }
 
 // Bubble header = name + time as separate spans, so each theme can format it
@@ -301,6 +304,7 @@ function attachCodeCopyHandlers(container) {
 }
 
 function showDetailView(session) {
+  if (vaultFocus && !vaultFocusOpening) closeVaultFocus(false);
   currentActiveSession = session;
   usageOpen = false;
   document.getElementById('usageView')?.classList.remove('active');
@@ -780,7 +784,10 @@ if (resizeGrip) {
     };
     el.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
-      if (ignoreSelector && e.target.closest(ignoreSelector)) return;
+      // presses on a control inside `el` don't drag (only look inside el: its
+      // ancestors, like .view-panel, must not count)
+      const hit = ignoreSelector && e.target.closest(ignoreSelector);
+      if (hit && hit !== el && el.contains(hit)) return;
       e.preventDefault();
       dragging = true;
       el.classList.add('dragging');
@@ -793,18 +800,33 @@ if (resizeGrip) {
     window.addEventListener('blur', stop);
   };
 
+  window.makeHudDraggable = makeDraggable; // the address bar uses it too (Shelter hides the title bar)
   makeDraggable(document.querySelector('.pill-header'), 'button, .quick-chip, .quick-chips, .controls, input, textarea, a');
+  // the toolbars' empty space drags too (Shelter has no title bar or top strip)
+  const TOOLBAR_SKIP = 'button, input, textarea, a, select, [class*="panel"], [class*="menu"]';
+  makeDraggable(document.getElementById('listToolbar'), TOOLBAR_SKIP);
+  makeDraggable(document.querySelector('#detailView .convo-toolbar'), TOOLBAR_SKIP);
   makeDraggable(document.getElementById('miniDock'), '.mini-btn');
 
   // Dock state from main: swap between the full HUD and the mini edge tab
   if (window.electronAPI.onDockState) {
-    window.electronAPI.onDockState(({ docked, side }) => {
-      document.body.classList.toggle('docked', !!docked);
+    let phaseTimer = null;
+    window.electronAPI.onDockState(({ docked, side, phase }) => {
+      if (phaseTimer) { clearTimeout(phaseTimer); phaseTimer = null; }
       document.body.classList.toggle('dock-left', side === 'left');
       document.body.classList.toggle('dock-right', side === 'right');
-      if (!docked) {
+      document.body.classList.toggle('docking', phase === 'docking');
+      document.body.classList.toggle('undocking', phase === 'undocking');
+      document.body.classList.toggle('docked', !!docked);
+      if (phase === 'undocking') {
+        phaseTimer = setTimeout(() => {
+          document.body.classList.remove('undocking', 'dock-left', 'dock-right');
+          phaseTimer = null;
+        }, 280);
+      }
+      if (!docked && phase !== 'docking') {
         // Re-sync height in case an alert expanded/collapsed us while docked
-        setTimeout(() => window.electronAPI.resizeWindow(isExpanded), 230);
+        setTimeout(() => window.electronAPI.resizeWindow(isExpanded), 330);
       }
     });
   }
@@ -816,18 +838,56 @@ if (resizeGrip) {
   const btnTheme = document.getElementById('btnTheme');
   const THEMES = ['aero', 'xp', 'vista', 'dark'];
   const LABELS = { aero: 'Windows 7', xp: 'Windows XP', vista: 'Vista Dark', dark: 'Dark' };
+  // Style: "shelter" (default) = the underground-base look in theme-shelter.css, built on
+  // the plain dark layout; "classic" = the Windows themes below.
+  let uiStyle = window.electronAPI.settings?.uiStyle === 'classic' ? 'classic' : 'shelter';
+  // Shelter's chat layout: both pictures live in the contact strip (agent left, you
+  // right) instead of a column beside the chat. Classic keeps the column.
+  const placeChatPictures = (shelter) => {
+    const side = document.querySelector('.convo-side');
+    const contact = document.querySelector('.convo-contact');
+    const agent = document.getElementById('dpAgent');
+    const you = document.getElementById('dpUser');
+    if (!side || !contact || !agent || !you) return;
+    if (shelter) { contact.prepend(agent); contact.append(you); } else side.append(agent, you);
+  };
   const apply = (theme) => {
-    document.body.classList.toggle('theme-aero', theme !== 'dark');
-    document.body.classList.toggle('theme-vista', theme === 'vista');
-    document.body.classList.toggle('theme-xp', theme === 'xp');
+    const shelter = uiStyle === 'shelter';
+    placeChatPictures(shelter);
+    document.body.classList.toggle('style-shelter', shelter);
+    document.body.classList.toggle('theme-aero', !shelter && theme !== 'dark');
+    document.body.classList.toggle('theme-vista', !shelter && theme === 'vista');
+    document.body.classList.toggle('theme-xp', !shelter && theme === 'xp');
     const v = document.getElementById('setThemeVal');
     if (v) v.textContent = LABELS[theme] || 'Aero';
+    window.electronAPI.notesTheme?.(shelter ? 'dark' : theme); // the pinned-notes panel follows
   };
   let theme = 'aero';
   theme = window.electronAPI.settings?.theme || 'aero';
   if (!THEMES.includes(theme)) theme = 'aero';
   apply(theme);
   if (btnTheme) {
+    // Style row (Shelter / Classic) above the Windows theme choice
+    const styleRow = document.createElement('div');
+    styleRow.className = 'set-row set-style-row';
+    styleRow.innerHTML = '<span class="set-ico">🏗</span><span class="set-label">Style</span>';
+    const stylePills = document.createElement('div');
+    stylePills.className = 'theme-pills style-pills';
+    const styleBtns = [['shelter', 'Shelter'], ['classic', 'Classic (Windows)']].map(([key, label]) => {
+      const b = document.createElement('button');
+      b.className = 'theme-pill';
+      b.textContent = label;
+      b.addEventListener('click', () => {
+        uiStyle = key;
+        window.electronAPI.storeSet('uiStyle', uiStyle);
+        apply(theme);
+        styleBtns.forEach((x, i) => x.classList.toggle('active', ['shelter', 'classic'][i] === uiStyle));
+      });
+      stylePills.appendChild(b);
+      return b;
+    });
+    styleBtns.forEach((x, i) => x.classList.toggle('active', ['shelter', 'classic'][i] === uiStyle));
+    btnTheme.before(styleRow, stylePills);
     // Segmented theme pills inside the Settings dialog
     const sub = document.createElement('div');
     sub.className = 'theme-sub theme-pills';
@@ -839,7 +899,6 @@ if (resizeGrip) {
         theme = t;
         apply(theme);
         window.electronAPI.storeSet('theme', theme);
-        window.electronAPI.notesTheme?.(theme); // the pinned-notes panel follows right away
         mark();
       });
       sub.appendChild(b);
@@ -859,6 +918,17 @@ btnSound.addEventListener('click', () => {
   const ico = btnSound.querySelector('.set-ico');
   if (ico) ico.textContent = soundEnabled ? '🔔' : '🔕';
 });
+
+// Nudge toggle: shake + glow when a chat finishes (main/ipc/snap.js reads "nudge")
+const btnNudge = document.getElementById('btnNudge');
+if (btnNudge) {
+  btnNudge.classList.toggle('active', window.electronAPI.settings?.nudge !== false);
+  btnNudge.addEventListener('click', () => {
+    const on = !btnNudge.classList.contains('active');
+    btnNudge.classList.toggle('active', on);
+    window.electronAPI.storeSet('nudge', on);
+  });
+}
 
 // Pin toggle
 btnPin.addEventListener('click', async () => {
@@ -894,7 +964,7 @@ function buildSettingsDialogLayout() {
     return sec;
   };
 
-  const themePills = settingsPanel.querySelector('.theme-pills');
+  const themePills = settingsPanel.querySelector('.theme-pills:not(.style-pills)');
   const digestBox = settingsPanel.querySelector('.set-digest');
   const restartBtn = byId('btnRestartApp');
   const footerLeft = byId('settingsFooterLeft');
@@ -904,8 +974,10 @@ function buildSettingsDialogLayout() {
     footerLeft.appendChild(restartBtn);
   }
 
-  const appearance = makeSection('Appearance', [byId('btnTheme'), themePills]);
-  const behavior = makeSection('Behavior', [byId('btnSound'), byId('btnPin'), byId('btnNotify'), byId('btnShowAg')]);
+  const appearance = makeSection('Appearance', [
+    settingsPanel.querySelector('.set-style-row'), settingsPanel.querySelector('.style-pills'), byId('btnTheme'), themePills,
+  ]);
+  const behavior = makeSection('Behavior', [byId('btnSound'), byId('btnNudge'), byId('btnPin'), byId('btnNotify'), byId('btnShowAg')]);
   const tools = makeSection('Tools & Data', [
     byId('btnDigest'), digestBox, byId('btnExport'), byId('btnCreateShortcut'), byId('btnRules'), byId('btnInstallSkill'),
   ]);
@@ -1141,6 +1213,7 @@ var miniLists = { attention: [], running: [] };
 var miniExtraSent = -1;
 var miniLastChatId = null; // last conversation you opened
 var MINI_APPROVE_W = 236; // px added to the docked tab for the request details + buttons
+var MINI_UPDATE_W = 156;  // px added to the docked tab for the hot-reload Restart/Later UI
 function updateMiniAvatar() {
   const mini = document.getElementById('miniDock');
   const icon = mini?.querySelector('.mini-icon');
@@ -1189,7 +1262,9 @@ function updateMiniAvatar() {
     document.getElementById('miniDeny').title = `Deny\n${what}${more}`;
     mini.title = `${what}${more}\nClick the robot to open · drag to move`;
   }
-  const extra = req ? MINI_APPROVE_W : 0;
+  const hasHot = !req && document.body.classList.contains('has-hot-update');
+  mini.classList.toggle('has-hot-update', hasHot);
+  const extra = req ? MINI_APPROVE_W : (hasHot ? MINI_UPDATE_W : 0);
   if (extra !== miniExtraSent) {
     miniExtraSent = extra;
     window.electronAPI.setMiniExtra?.(extra);
@@ -1447,12 +1522,14 @@ function renderSessionCards(force = false) {
     body.className = 'workspace-body';
     // Needs your reply first, then running, then most recent
     const rank = (s) => (s.unread || s.state === 'attention' ? 0 : s.status === 'running' ? 1 : 2);
-    group.sessions
+    const ordered = group.sessions
       .slice()
-      .sort((a, b) => rank(a) - rank(b) || (b.mtime || 0) - (a.mtime || 0))
-      .forEach(session => body.appendChild(buildSessionCard(session)));
+      .sort((a, b) => rank(a) - rank(b) || (b.mtime || 0) - (a.mtime || 0));
+    ordered.forEach(session => body.appendChild(buildSessionCard(session)));
 
+    const vaultRoom = buildWorkspaceVaultRoom(ordered, { name: group.name, runningN, attnN, total: group.sessions.length });
     groupEl.appendChild(header);
+    if (vaultRoom) groupEl.appendChild(vaultRoom);
     groupEl.appendChild(body);
     sessionsContainer.appendChild(groupEl);
   });
@@ -1476,7 +1553,7 @@ let listViewMode = window.electronAPI.settings?.listView === 'list' ? 'list' : '
 const lbViewBtn = document.getElementById('lbView');
 function applyListView() {
   document.body.classList.toggle('list-grid', listViewMode === 'grid');
-  if (lbViewBtn) lbViewBtn.textContent = listViewMode === 'grid' ? 'View: Grid' : 'View: List';
+  if (lbViewBtn) lbViewBtn.textContent = listViewMode === 'grid' ? 'View: Vault' : 'View: List';
 }
 applyListView();
 lbViewBtn?.addEventListener('click', (e) => {
@@ -1496,6 +1573,773 @@ function workspaceKey(session) {
 const collapsedGroups = new Set(window.electronAPI.settings?.collapsedGroups || []);
 function saveCollapsedGroups() {
   window.electronAPI.storeSet('collapsedGroups', [...collapsedGroups]);
+}
+
+function sessionVaultMeta(session, state) {
+  if (state === 'running') {
+    const act = currentActivity(session);
+    const pose = activityPose(act);
+    const rooms = {
+      hammer: 'forge',
+      type: 'lab',
+      read: 'library',
+      search: 'recon',
+      web: 'comms',
+      think: 'command',
+      run: 'corridor',
+    };
+    return { pose, room: rooms[pose] || 'corridor' };
+  }
+  if (state === 'attention') return { pose: 'done', room: 'alert' };
+  return { pose: 'walk', room: 'lounge' };
+}
+
+const VAULT_ROOMS = {
+  forge:    { label: 'TOOL FORGE' },
+  lab:      { label: 'CODING LAB' },
+  library:  { label: 'CONTEXT ARCHIVE' },
+  recon:    { label: 'SEARCH & RAG' },
+  comms:    { label: 'MCP & WEB' },
+  command:  { label: 'PLANNER CORE' },
+  corridor: { label: 'AGENT RUNWAY' },
+  alert:    { label: 'APPROVAL GATE' },
+  lounge:   { label: 'STANDBY BAY' },
+};
+
+// 2.5D shaded AI-task furniture pieces (each rendered in its own 64x56 SVG so aspect ratio never stretches)
+const AI_FURNITURE = {
+  diffDesk:
+    '<g>' +
+    '<rect x="6" y="51" width="52" height="3" rx="1.5" fill="rgba(0,0,0,.45)"/>' +
+    // desk legs & top with 2.5D bevel
+    '<rect x="10" y="38" width="4" height="14" fill="#334155"/><rect x="50" y="38" width="4" height="14" fill="#334155"/>' +
+    '<rect x="6" y="35" width="52" height="4" rx="1" fill="#64748b"/><rect x="6" y="35" width="52" height="1.5" fill="#94a3b8"/>' +
+    // monitor stands
+    '<rect x="19" y="31" width="4" height="4" fill="#475569"/><rect x="41" y="31" width="4" height="4" fill="#475569"/>' +
+    // dual monitors with code/diff
+    '<rect x="10" y="15" width="22" height="16" rx="2" fill="#0f172a" stroke="#475569" stroke-width="1.2"/>' +
+    '<rect class="f-screen" x="12" y="17" width="18" height="12" rx="1" fill="#082f49"/>' +
+    '<g class="f-code"><path d="M14 20 h10 M14 23 h13" stroke="#34d399" stroke-width="1.4"/><path d="M14 26 h8" stroke="#f87171" stroke-width="1.4"/></g>' +
+    '<rect x="34" y="16" width="20" height="15" rx="2" fill="#0f172a" stroke="#475569" stroke-width="1.2"/>' +
+    '<rect class="f-screen" x="36" y="18" width="16" height="11" rx="1" fill="#0c1e35"/>' +
+    '<g class="f-code f-code-2"><path d="M38 21 h11 M38 24 h8 M38 27 h10" stroke="#38bdf8" stroke-width="1.3"/></g>' +
+    // keyboard + mug
+    '<rect x="20" y="33.5" width="16" height="2" rx=".8" fill="#cbd5e1"/>' +
+    '<rect x="47" y="31" width="4" height="4" rx=".8" fill="#e2e8f0"/><path d="M51 32 h1.5 v2 h-1.5" fill="none" stroke="#e2e8f0" stroke-width=".8"/>' +
+    '</g>',
+  gpuRack:
+    '<g>' +
+    '<rect x="14" y="51" width="36" height="3" rx="1.5" fill="rgba(0,0,0,.45)"/>' +
+    '<rect x="16" y="10" width="32" height="42" rx="2" fill="#1e293b" stroke="#64748b" stroke-width="1.2"/>' +
+    '<rect x="18" y="12" width="28" height="38" rx="1" fill="#0f172a"/>' +
+    // 3 compute blades
+    '<rect x="20" y="14" width="24" height="8" rx="1" fill="#1e293b"/><circle cx="24" cy="18" r="1.4" class="f-led" fill="#22d3ee"/><circle cx="29" cy="18" r="1.4" class="f-led" fill="#10b981"/><path d="M34 18 h7" stroke="#475569" stroke-width="1.2"/>' +
+    '<rect x="20" y="24" width="24" height="8" rx="1" fill="#1e293b"/><circle cx="24" cy="28" r="1.4" class="f-led" fill="#f59e0b"/><circle cx="29" cy="28" r="1.4" class="f-led" fill="#22d3ee"/><path d="M34 28 h7" stroke="#475569" stroke-width="1.2"/>' +
+    '<rect x="20" y="34" width="24" height="13" rx="1" fill="#172030"/>' +
+    '<circle class="f-fan" cx="32" cy="40.5" r="4.5" fill="#0f172a" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3 2"/>' +
+    '<circle cx="32" cy="40.5" r="1.5" fill="#38bdf8"/>' +
+    '</g>',
+  promptTerm:
+    '<g>' +
+    '<rect x="12" y="51" width="40" height="3" rx="1.5" fill="rgba(0,0,0,.45)"/>' +
+    // kiosk pedestal + angled CRT/terminal
+    '<rect x="24" y="35" width="16" height="17" fill="#334155"/><rect x="18" y="48" width="28" height="4" rx="1" fill="#475569"/>' +
+    '<rect x="14" y="13" width="36" height="24" rx="3" fill="#334155" stroke="#64748b" stroke-width="1.2"/>' +
+    '<rect x="17" y="16" width="30" height="18" rx="1.5" fill="#061826"/>' +
+    '<path class="f-term" d="M21 22 l3.5 2.5 l-3.5 2.5 M27 27 h11 M21 30 h18" fill="none" stroke="#22d3ee" stroke-width="1.5" stroke-linecap="round"/><rect class="f-cursor" x="40.5" y="29" width="3" height="2.2" fill="#22d3ee"/>' +
+    '</g>',
+  whiteboard:
+    '<g>' +
+    '<rect x="10" y="51" width="44" height="3" rx="1.5" fill="rgba(0,0,0,.45)"/>' +
+    '<path d="M16 39 v13 M48 39 v13 M12 50 h8 M44 50 h8" stroke="#64748b" stroke-width="1.8" stroke-linecap="round"/>' +
+    '<rect x="10" y="12" width="44" height="28" rx="2" fill="#0f2544" stroke="#60a5fa" stroke-width="1.3"/>' +
+    // agent workflow graph
+    '<circle cx="19" cy="23" r="3.2" fill="#38bdf8"/><circle cx="32" cy="19" r="3.2" fill="#a78bfa"/><circle cx="44" cy="28" r="3.2" fill="#34d399"/>' +
+    '<path class="f-draw" d="M22 22 L29 20 M35 20 L42 26 M21 25 L41 28" stroke="#93c5fd" stroke-width="1.2" opacity=".85"/>' +
+    '<rect x="14" y="37" width="36" height="2.5" rx="1" fill="#475569"/>' +
+    '</g>',
+  vectorPods:
+    '<g>' +
+    '<rect x="10" y="51" width="44" height="3" rx="1.5" fill="rgba(0,0,0,.45)"/>' +
+    // base platform
+    '<rect x="12" y="45" width="40" height="7" rx="1.5" fill="#1e293b" stroke="#475569" stroke-width="1"/>' +
+    // two glass cryo/vector cylinders
+    '<rect x="16" y="15" width="13" height="30" rx="3" fill="#06281e" stroke="#34d399" stroke-width="1.1"/>' +
+    '<rect class="f-fluid" x="19" y="23" width="7" height="19" rx="2" fill="#10b981" opacity=".55"/>' +
+    '<rect x="35" y="15" width="13" height="30" rx="3" fill="#06281e" stroke="#34d399" stroke-width="1.1"/>' +
+    '<rect class="f-fluid f-fluid-2" x="38" y="20" width="7" height="22" rx="2" fill="#34d399" opacity=".6"/>' +
+    '<rect x="15" y="13" width="15" height="4" rx="1" fill="#475569"/><rect x="34" y="13" width="15" height="4" rx="1" fill="#475569"/>' +
+    '</g>',
+  mcpDock:
+    '<g>' +
+    '<rect x="10" y="51" width="44" height="3" rx="1.5" fill="rgba(0,0,0,.45)"/>' +
+    '<rect x="14" y="20" width="36" height="32" rx="2" fill="#1e1b36" stroke="#8b5cf6" stroke-width="1.2"/>' +
+    '<rect x="18" y="24" width="28" height="10" rx="1.5" fill="#2e1065"/>' +
+    '<circle class="f-led" cx="24" cy="29" r="2" fill="#a78bfa"/><circle class="f-led" cx="32" cy="29" r="2" fill="#22d3ee"/><circle class="f-led" cx="40" cy="29" r="2" fill="#34d399"/>' +
+    '<path class="f-cable" d="M24 38 v10 M32 38 v10 M40 38 v10" stroke="#7c3aed" stroke-width="2" stroke-linecap="round"/>' +
+    '</g>',
+  forgeCore:
+    '<g>' +
+    '<rect x="8" y="51" width="48" height="3" rx="1.5" fill="rgba(0,0,0,.45)"/>' +
+    '<rect x="10" y="18" width="28" height="34" rx="2" fill="#2a1d12" stroke="#b45309" stroke-width="1.2"/>' +
+    '<circle class="f-fire" cx="24" cy="35" r="8" fill="#ea580c" opacity=".55"/><circle cx="24" cy="35" r="4.5" fill="#fde047" opacity=".85"/>' +
+    // anvil beside furnace
+    '<path d="M40 42 h16 l-3 4 h-10 z" fill="#475569"/><rect x="44" y="46" width="8" height="6" fill="#334155"/>' +
+    '</g>',
+  rechargePod:
+    '<g>' +
+    '<rect x="10" y="51" width="44" height="3" rx="1.5" fill="rgba(0,0,0,.45)"/>' +
+    // cozy sofa + coffee table
+    '<rect x="10" y="34" width="28" height="18" rx="3" fill="#334155" stroke="#64748b" stroke-width="1.1"/>' +
+    '<rect x="13" y="29" width="22" height="7" rx="2" fill="#475569"/>' +
+    '<rect x="10" y="33" width="4" height="19" rx="1.5" fill="#475569"/><rect x="34" y="33" width="4" height="19" rx="1.5" fill="#475569"/>' +
+    // potted plant
+    '<rect x="44" y="42" width="10" height="10" rx="1.5" fill="#9a3412"/><circle cx="49" cy="36" r="6" fill="#16a34a"/><circle cx="46" cy="38" r="3.5" fill="#22c55e"/>' +
+    '</g>',
+  ctxTank:
+    '<g>' +
+    '<rect x="16" y="51" width="32" height="3" rx="1.5" fill="rgba(0,0,0,.45)"/>' +
+    '<rect x="20" y="12" width="24" height="40" rx="6" fill="#0c192c" stroke="#64748b" stroke-width="1.2"/>' +
+    '<rect class="f-fluid" x="23" y="26" width="18" height="23" rx="4" fill="#06b6d4" opacity=".5"/><g class="f-bubbles" fill="#a5f3fc"><circle cx="28" cy="46" r="1.2"/><circle cx="33" cy="47" r="1"/><circle cx="37" cy="45" r=".9"/></g>' +
+    '<path d="M25 20 h14 M25 32 h14 M25 42 h14" stroke="#94a3b8" stroke-width=".9" opacity=".65"/>' +
+    '</g>',
+};
+
+const ROOM_FURNITURE_POOLS = {
+  forge:    ['forgeCore', 'gpuRack', 'mcpDock', 'promptTerm', 'ctxTank'],
+  lab:      ['diffDesk', 'gpuRack', 'promptTerm', 'whiteboard', 'ctxTank'],
+  library:  ['vectorPods', 'whiteboard', 'diffDesk', 'ctxTank', 'promptTerm'],
+  recon:    ['vectorPods', 'whiteboard', 'promptTerm', 'gpuRack', 'mcpDock'],
+  comms:    ['mcpDock', 'promptTerm', 'gpuRack', 'whiteboard', 'ctxTank'],
+  command:  ['whiteboard', 'diffDesk', 'ctxTank', 'gpuRack', 'promptTerm'],
+  corridor: ['ctxTank', 'rechargePod', 'gpuRack', 'mcpDock'],
+  alert:    ['mcpDock', 'ctxTank', 'gpuRack', 'promptTerm'],
+  lounge:   ['rechargePod', 'diffDesk', 'promptTerm', 'whiteboard', 'vectorPods', 'gpuRack', 'mcpDock', 'ctxTank'],
+};
+
+const IDLE_POSES = ['stand', 'stand', 'read', 'type', 'think', 'search', 'done'];
+const IDLE_EMOTES = {
+  stand: ['☕', '🎵', ''],
+  read: ['📖', ''],
+  type: ['⌨', ''],
+  think: ['💡', ''],
+  search: ['🔍', ''],
+  done: ['👋', '✨'],
+  walk: [''],
+};
+// Walking pace in screen pixels, so a wide room is not crossed faster than a narrow one.
+// 26 px/s matches the leg cycle in features.css (0.8s, ±24°): about 10px of ground per
+// step, so the feet stay planted instead of sliding.
+const WALK_PX_PER_SEC = 26;
+const TURN_MS = 0; // turning round is instant (no pause before setting off)
+const MIN_STAY_MS = 3000; // once at a piece, work there at least this long before heading elsewhere
+function vaultRoomWidth() {
+  // rooms span the list's width; on the very first draw there is no room to measure yet
+  return document.querySelector('#listView .vault-room')?.clientWidth ||
+    Math.max(0, (document.getElementById('sessionsContainer')?.clientWidth || 0) - 2) || 420;
+}
+function walkSecs(distPct) {
+  return Math.max(0.7, (Math.abs(distPct) / 100) * vaultRoomWidth() / WALK_PX_PER_SEC);
+}
+// `left` moves linearly, matching the step cycle
+function walkTransition(secs, delayMs = 0) {
+  return `left ${secs.toFixed(2)}s linear ${delayMs}ms`;
+}
+const vaultDwellerAI = new Map(); // sessionId -> { x, face, pose, emote, dur, stopAt, nextAt }
+
+function getIdleDwellerState(session, idx, totalCount) {
+  const now = Date.now();
+  let st = vaultDwellerAI.get(session.id);
+  if (!st) {
+    const h = sessionHash(session);
+    const pose = IDLE_POSES[(h + idx) % IDLE_POSES.length];
+    const baseX = totalCount === 1 ? 48 : Math.round(16 + (idx / Math.max(1, totalCount - 1)) * 68);
+    st = {
+      x: Math.max(12, Math.min(88, baseX + ((h % 13) - 6))),
+      face: (h % 2) ? 1 : -1,
+      pose,
+      emote: '',
+      dur: 0,
+      stopAt: 0,
+      nextAt: now + 1200 + (h % 5) * 900,
+    };
+    vaultDwellerAI.set(session.id, st);
+  }
+  return st;
+}
+
+// occupied: % positions other robots are standing at (working spots) — idle robots
+// don't pick a spot on top of someone
+function stepIdleDweller(st, occupied = []) {
+  const now = Date.now();
+  if (st.pose === 'walk' && now >= st.stopAt) {
+    // Arrived at destination: stop moving legs immediately!
+    st.pose = 'stand';
+    st.dur = 0;
+    st.stopAt = 0;
+    st.nextAt = now + 900 + Math.random() * 1400;
+    return;
+  }
+  const roll = Math.random();
+  if (roll < 0.45) {
+    let targetX = st.x;
+    for (let tries = 0; tries < 8; tries++) {
+      const t = Math.round(12 + Math.random() * 76);
+      if (occupied.every((o) => Math.abs(o - t) >= 9)) { targetX = t; break; }
+    }
+    if (Math.abs(targetX - st.x) < 2) { st.nextAt = now + 1500; return; } // nowhere free: wait
+    const dist = Math.abs(targetX - st.x);
+    const dur = +walkSecs(dist).toFixed(2);
+    st.face = targetX >= st.x ? 1 : -1;
+    st.fromX = st.x;            // remembered so a redraw mid-walk puts it part-way, not at the end
+    st.walkT0 = now + TURN_MS;
+    st.x = targetX;
+    st.pose = 'walk';
+    st.dur = dur;
+    st.turnMs = TURN_MS;
+    st.stopAt = now + TURN_MS + dur * 1000;
+    st.emote = '';
+    st.nextAt = st.stopAt;
+  } else {
+    const acts = ['stand', 'read', 'type', 'think', 'search', 'done'];
+    st.pose = acts[Math.floor(Math.random() * acts.length)];
+    st.face = Math.random() < 0.5 ? 1 : -1;
+    st.dur = 0;
+    st.turnMs = 0;
+    st.stopAt = 0;
+    const pool = IDLE_EMOTES[st.pose] || [''];
+    st.emote = Math.random() < 0.45 ? pool[Math.floor(Math.random() * pool.length)] : '';
+    st.nextAt = now + 3500 + Math.random() * 3500;
+  }
+}
+
+// ---- Working robots go to the furniture for their task -------------------------
+// Each workspace keeps a stable set of furniture (seeded, not tied to the "lead"
+// robot). A working robot walks from where it is to the piece for its current step
+// and uses it there. If the room has no such piece, it appears with a smoke puff;
+// pieces that appeared that way poof away after a minute unused.
+const TASK_FURNITURE = { hammer: 'promptTerm', type: 'diffDesk', read: 'ctxTank', search: 'vectorPods', web: 'mcpDock', think: 'whiteboard', run: 'gpuRack' };
+const TASK_POSE_AT = { run: 'type' }; // "working" with no specific tool: operating the GPU rack
+// How far from a piece's centre a robot stands to use it (px): close enough that its
+// hands reach the keyboard / screen / panel, overlapping the piece's edge a little
+const STANCE_PX = { diffDesk: 20, promptTerm: 24, gpuRack: 22, ctxTank: 20, vectorPods: 24, mcpDock: 22, whiteboard: 26, forgeCore: 26, rechargePod: 26 };
+const FURN_SLOTS = [12, 25, 38, 51, 64, 77, 88];
+const vaultRoomFurniture = new Map(); // room key -> [{ kind, x, spawned, needsPuff, lastUsed }]
+const vaultWorkerAI = new Map();      // session id -> { x, tx, t0, dur, kind, side }
+
+function roomFurnitureState(key, seed) {
+  let list = vaultRoomFurniture.get(key);
+  if (list) return list;
+  const pool = [...ROOM_FURNITURE_POOLS.lounge];
+  let s = Math.abs(seed || 1);
+  for (let i = pool.length - 1; i > 0; i--) {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    const j = s % (i + 1);
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const slots = [12, 38, 64, 88].filter((_, i) => !(i === 2 && (s % 4) === 0));
+  list = slots.map((x, i) => ({ kind: pool[i], x, spawned: false, needsPuff: false, lastUsed: 0 }));
+  vaultRoomFurniture.set(key, list);
+  return list;
+}
+
+// The piece for `kind` in this room, spawning it into a free spot if needed
+function furnitureFor(list, kind, busy) {
+  let f = list.find((p) => p.kind === kind);
+  if (f) return f;
+  const free = FURN_SLOTS.find((x) => list.every((p) => Math.abs(p.x - x) >= 12));
+  if (free !== undefined) {
+    f = { kind, x: free, spawned: true, needsPuff: true, lastUsed: Date.now() };
+    list.push(f);
+    return f;
+  }
+  // room full: swap out a piece nobody is using
+  const spare = list.find((p) => !busy.has(p));
+  if (!spare) return list[0];
+  Object.assign(spare, { kind, spawned: true, needsPuff: true, lastUsed: Date.now() });
+  return spare;
+}
+
+// Where a robot is right now (it may be part-way through a walk)
+function workerPos(st, now = Date.now()) {
+  if (!st.dur) return st.tx;
+  const k = Math.max(0, Math.min(1, (now - st.t0) / (st.dur * 1000))); // t0 may be ahead (still turning)
+  return st.x + (st.tx - st.x) * k;
+}
+
+function furnitureSvg(p) {
+  return `<svg class="vault-furn${p.needsPuff ? ' furn-spawn' : ''}${p.inUse ? ' in-use' : ''}" data-kind="${p.kind}" style="left:${p.x}%" viewBox="0 0 64 56">${AI_FURNITURE[p.kind]}</svg>`;
+}
+
+// After the room is on screen: puff for pieces that just appeared or left
+function puffRoomFurniture(room, events) {
+  if (!events.length) return;
+  requestAnimationFrame(() => {
+    const wall = room.querySelector('.vault-wall')?.getBoundingClientRect();
+    if (!wall || !wall.width || typeof smokePuff !== 'function') return;
+    for (const x of events) smokePuff(wall.left + wall.width * x / 100, wall.bottom - 26, 44);
+  });
+}
+
+setInterval(() => {
+  if (!document.body.classList.contains('list-grid') || document.body.classList.contains('list-compact')) return;
+  const now = Date.now();
+  const drawBot = (el, s, pose) => {
+    const bot = el.querySelector('.vault-bot');
+    if (bot) bot.innerHTML = window.buildRunnerSvg(robotHueFor(s), window.robotOutfitFor?.(s) || null, pose);
+  };
+  const setPoseClass = (el, pose) => {
+    el.dataset.pose = pose;
+    for (const c of [...el.classList]) if (c.startsWith('pose-')) el.classList.remove(c);
+    el.classList.add(`pose-${pose}`);
+  };
+  // Working robot reaches its furniture: stop, turn to face it…
+  document.querySelectorAll('.vault-walker[data-working="1"][data-arrive]').forEach((el) => {
+    if (now < Number(el.dataset.arrive)) return;
+    el.removeAttribute('data-arrive');
+    const s = sessionsList.find((x) => x.id === el.dataset.sid);
+    if (!s || !el.dataset.taskPose) return;
+    el.classList.remove('is-walking');
+    setPoseClass(el, 'stand');
+    drawBot(el, s, 'stand');
+    const bot = el.querySelector('.vault-bot');
+    if (bot) bot.style.transform = `scaleX(${el.dataset.face || 1})`;
+    el.dataset.engage = String(now + 320);
+  });
+  // …then reach in and start the task
+  document.querySelectorAll('.vault-walker[data-working="1"][data-engage]').forEach((el) => {
+    if (now < Number(el.dataset.engage)) return;
+    el.removeAttribute('data-engage');
+    const s = sessionsList.find((x) => x.id === el.dataset.sid);
+    const pose = el.dataset.taskPose;
+    if (!s || !pose) return;
+    setPoseClass(el, pose);
+    drawBot(el, s, pose);
+    el.classList.add('engage');
+    el.closest('.vault-room')?.querySelector(`.vault-furn[data-kind="${el.dataset.kind}"]`)?.classList.add('in-use');
+    setTimeout(() => el.classList.remove('engage'), 600);
+    if (pose === 'think' && !el.querySelector('.act-bubble')) el.insertAdjacentHTML('beforeend', '<span class="act-bubble"><i></i><i></i><i></i></span>');
+  });
+  document.querySelectorAll('.vault-walker[data-idle="1"]').forEach((el) => {
+    const sid = el.dataset.sid;
+    const s = sessionsList.find((x) => x.id === sid);
+    if (!s) return;
+    const st = vaultDwellerAI.get(sid);
+    if (!st || now < st.nextAt || vaultFocus?.id === sid) return;
+    // spots where robots are working in this room
+    const occupied = [...(el.closest('.vault-room')?.querySelectorAll('.vault-walker[data-working="1"]') || [])]
+      .map((w) => parseFloat(w.style.left)).filter((v) => !Number.isNaN(v));
+    stepIdleDweller(st, occupied);
+    const prevPose = el.dataset.pose;
+    setPoseClass(el, st.pose);
+    el.classList.toggle('is-walking', st.pose === 'walk');
+    el.style.transition = st.dur ? walkTransition(st.dur, st.turnMs || 0) : '';
+    el.style.left = `${st.x}%`;
+    const bot = el.querySelector('.vault-bot');
+    if (bot) {
+      bot.style.transform = `scaleX(${st.face})`;
+      if (prevPose !== st.pose && typeof window.buildRunnerSvg === 'function') {
+        const hue = typeof robotHueFor === 'function' ? robotHueFor(s) : 0;
+        const outfit = typeof window.robotOutfitFor === 'function' ? window.robotOutfitFor(s) : null;
+        bot.innerHTML = window.buildRunnerSvg(hue, outfit, st.pose);
+      }
+    }
+    let bub = el.querySelector('.act-bubble');
+    if (st.pose === 'think') {
+      if (!bub) { bub = document.createElement('span'); bub.className = 'act-bubble'; bub.innerHTML = '<i></i><i></i><i></i>'; el.appendChild(bub); }
+    } else if (bub) {
+      bub.remove();
+    }
+    let em = el.querySelector('.vault-emote');
+    if (st.emote) {
+      if (!em) { em = document.createElement('span'); em.className = 'vault-emote'; el.appendChild(em); }
+      em.textContent = st.emote;
+    } else if (em) {
+      em.remove();
+    }
+  });
+}, 300);
+
+// Vault view → chat as one zoom: the room scales up toward the robot you clicked
+// and dissolves while the chat grows out of that spot. Back plays it in reverse
+// (see showListView). Falls back to a plain switch with reduced motion.
+var vaultZoomBusy = false; // var: showListView can run before this line during startup
+var vaultZoomFrom = null; // session id whose robot opened the chat
+
+// ---- Focus mode (HUD at least 400px wide): the rooms stay, zoomed so the robot sits
+// big in a strip on the left; the chat slides in as a panel on the right with a
+// pointer at the robot. Other robots in the strip can be clicked to switch chats.
+var vaultFocus = null;          // { id, t: {x, y, s}, settleAt } while a chat is open beside its robot
+var vaultFocusOpening = false;  // showDetailView called by focus mode itself
+const FOCUS_SCALE = 2.1;
+function focusRobotEl(id) {
+  return listView.querySelector(`.vault-walker[data-sid="${CSS.escape(id)}"] .vault-bot`);
+}
+// Move/scale the list so the focused robot lands in the middle of the left strip
+function alignFocus(animate) {
+  if (!vaultFocus) return;
+  const bot = focusRobotEl(vaultFocus.id);
+  if (!bot) return;
+  const pb = popupBody.getBoundingClientRect();
+  const strip = Math.max(110, Math.min(170, pb.width * 0.3));
+  const tx = pb.left + strip / 2, ty = pb.top + Math.min(pb.height * 0.42, 190);
+  const m = new DOMMatrixReadOnly(getComputedStyle(listView).transform); // as drawn right now (may be mid-slide)
+  const cur = { x: m.e, y: m.f, s: m.a || 1 };
+  const lv = listView.getBoundingClientRect();   // includes the current transform (origin 0 0)
+  const r = bot.getBoundingClientRect();
+  const px = (r.left + r.width / 2 - lv.left) / cur.s, py = (r.top + r.height / 2 - lv.top) / cur.s;
+  const x0 = lv.left - cur.x, y0 = lv.top - cur.y;  // untransformed top-left
+  const t = { x: tx - x0 - FOCUS_SCALE * px, y: ty - y0 - FOCUS_SCALE * py, s: FOCUS_SCALE };
+  vaultFocus.t = t;
+  listView.style.transition = animate ? 'transform .5s cubic-bezier(.3,.7,.2,1)' : 'none';
+  listView.style.transform = `translate(${t.x}px, ${t.y}px) scale(${t.s})`;
+  if (animate) vaultFocus.settleAt = Date.now() + 520;
+  popupBody.style.setProperty('--focus-strip', `${strip}px`);
+  popupBody.style.setProperty('--focus-tail', `${ty - pb.top}px`);
+}
+function openVaultFocus(session) {
+  if (!document.body.classList.contains('list-grid') || popupBody.getBoundingClientRect().width < 400) return false;
+  if (!focusRobotEl(session.id)) return false; // chips in the drawer: no robot to point at
+  const switching = !!vaultFocus;
+  vaultFocus = { id: session.id };
+  vaultFocusOpening = true;
+  try { showDetailView(session); } finally { vaultFocusOpening = false; }
+  document.body.classList.add('vault-focus');
+  listView.querySelectorAll('.vault-walker.is-focus').forEach((w) => w.classList.remove('is-focus'));
+  focusRobotEl(session.id).closest('.vault-walker').classList.add('is-focus');
+  alignFocus(!reducedMotion());
+  if (reducedMotion()) return true;
+  detailView.animate(switching
+    ? [{ opacity: 0.35 }, { opacity: 1 }]
+    : [{ transform: 'translateX(55%)', opacity: 0 }, { transform: 'none', opacity: 1 }],
+  { duration: switching ? 220 : 440, delay: switching ? 0 : 90, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' });
+  return true;
+}
+// Leave focus mode. animate=false when another part of the HUD takes over the view.
+function closeVaultFocus(animate = true) {
+  if (!vaultFocus) return false;
+  vaultFocus = null;
+  document.body.classList.remove('vault-focus');
+  listView.querySelectorAll('.vault-walker.is-focus').forEach((w) => w.classList.remove('is-focus'));
+  listView.style.transition = animate && !reducedMotion() ? 'transform .42s cubic-bezier(.3,.7,.2,1)' : 'none';
+  listView.style.transform = '';
+  setTimeout(() => { if (!vaultFocus) listView.style.transition = ''; }, 450);
+  return true;
+}
+// Clicking the rooms beside the chat panel closes the chat (zooms back out).
+// Robots and drawer chips still switch chats. Capture phase, so the click doesn't
+// also collapse a workspace or open something underneath.
+listView.addEventListener('click', (e) => {
+  if (!vaultFocus || e.target.closest('.vault-walker, .vault-chip')) return;
+  e.preventDefault();
+  e.stopPropagation();
+  showListView();
+}, true);
+
+// The list re-renders on every update: keep the robot under the pointer
+const renderCardsBeforeFocus = renderSessionCards;
+renderSessionCards = function (...args) {
+  const out = renderCardsBeforeFocus.apply(this, args);
+  if (vaultFocus) {
+    const wait = Math.max(0, (vaultFocus.settleAt || 0) - Date.now());
+    setTimeout(() => {
+      if (!vaultFocus) return;
+      focusRobotEl(vaultFocus.id)?.closest('.vault-walker').classList.add('is-focus');
+      alignFocus(false);
+    }, wait);
+  }
+  return out;
+};
+
+function zoomIntoChat(session, fromEl) {
+  if (vaultZoomBusy) return;
+  // already chatting with this robot (focus mode): clicking it opens dress-up
+  if (vaultFocus?.id === session.id && fromEl?.classList.contains('vault-walker') && window.openDressUp) {
+    window.openDressUp(fromEl);
+    return;
+  }
+  if (openVaultFocus(session)) return;
+  const room = fromEl?.closest('.vault-room') || fromEl?.closest('.vault-drawer')?.previousElementSibling || null;
+  const r = fromEl?.getBoundingClientRect();
+  if (!room || !r || !r.width || reducedMotion()) { vaultZoomFrom = session.id; showDetailView(session); return; }
+  vaultZoomBusy = true;
+  vaultZoomFrom = session.id;
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+
+  // a frozen copy of the room on top, so it can keep zooming after the view switches
+  const rr = room.getBoundingClientRect();
+  const ghost = room.cloneNode(true);
+  ghost.classList.add('vault-zoom-ghost');
+  Object.assign(ghost.style, { left: rr.left + 'px', top: rr.top + 'px', width: rr.width + 'px', height: rr.height + 'px' });
+  ghost.style.transformOrigin = `${cx - rr.left}px ${cy - rr.top}px`;
+  ghost.querySelector(`.vault-walker[data-sid="${CSS.escape(session.id)}"]`)?.classList.add('zoom-target');
+  document.body.appendChild(ghost);
+
+  showDetailView(session);
+
+  const dv = detailView.getBoundingClientRect();
+  const x = cx - dv.left, y = cy - dv.top;
+  const R = Math.hypot(Math.max(x, dv.width - x), Math.max(y, dv.height - y));
+  const reveal = detailView.animate([
+    { clipPath: `circle(14px at ${x}px ${y}px)`, opacity: 0.6 },
+    { clipPath: `circle(${R}px at ${x}px ${y}px)`, opacity: 1 },
+  ], { duration: 460, delay: 70, easing: 'cubic-bezier(.3,.7,.2,1)', fill: 'backwards' });
+  ghost.animate([
+    { transform: 'scale(1)', opacity: 1 },
+    { transform: 'scale(1.9)', opacity: 1, offset: 0.45 },
+    { transform: 'scale(3.2)', opacity: 0 },
+  ], { duration: 480, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' });
+  const finish = () => { ghost.remove(); vaultZoomBusy = false; };
+  reveal.onfinish = finish;
+  reveal.oncancel = finish;
+  setTimeout(finish, 900); // never leave the overlay behind
+}
+
+// Back from a chat that was opened from a robot: the list zooms out from that robot
+function zoomOutToRobot() {
+  const id = vaultZoomFrom;
+  vaultZoomFrom = null;
+  if (!id || reducedMotion() || !document.body.classList.contains('list-grid')) return;
+  const bot = listView.querySelector(`.vault-walker[data-sid="${CSS.escape(id)}"]`) ||
+    listView.querySelector(`.vault-chip[data-sid="${CSS.escape(id)}"]`);
+  const r = bot?.getBoundingClientRect();
+  const lv = listView.getBoundingClientRect();
+  if (!r || !r.width || !lv.width) return;
+  listView.style.transformOrigin = `${r.left + r.width / 2 - lv.left}px ${r.top + r.height / 2 - lv.top}px`;
+  listView.animate([
+    { transform: 'scale(2.6)', opacity: 0 },
+    { transform: 'scale(1.25)', opacity: 1, offset: 0.55 },
+    { transform: 'scale(1)', opacity: 1 },
+  ], { duration: 420, easing: 'cubic-bezier(.2,.7,.2,1)' }).onfinish = () => { listView.style.transformOrigin = ''; };
+  bot.classList.add('zoom-landed');
+  setTimeout(() => bot.classList.remove('zoom-landed'), 900);
+}
+
+function buildWorkspaceVaultRoom(orderedSessions, groupMeta = {}) {
+  if (typeof window.buildRunnerSvg !== 'function' || !orderedSessions.length) return null;
+  const maxDwellers = 6;
+  const dwellers = orderedSessions.slice(0, maxDwellers);
+  const overflow = orderedSessions.length - dwellers.length;
+  const metaOf = (s) => {
+    const isAttn = s.unread || s.state === 'attention';
+    const state = isAttn ? 'attention' : (s.status === 'running' ? 'running' : 'idle');
+    return { s, state, ...sessionVaultMeta(s, state) };
+  };
+  const items = dwellers.map(metaOf);
+  const roomSeed = sessionHash({ id: groupMeta.name || orderedSessions[0].id });
+  const roomKey = groupMeta.name || workspaceKey(orderedSessions[0]);
+  const furn = roomFurnitureState(roomKey, roomSeed);
+  const now = Date.now();
+
+  // Working robots → the piece for their task, one spot per side of it
+  const roomW = vaultRoomWidth();
+  const busy = new Set();
+  const spotsTaken = new Map(); // furniture -> robots placed there
+  const work = new Map();       // session id -> { tx, face, pose }
+  for (const d of items) {
+    if (d.state !== 'running') continue;
+    let kind = TASK_FURNITURE[d.pose] || 'gpuRack';
+    let taskPose = TASK_POSE_AT[d.pose] || d.pose;
+    // committed: keep heading for / working at the current piece until it has arrived
+    // and stayed MIN_STAY_MS, so quick steps don't make it U-turn on the way
+    const cur = vaultWorkerAI.get(d.s.id);
+    if (cur?.kind && cur.kind !== kind && now < (cur.commitUntil || 0)) { kind = cur.kind; taskPose = cur.taskPose; }
+    const piece = furnitureFor(furn, kind, busy);
+    busy.add(piece);
+    piece.lastUsed = now;
+    const n = spotsTaken.get(piece) || 0;
+    spotsTaken.set(piece, n + 1);
+    const side = n % 2 === 0 ? -1 : 1;                 // left of it first, then right
+    // stand close enough to reach it (px from its centre), next robots further out
+    const px = (STANCE_PX[piece.kind] || 24) + Math.floor(n / 2) * 20;
+    const tx = Math.max(4, Math.min(96, piece.x + side * (px / roomW) * 100));
+    work.set(d.s.id, { tx, face: -side, pose: taskPose, kind, piece });
+  }
+  // pieces that appeared for a task poof away after a minute unused
+  const puffs = [];
+  for (let i = furn.length - 1; i >= 0; i--) {
+    const p = furn[i];
+    if (p.spawned && !busy.has(p) && now - p.lastUsed > 60000) { puffs.push(p.x); furn.splice(i, 1); }
+  }
+  // a piece is "in use" once a robot has arrived at it (its screens, LEDs… come alive)
+  for (const p of furn) p.inUse = false;
+  for (const [sid, job] of work) {
+    const st = vaultWorkerAI.get(sid);
+    if (st && Math.abs(st.tx - job.tx) < 0.3 && now >= st.t0 + st.dur * 1000) job.piece.inUse = true;
+  }
+  const furnitureHtml = furn.map(furnitureSvg).join('');
+  for (const p of furn) if (p.needsPuff) { puffs.push(p.x); p.needsPuff = false; }
+
+  // One fixed room type (label + colour) per workspace, so the room doesn't flip
+  // colour whenever the "lead" robot changes task. Needs-you = an alert glow on top.
+  const STABLE_ROOMS = ['lab', 'forge', 'library', 'recon', 'comms', 'command'];
+  const roomType = STABLE_ROOMS[roomSeed % STABLE_ROOMS.length];
+  const anyAttn = items.some((d) => d.state === 'attention');
+  const room = document.createElement('div');
+  room.className = `vault-room vault-stage room-${roomType}${anyAttn ? ' room-alert-on' : ''}`;
+  room.innerHTML =
+    '<span class="vault-ceiling"></span>' +
+    `<span class="vault-wall">${furnitureHtml}</span>` +
+    '<span class="vault-plaque"><span class="vault-ws-name"></span><span class="vault-ws-tag"></span></span>' +
+    '<span class="vault-shaft left"></span>' +
+    '<span class="vault-shaft right"></span>' +
+    '<span class="vault-floor"></span>';
+  room.querySelector('.vault-ws-name').textContent = groupMeta.name || orderedSessions[0].project || 'Workspace';
+  const total = groupMeta.total ?? orderedSessions.length;
+  const runningN = groupMeta.runningN ?? items.filter((d) => d.state === 'running').length;
+  room.querySelector('.vault-ws-tag').textContent = `${VAULT_ROOMS[roomType].label} · ${runningN}/${total}`;
+
+  items.forEach((d, idx) => {
+    const hue = typeof robotHueFor === 'function' ? robotHueFor(d.s) : 0;
+    const outfit = typeof window.robotOutfitFor === 'function' ? window.robotOutfitFor(d.s) : null;
+    const hash = sessionHash(d.s);
+    const isIdle = d.state === 'idle';
+    const prevWork = vaultWorkerAI.get(d.s.id);
+    const job = work.get(d.s.id);
+    // a robot that just stopped working carries on from where it is
+    if (!job && prevWork) {
+      const at = workerPos(prevWork, now);
+      if (isIdle) {
+        const st = getIdleDwellerState(d.s, idx, items.length);
+        Object.assign(st, { x: at, pose: 'stand', dur: 0, stopAt: 0, nextAt: now + 1500 });
+      }
+      vaultWorkerAI.set(d.s.id, { x: at, tx: at, t0: now, dur: 0, parked: true });
+      if (isIdle) vaultWorkerAI.delete(d.s.id);
+    }
+    const ai = isIdle ? getIdleDwellerState(d.s, idx, items.length) : null;
+
+    let pose = ai ? ai.pose : d.pose;
+    let face = ai ? ai.face : ((hash % 2) ? 1 : -1);
+    let slotPct = ai ? ai.x : (items.length === 1 ? 50 : Math.round(16 + (idx / (items.length - 1)) * 68));
+    let walkTo = null; // { tx, secs } when the robot is still on its way
+    if (ai && ai.pose === 'walk') {
+      // idle robot mid-walk: draw it where it is now and let it carry on
+      if (now >= ai.stopAt) {
+        pose = 'stand';                                  // arrived between ticks
+      } else {
+        const t = Math.max(0, now - (ai.walkT0 || now));
+        const k = ai.dur ? Math.min(1, t / (ai.dur * 1000)) : 1;
+        const from = ai.fromX ?? ai.x;
+        slotPct = from + (ai.x - from) * k;
+        const delay = Math.max(0, (ai.walkT0 || now) - now);
+        walkTo = { tx: ai.x, secs: (ai.stopAt - now - delay) / 1000, delay, turnTo: null };
+      }
+    }
+    if (job) {
+      let st = vaultWorkerAI.get(d.s.id);
+      const from = st ? workerPos(st, now) : (vaultDwellerAI.get(d.s.id)?.x ?? slotPct);
+      if (vaultFocus?.id === d.s.id) {
+        st = { x: from, tx: from, t0: now, dur: 0 };     // talking to you: stay put
+      } else if (!st || Math.abs(st.tx - job.tx) > 0.3 || st.parked) {
+        const far = Math.abs(job.tx - from) >= 0.5;
+        const prevFace = st?.face ?? vaultDwellerAI.get(d.s.id)?.face ?? 1;
+        // turn round first (TURN_MS), then walk
+        st = { x: from, tx: job.tx, t0: now + (far ? TURN_MS : 0), dur: far ? walkSecs(job.tx - from) : 0,
+          face: job.tx >= from ? 1 : -1, prevFace, fresh: far };
+        st.commitUntil = st.t0 + st.dur * 1000 + MIN_STAY_MS;
+      }
+      st.kind = job.kind;
+      st.taskPose = job.pose;
+      vaultWorkerAI.set(d.s.id, st);
+      const at = workerPos(st, now);
+      const left = st.dur ? st.t0 + st.dur * 1000 - now : 0;
+      slotPct = at;
+      if (left > 50) {
+        pose = 'walk';
+        face = st.fresh ? st.prevFace : st.face;          // a new walk starts facing the old way…
+        const delay = Math.max(0, st.t0 - now);
+        walkTo = { tx: st.tx, secs: Math.min(left, st.dur * 1000) / 1000, delay, turnTo: st.fresh ? st.face : null };
+        st.fresh = false;                                 // …and turns once (below)
+      } else {
+        pose = job.pose;
+        face = job.face;
+      }
+    } else if (d.state === 'attention' && vaultWorkerAI.has(d.s.id)) {
+      slotPct = vaultWorkerAI.get(d.s.id).tx;  // needs you: stays at its last spot
+    }
+
+    const dweller = document.createElement('div');
+    dweller.className = `vault-walker pose-${pose}${d.state === 'attention' ? ' is-attn' : ''}`;
+    dweller.dataset.sid = d.s.id;
+    if (vaultFocus?.id === d.s.id) dweller.classList.add('is-focus');
+    dweller.dataset.pose = pose;
+    if (isIdle) dweller.dataset.idle = '1';
+    if (job) {
+      dweller.dataset.working = '1';
+      dweller.dataset.taskPose = job.pose;
+      dweller.dataset.kind = job.kind;
+      dweller.dataset.face = String(job.face);
+    }
+    dweller.style.left = `${slotPct}%`;
+    if (walkTo) {
+      dweller.dataset.arrive = String(now + walkTo.delay + walkTo.secs * 1000);
+      dweller.classList.add('is-walking');                // draws on top of anyone it passes
+      // once the room is on screen: turn round, then walk
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (walkTo.turnTo != null) {
+          const b = dweller.querySelector('.vault-bot');
+          if (b) b.style.transform = `scaleX(${walkTo.turnTo})`;
+        }
+        dweller.style.transition = walkTransition(walkTo.secs, walkTo.delay);
+        dweller.style.left = `${walkTo.tx}%`;
+      }));
+    }
+    const title = d.s.sessionTitle || d.s.aiTitle || 'Untitled session';
+    const actLabel = d.state === 'running' ? friendlyStatus(d.s, 'running') : (d.state === 'attention' ? 'Needs input' : 'Idle');
+    const shortName = agentLabel(d.s.source, d.s.id);
+    const said = (d.s.detail || '').replace(/\s+/g, ' ').trim();
+    dweller.title = `${shortName} — ${title}\n${actLabel}${said ? `\n\n${said.slice(0, 160)}${said.length > 160 ? '…' : ''}` : ''}`;
+    // a button: Tab to it, Enter/Space opens the chat, right-click = the row menu (features.js)
+    dweller.tabIndex = 0;
+    dweller.setAttribute('role', 'button');
+    dweller.setAttribute('aria-label', `${shortName}: ${title}. ${actLabel}`);
+    dweller.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); zoomIntoChat(d.s, dweller); }
+    });
+    dweller.innerHTML =
+      `<span class="vault-bot" style="transform:scaleX(${face})">${window.buildRunnerSvg(hue, outfit, pose)}</span>` +
+      (pose === 'think' ? '<span class="act-bubble"><i></i><i></i><i></i></span>' : '') +
+      (ai && ai.emote ? `<span class="vault-emote">${ai.emote}</span>` : '') +
+      (d.state === 'attention' ? '<span class="vault-ping">!</span>' : '') +
+      '<span class="vault-shadow"></span><span class="vault-name"></span>';
+    dweller.querySelector('.vault-name').textContent = shortName;
+    dweller.addEventListener('click', (e) => {
+      e.stopPropagation();
+      zoomIntoChat(d.s, dweller);
+    });
+    room.appendChild(dweller);
+  });
+
+  puffRoomFurniture(room, puffs);
+  if (overflow <= 0) return room;
+
+  // Chats that don't fit on the floor: a drawer of small chips under the room,
+  // so every chat can still be opened (click / Enter) and right-clicked.
+  const out = document.createDocumentFragment();
+  const drawer = document.createElement('div');
+  drawer.className = 'vault-drawer';
+  const lbl = document.createElement('span');
+  lbl.className = 'vault-drawer-label';
+  lbl.textContent = `+${overflow} more:`;
+  drawer.appendChild(lbl);
+  for (const s of orderedSessions.slice(maxDwellers)) {
+    const isAttn = s.unread || s.state === 'attention';
+    const chip = document.createElement('button');
+    chip.className = `vault-chip${isAttn ? ' is-attn' : s.status === 'running' ? ' is-running' : ''}`;
+    chip.dataset.sid = s.id;
+    const hue = typeof robotHueFor === 'function' ? robotHueFor(s) : 0;
+    const dot = document.createElement('i');
+    dot.style.background = shiftHexHue('#62b6d8', hue);
+    const name = document.createElement('span');
+    const title = s.sessionTitle || s.aiTitle || agentLabel(s.source, s.id);
+    name.textContent = title;
+    chip.title = `${agentLabel(s.source, s.id)} — ${title}\n${isAttn ? 'Needs input' : s.status === 'running' ? friendlyStatus(s, 'running') : 'Idle'}`;
+    chip.append(dot, name);
+    chip.addEventListener('click', (e) => { e.stopPropagation(); zoomIntoChat(s, chip); });
+    drawer.appendChild(chip);
+  }
+  out.append(room, drawer);
+  return out;
 }
 
 function buildSessionCard(session) {
@@ -1629,8 +2473,23 @@ function sessionHash(session) {
   return h;
 }
 
-// Hue shift in degrees for this session (0 = the original blue). Stable per session.
+// Body colours picked in the dress-up panel (session id -> hue), kept apart from
+// outfits so "Use for all robots" never paints every robot the same colour
+const robotHueOverrides = { ...(window.electronAPI.settings?.robotHues || {}) };
+window.setRobotHue = function (id, hue) {
+  if (!id) return;
+  if (hue === null || hue === undefined) delete robotHueOverrides[id];
+  else robotHueOverrides[id] = ((Math.round(hue) % 360) + 360) % 360;
+  window.electronAPI.storeSet('robotHues', { ...robotHueOverrides });
+  window.refreshRobotAvatars?.();
+};
+window.hasRobotHue = (id) => Object.prototype.hasOwnProperty.call(robotHueOverrides, id);
+
+// Hue shift in degrees for this session (0 = the original blue). Stable per session,
+// unless a colour was picked for it.
 function robotHueFor(session) {
+  const id = session?.id;
+  if (id && Object.prototype.hasOwnProperty.call(robotHueOverrides, id)) return robotHueOverrides[id];
   return (sessionHash(session) % ROBOT_HUE_STEPS) * (360 / ROBOT_HUE_STEPS);
 }
 
@@ -2147,6 +3006,8 @@ function renderActivityProgress(row, s, act, verb, target) {
   caret.textContent = activityTrailOpen ? '▴' : '▾';
   pill.append(icons, label, caret);
 
+  renderActivityTeam(row, s);
+
   const trail = box.querySelector('.act-trail');
   trail.textContent = '';
   box.style.display = n && activityTrailOpen ? '' : 'none';
@@ -2163,6 +3024,74 @@ function renderActivityProgress(row, s, act, verb, target) {
       trail.appendChild(r);
     }
   }
+}
+
+// Team stage: helper agents work next to the lead robot, each acting out its own step.
+// New helpers pop out of a smoke puff; finished ones wave a ✓, then poof away.
+const TEAM_MAX = 4;
+const TEAM_HUE = { Explore: -40, Plan: 80, 'general-purpose': 190, claude: 140 };
+function teamHue(type) {
+  if (type in TEAM_HUE) return TEAM_HUE[type];
+  let h = 0;
+  for (const ch of String(type)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return (h % 12) * 30;
+}
+function renderActivityTeam(row, s) {
+  const subs = Array.isArray(s.subagents) ? s.subagents : [];
+  let team = row.querySelector('.act-team');
+  if (!subs.length) {
+    if (team) {
+      for (const m of team.querySelectorAll('.team-mate')) teamPoof(m);
+      team.remove();
+    }
+    return;
+  }
+  if (!team) {
+    team = document.createElement('div');
+    team.className = 'act-team';
+    team.innerHTML = '<span class="team-line"><i></i></span><div class="team-mates"></div><button class="team-more"></button>';
+    row.appendChild(team);
+  }
+  const mates = team.querySelector('.team-mates');
+  const shown = subs.slice(-TEAM_MAX);
+  const keep = new Set(shown.map((a) => a.id));
+  for (const m of [...mates.children]) if (!keep.has(m.dataset.id)) { teamPoof(m); m.remove(); }
+
+  for (const a of shown) {
+    let m = mates.querySelector(`.team-mate[data-id="${CSS.escape(a.id)}"]`);
+    const isNew = !m;
+    if (isNew) {
+      m = document.createElement('div');
+      m.className = 'team-mate';
+      m.dataset.id = a.id;
+      m.innerHTML = '<span class="team-bot"></span><span class="team-tag"></span><span class="team-task"></span>';
+      mates.appendChild(m);
+    }
+    const pose = a.finished ? 'done' : activityPose(a.tool ? { kind: 'tool', tool: a.tool } : { kind: 'thinking' });
+    const bot = m.querySelector('.team-bot');
+    if (bot.dataset.look !== pose && typeof window.buildRunnerSvg === 'function') {
+      bot.dataset.look = pose;
+      bot.innerHTML = window.buildRunnerSvg(teamHue(a.type), null, pose) +
+        (pose === 'done' ? '<span class="act-bubble ok">✓</span>' : pose === 'think' ? '<span class="act-bubble"><i></i><i></i><i></i></span>' : '');
+      m.className = `team-mate pose-${pose}`;
+    }
+    m.querySelector('.team-tag').textContent = a.type;
+    m.querySelector('.team-task').textContent = a.task;
+    m.title = `${a.type}: ${a.task}` + (a.finished ? '\n✓ Done' : a.tool ? `\nNow: ${a.tool}${a.target ? ' ' + a.target : ''}` : '\nNow: thinking');
+    if (isNew) requestAnimationFrame(() => {
+      const r = bot.getBoundingClientRect();
+      if (r.width) smokePuff(r.left + r.width / 2, r.top + r.height / 2, 30);
+    });
+  }
+  const more = team.querySelector('.team-more');
+  const extra = subs.length - shown.length;
+  more.style.display = extra > 0 ? '' : 'none';
+  more.textContent = `+${extra}`;
+  more.title = subs.slice(0, extra).map((a) => `${a.type}: ${a.task}`).join('\n');
+}
+function teamPoof(m) {
+  const r = m.querySelector('.team-bot')?.getBoundingClientRect();
+  if (r && r.width) smokePuff(r.left + r.width / 2, r.top + r.height / 2, 30);
 }
 
 var activityHideTimer = null;

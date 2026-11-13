@@ -43,6 +43,40 @@
       <path d="M14.5,8C12.5,-1 16,-5.5 21,-5.5C26,-5.5 28.5,-2 27.5,3" fill="none" stroke="${shade(c, -0.25)}" stroke-width="2.4" stroke-linecap="round"/>
       <rect x="11.2" y="5.2" width="8" height="11" rx="3.5" fill="${c}" stroke="${o}" stroke-width="1"/>
       <rect x="13" y="7.3" width="4.4" height="6.8" rx="2.2" fill="${shade(c, 0.3)}"/>`,
+    hardhat: (c, o) => `
+      <path d="M9.4,4.6C10.2,-4.6 15.8,-7 21.3,-7C27.4,-7 32.6,-4 33.2,4.6Z" fill="${c}" stroke="${o}" stroke-width="1"/>
+      <path d="M19.6,-7V4.2M23,-7V4.2" stroke="${shade(c, -0.22)}" stroke-width="1.2"/>
+      <path d="M13,1.5C13.6,-2.5 16.2,-4.6 19,-5.2" stroke="#fff" stroke-opacity=".45" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      <rect x="6.6" y="3.4" width="30.2" height="2.8" rx="1.4" fill="${shade(c, -0.14)}" stroke="${o}" stroke-width="1"/>`,
+    cowboy: (c, o) => `
+      <path d="M13.8,1.2L14.6,-8.8Q18,-10.2 21.2,-7.6Q24.4,-10.2 27.8,-8.8L28.6,1.2Z" fill="${c}" stroke="${o}" stroke-width="1" stroke-linejoin="round"/>
+      <rect x="14" y="-2.4" width="14.4" height="2.4" fill="${shade(c, -0.4)}"/>
+      <path d="M4.6,-0.6Q21,6.4 38,-1.4Q37.6,2.6 34,3.6Q21,7.6 8,3.6Q4.6,2.4 4.6,-0.6Z" fill="${shade(c, -0.12)}" stroke="${o}" stroke-width="1" stroke-linejoin="round"/>`,
+    wizard: (c, o) => `
+      <ellipse cx="21" cy="1" rx="13.6" ry="2.6" fill="${shade(c, -0.25)}" stroke="${o}" stroke-width="1"/>
+      <path d="M13,0.6Q16.5,-11 26.5,-22Q24.5,-10 29.6,0.6Z" fill="${c}" stroke="${o}" stroke-width="1" stroke-linejoin="round"/>
+      <path d="M19.4,-5.6l.9,1.8 2,.3-1.4,1.4.3,2-1.8-.9-1.8.9.3-2-1.4-1.4 2-.3z" fill="#f2c230"/>`,
+    chef: (c, o) => `
+      <circle cx="15.6" cy="-6.6" r="4.6" fill="#f7f7f7" stroke="${o}" stroke-width="1"/>
+      <circle cx="26.6" cy="-6.6" r="4.6" fill="#f7f7f7" stroke="${o}" stroke-width="1"/>
+      <circle cx="21.1" cy="-9.2" r="5.4" fill="#f7f7f7" stroke="${o}" stroke-width="1"/>
+      <rect x="13.2" y="-5" width="15.8" height="6.8" rx="1.4" fill="#f7f7f7" stroke="${o}" stroke-width="1"/>
+      <rect x="13.2" y="-0.2" width="15.8" height="1.8" fill="${c}"/>`,
+    propeller: (c, o) => `
+      <path d="M9.4,4.4C9.6,-4 15.2,-6.8 21.2,-6.8C27.2,-6.8 32.8,-4 33,4.4Z" fill="${c}" stroke="${o}" stroke-width="1"/>
+      <path d="M21.2,-6.8L15,4.2H27.4Z" fill="#f2c230"/>
+      <rect x="20.5" y="-11" width="1.4" height="4.4" fill="#3a3f4b"/>
+      <ellipse cx="16.6" cy="-11.4" rx="4.8" ry="1.3" fill="#f2c230" stroke="${o}" stroke-width=".8"/>
+      <ellipse cx="25.8" cy="-11.4" rx="4.8" ry="1.3" fill="#e0483e" stroke="${o}" stroke-width=".8"/>
+      <circle cx="21.2" cy="-11.4" r="1.3" fill="#3a3f4b"/>`,
+    bow: (c, o) => `
+      <path d="M15,0.4C11,-6 6.6,-3 8,0.8C9,3.4 12.4,2.4 15,0.4Z" fill="${c}" stroke="${o}" stroke-width="1" stroke-linejoin="round"/>
+      <path d="M15,0.4C19,-6 23.4,-3 22,0.8C21,3.4 17.6,2.4 15,0.4Z" fill="${c}" stroke="${o}" stroke-width="1" stroke-linejoin="round"/>
+      <circle cx="15" cy="0.4" r="2" fill="${shade(c, -0.15)}" stroke="${o}" stroke-width=".9"/>`,
+    halo: (c, o) => `
+      <ellipse cx="21" cy="-6" rx="9" ry="2.2" fill="none" stroke="${c}" stroke-opacity=".35" stroke-width="3.4"/>
+      <ellipse cx="21" cy="-6" rx="9" ry="2.2" fill="none" stroke="${o}" stroke-width="2.2"/>
+      <ellipse cx="21" cy="-6" rx="9" ry="2.2" fill="none" stroke="${c}" stroke-width="1.2"/>`,
   };
   // these sit on top of the head; the others leave the ear bolt visible
   const HAT_HIDES_EAR = { headphones: true };
@@ -164,7 +198,7 @@
     </g>
     ${leg('r-leg r-leg-front', legFrontFill)}
     ${limb('r-arm r-arm-front', armFront, mid, mid, prop.arm)}
-    ${prop.body || ''}
+    ${prop.body ? `<g class="r-prop-body">${prop.body}</g>` : ''}
   </g>
 </svg>`;
   };
