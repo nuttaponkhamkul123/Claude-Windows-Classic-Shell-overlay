@@ -159,7 +159,7 @@ function register({ getWin }) {
         fs.mkdirSync(dest);
         // Windows 10+ ships bsdtar (reads .zip). Use it by full path: a GNU tar earlier in PATH
         // (e.g. from Git) reads "C:\x.zip" as host:file. A bare file name + cwd avoids that too.
-        const sysTar = path.join(process.env.SystemRoot || 'C:\Windows', 'System32', 'tar.exe');
+        const sysTar = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe');
         await run(fs.existsSync(sysTar) ? sysTar : 'tar', ['-xf', path.basename(src), '-C', dest], { cwd: path.dirname(src) });
         root = dest;
       } else if (fs.existsSync(src) && fs.statSync(src).isDirectory()) {

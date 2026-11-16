@@ -351,7 +351,7 @@ function findClaudeBinary() {
     try {
       const matches = fs.readdirSync(dir)
         .filter(d => d.startsWith('anthropic.claude-code-'))
-        .sort()
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) // 2.1.100 comes after 2.1.99 (plain text order would not)
         .reverse();
       for (const m of matches) {
         const binPath = path.join(dir, m, 'resources', 'native-binary', 'claude.exe');
