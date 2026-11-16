@@ -2998,6 +2998,8 @@ function takeReplyOptions(session) {
   // "implement it" message right after approval uses the execute model (one-shot)
   if (opts.oneShotModel) { out.model = opts.oneShotModel; delete opts.oneShotModel; }
   else if (opts.plan && session.source === 'claude' && window.fxPlanModels) out.model = window.fxPlanModels.plan;
+  // "This message only" effort from the Model menu
+  if (opts.oneShotEffort) { out.effort = opts.oneShotEffort; delete opts.oneShotEffort; }
   if (session.draft && !session.draftSent) { out.newSession = true; session.draftSent = true; }
   opts.newSession = false;
   renderReplyOptions();
@@ -3010,6 +3012,8 @@ function renderReplyOptions() {
   const opts = s && (s.source === 'claude' || s.source === 'antigravity') ? getReplyOptions(s) : {};
   replyOptionsEl.innerHTML = '';
   const chips = [];
+  if (opts.oneShotModel) chips.push({ key: 'oneShotModel', label: `This message: ${opts.oneShotModel}` });
+  if (opts.oneShotEffort) chips.push({ key: 'oneShotEffort', label: `This message: effort ${opts.oneShotEffort}` });
   if (opts.model) chips.push({ key: 'model', label: `Model: ${opts.model}` });
   if (opts.effort) chips.push({ key: 'effort', label: `Effort: ${opts.effort}` });
   if (opts.newSession) chips.push({ key: 'newSession', label: 'Next message starts a new conversation' });

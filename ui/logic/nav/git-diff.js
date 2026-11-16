@@ -1,6 +1,8 @@
 // Git changes panel: click the git box in the chat header → a panel slides in
 // from the right with every changed file (vs HEAD, plus untracked files) and
-// the diff of the selected one. Read-only; nothing is staged or committed.
+// the diff of the selected one. Tick files (or right-click a file / folder) to
+// Commit (message drafted by Claude if you like, optional push) or Discard
+// (backed up, with Undo). Nothing changes until you confirm in a dialog.
 //   window.openGitDiff(cwd, branch)
 (function () {
   const api = window.electronAPI;
@@ -41,9 +43,12 @@
   head.append(titleBox, btnCopy, btnRefresh, btnClose);
 
   const body = mk('div', 'gd-body');
+  const listCol = mk('div', 'gd-listcol'); // file tree + the Commit / Discard bar under it
   const list = mk('div', 'gd-files');
+  const actionBar = mk('div', 'gd-actions');
+  listCol.append(list, actionBar);
   const view = mk('div', 'gd-view');
-  body.append(list, view);
+  body.append(listCol, view);
   panel.append(head, body);
   document.body.append(backdrop, panel);
 
@@ -76,10 +81,41 @@
     return { a, r, n };
   }
   const INDENT = 14;
+
+  // ---- tick boxes: which files to commit / discard ----
+  const ticked = new Set(); // file paths
+  const under = (key) => state.files.filter((f) => f.path.startsWith(key + '/'));
+  function checkBox(on, partial) {
+    const c = mk('span', 'gd-check' + (on ? ' on' : '') + (partial ? ' part' : ''));
+    c.setAttribute('role', 'checkbox');
+    c.setAttribute('aria-checked', partial ? 'mixed' : String(on));
+    c.innerHTML = '<svg viewBox="0 0 12 12" width="10" height="10"><path d="M2.2 6.3l2.4 2.4 5-5.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '<i class="gd-check-dash"></i>';
+    return c;
+  }
+  function paintChecks() {
+    for (const r of list.querySelectorAll('.gd-file')) {
+      const on = ticked.has(r.dataset.path);
+      const c = r.querySelector('.gd-check');
+      c.classList.toggle('on', on); c.classList.remove('part'); c.setAttribute('aria-checked', String(on));
+    }
+    for (const r of list.querySelectorAll('.gd-folder')) {
+      const fs_ = under(r.dataset.key);
+      const n = fs_.filter((f) => ticked.has(f.path)).length;
+      const c = r.querySelector('.gd-check');
+      c.classList.toggle('on', n > 0 && n === fs_.length); c.classList.toggle('part', n > 0 && n < fs_.length);
+      c.setAttribute('aria-checked', n > 0 && n < fs_.length ? 'mixed' : String(n > 0));
+    }
+    updateActions();
+  }
   function fileRow(f, depth) {
     const row = mk('button', 'gd-file');
     row.dataset.path = f.path;
-    row.style.paddingLeft = `${8 + depth * INDENT + 16}px`; // + chevron column, so names line up with folder names
+    row.style.paddingLeft = `${30 + depth * INDENT + 16}px`; // 22px tick column + chevron column, so names line up with folder names
+    const tick = checkBox(ticked.has(f.path));
+    tick.title = 'Include in Commit / Discard';
+    tick.addEventListener('click', (e) => { e.stopPropagation(); if (ticked.has(f.path)) ticked.delete(f.path); else ticked.add(f.path); paintChecks(); });
+    row.append(tick);
     const [letter, label] = KIND[f.kind] || ['M', 'Modified'];
     const badge = mk('span', `gd-badge gd-${f.kind}`, letter);
     badge.title = label + (f.staged ? ' · staged' : '');
@@ -116,7 +152,7 @@
     menu.innerHTML = '';
     for (const it of items) {
       if (it === '-') { menu.append(mk('div', 'gd-menu-sep')); continue; }
-      const b = mk('button', 'gd-menu-item' + (it.primary ? ' primary' : ''));
+      const b = mk('button', 'gd-menu-item' + (it.primary ? ' primary' : '') + (it.danger ? ' danger' : ''));
       b.setAttribute('role', 'menuitem');
       b.append(mk('span', 'gd-menu-ico', it.icon || ''), mk('span', 'gd-menu-label', it.label));
       if (it.hint) b.append(mk('span', 'gd-menu-hint', it.hint));
@@ -195,6 +231,9 @@
       { icon: '✦', label: 'Explain this change', primary: true, disabled: !open, title: open ? 'Ask Claude in this chat' : 'Open a chat first',
         run: () => sendToChat(explainFilePrompt(f)) },
       '-',
+      { icon: '✓', label: 'Commit this file…', run: () => openCommit([f]) },
+      { icon: '↶', label: f.kind === 'untracked' || f.kind === 'added' ? 'Delete this new file…' : 'Discard changes…', danger: true, run: () => openDiscard([f]) },
+      '-',
       { icon: '↗', label: 'Open in VS Code', disabled: f.kind === 'deleted',
         run: () => api.openFile?.(state.top + '\\' + f.path.replace(/\//g, '\\')) },
       { icon: '⧉', label: 'Copy path', hint: f.path.length > 28 ? '…' + f.path.slice(-27) : f.path,
@@ -207,6 +246,9 @@
     return [
       { icon: '✦', label: "Explain this folder's changes", hint: `${n} file${n > 1 ? 's' : ''}`, primary: true, disabled: !open,
         title: open ? 'Ask Claude in this chat' : 'Open a chat first', run: () => sendToChat(explainFolderPrompt(key)) },
+      '-',
+      { icon: '✓', label: 'Commit this folder…', hint: `${n} file${n > 1 ? 's' : ''}`, run: () => openCommit(under(key)) },
+      { icon: '↶', label: "Discard this folder's changes…", danger: true, run: () => openDiscard(under(key)) },
       '-',
       { icon: '⧉', label: 'Copy folder path', run: () => api.copyToClipboard?.(key + '/') },
     ];
@@ -222,7 +264,17 @@
       const isClosed = collapsed.has(key);
       const t = totals(d);
       const row = mk('button', 'gd-folder' + (isClosed ? ' closed' : ''));
-      row.style.paddingLeft = `${8 + depth * INDENT}px`;
+      row.dataset.key = key;
+      row.style.paddingLeft = `${30 + depth * INDENT}px`;
+      const inside = under(key), nOn = inside.filter((f) => ticked.has(f.path)).length;
+      const tick = checkBox(nOn > 0 && nOn === inside.length, nOn > 0 && nOn < inside.length);
+      tick.title = 'Include every file in this folder';
+      tick.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const all = inside.every((f) => ticked.has(f.path));
+        for (const f of inside) { if (all) ticked.delete(f.path); else ticked.add(f.path); }
+        paintChecks();
+      });
       row.title = `${key}/ · ${t.n} file${t.n > 1 ? 's' : ''}`;
       const chev = mk('span', 'gd-chev');
       chev.innerHTML = '<svg viewBox="0 0 10 10" width="10" height="10"><path d="M3 2l3.5 3L3 8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -235,7 +287,7 @@
         if (t.a) stats.append(mk('span', 'gd-add gd-faint', `+${t.a}`));
         if (t.r) stats.append(mk('span', 'gd-del gd-faint', `−${t.r}`));
       }
-      row.append(chev, icon, label, stats);
+      row.append(tick, chev, icon, label, stats);
       row.addEventListener('click', () => {
         if (collapsed.has(key)) collapsed.delete(key); else collapsed.add(key);
         drawList();
@@ -254,6 +306,7 @@
     list.innerHTML = '';
     visibleOrder = [];
     const { files } = state;
+    updateActions();
     const totA = files.reduce((n, f) => n + (f.added || 0), 0);
     const totR = files.reduce((n, f) => n + (f.removed || 0), 0);
     sub.textContent = files.length
@@ -520,6 +573,169 @@
     return table;
   }
 
+  // ---- Commit / Discard ----
+  // The bar under the tree acts on the ticked files; the right-click menu acts on one file / folder.
+  const dlgBack = mk('div', 'gd-dlg-back');
+  const dlg = mk('div', 'gd-dlg');
+  dlg.setAttribute('role', 'dialog');
+  dlg.setAttribute('aria-modal', 'true');
+  dlgBack.append(dlg);
+  const toast = mk('div', 'gd-toast');
+  panel.append(dlgBack, toast);
+  let dlgOpen = false, dlgBusy = false, dlgSubmit = null, toastTimer = null;
+  function closeDialog() { if (dlgBusy) return; dlgOpen = false; dlgSubmit = null; dlgBack.classList.remove('show'); }
+  function showDialog(build) {
+    hideMenu();
+    dlg.innerHTML = '';
+    build(dlg);
+    dlgOpen = true;
+    dlgBack.classList.add('show');
+    (dlg.querySelector('[data-focus]') || dlg).focus?.();
+  }
+  dlgBack.addEventListener('mousedown', (e) => { if (e.target === dlgBack) closeDialog(); });
+  function say(text, { action, ms = 6000, bad = false } = {}) {
+    clearTimeout(toastTimer);
+    toast.innerHTML = '';
+    toast.className = 'gd-toast show' + (bad ? ' bad' : '');
+    toast.append(mk('span', 'gd-toast-text', text));
+    if (action) {
+      const b = mk('button', 'gd-btn', action.label);
+      b.addEventListener('click', () => { toast.classList.remove('show'); action.run(); });
+      toast.append(b);
+    }
+    toastTimer = setTimeout(() => toast.classList.remove('show'), ms);
+  }
+  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  const ticks = () => state.files.filter((f) => ticked.has(f.path));
+
+  const barAll = checkBox(false);
+  const barText = mk('span', 'gd-actions-text');
+  const barCommit = mk('button', 'gd-btn primary', 'Commit…');
+  const barDiscard = mk('button', 'gd-btn danger', 'Discard…');
+  barAll.title = 'Tick / untick every file';
+  barAll.addEventListener('click', () => {
+    if (ticked.size === state.files.length) ticked.clear(); else state.files.forEach((f) => ticked.add(f.path));
+    paintChecks();
+  });
+  barCommit.addEventListener('click', () => openCommit(ticks()));
+  barDiscard.addEventListener('click', () => openDiscard(ticks()));
+  actionBar.append(barAll, barText, barCommit, barDiscard);
+  function updateActions() {
+    const n = ticked.size, total = state.files.length;
+    actionBar.hidden = !total;
+    barAll.classList.toggle('on', total > 0 && n === total);
+    barAll.classList.toggle('part', n > 0 && n < total);
+    barText.textContent = n ? `${n} of ${total}` : 'Tick files';
+    barText.title = n ? `${n} of ${total} files ticked` : 'Tick files to commit or discard them';
+    barCommit.disabled = !n;
+    barDiscard.disabled = !n;
+  }
+
+  function fileLines(files) {
+    const box = mk('div', 'gd-dlg-files');
+    for (const f of files.slice(0, 200)) {
+      const li = mk('div', 'gd-dlg-file');
+      li.append(mk('span', `gd-badge gd-${f.kind}`, (KIND[f.kind] || ['M'])[0]), mk('span', 'gd-dlg-path', f.path), mk('span', 'gd-stats gd-dim', counts(f)));
+      box.append(li);
+    }
+    return box;
+  }
+
+  function openCommit(files) {
+    if (!files.length) return;
+    const paths = files.map((f) => f.path);
+    showDialog((d) => {
+      d.append(mk('div', 'gd-dlg-title', `Commit ${plural(files.length, 'file')}`), fileLines(files));
+      const msg = mk('textarea', 'gd-dlg-msg');
+      msg.rows = 5; msg.spellcheck = false; msg.dataset.focus = '1';
+      msg.placeholder = 'Commit message — the first line is the summary';
+      const draft = mk('button', 'gd-btn', '✦ Draft with Claude');
+      draft.title = 'Claude (Haiku — cheap) reads the diff of these files and writes a message';
+      const pushLabel = mk('label', 'gd-dlg-check');
+      const push = mk('input'); push.type = 'checkbox';
+      pushLabel.append(push, mk('span', null, 'Push after committing'));
+      const acct = mk('input', 'gd-dlg-input');
+      acct.placeholder = 'GitHub account for the push (optional — only if you use several)';
+      acct.spellcheck = false; acct.hidden = true;
+      api.storeGetAll?.().then((st) => { if (st?.gitPushAccount) acct.value = st.gitPushAccount; }).catch(() => {});
+      push.addEventListener('change', () => { acct.hidden = !push.checked; go.textContent = push.checked ? 'Commit & push' : 'Commit'; });
+      const status = mk('div', 'gd-dlg-status');
+      const say_ = (t, bad) => { status.textContent = t; status.classList.toggle('bad', !!bad); };
+      const cancel = mk('button', 'gd-btn', 'Cancel');
+      const go = mk('button', 'gd-btn primary', 'Commit');
+      const lock = (on) => { dlgBusy = on; for (const x of [msg, draft, push, acct, cancel, go]) x.disabled = on; };
+      cancel.addEventListener('click', closeDialog);
+
+      draft.addEventListener('click', async () => {
+        lock(true); draft.textContent = 'Drafting…'; say_('Claude is reading the diff…');
+        const r = await api.gitDraftMessage(state.cwd, paths).catch((e) => ({ error: e.message }));
+        lock(false); draft.textContent = '✦ Draft with Claude';
+        if (r?.message) { msg.value = r.message; say_(''); } else say_(r?.error || 'No draft came back', true);
+        msg.focus();
+      });
+      async function submit() {
+        if (dlgBusy) return;
+        if (!msg.value.trim()) { say_('Write a commit message first', true); msg.focus(); return; }
+        lock(true); say_('Committing…');
+        const c = await api.gitCommit(state.cwd, paths, msg.value).catch((e) => ({ error: e.message }));
+        if (c?.error) { lock(false); say_(c.error, true); return; }
+        let note = `Committed ${c.sha}`, bad = false;
+        if (push.checked) {
+          say_('Pushing…');
+          const p = await api.gitPush(state.cwd, acct.value).catch((e) => ({ error: e.message }));
+          if (p?.error) { note += ` — but the push failed: ${p.error}`; bad = true; } else note += ' · pushed';
+        }
+        lock(false); closeDialog();
+        paths.forEach((p) => ticked.delete(p));
+        await load(true);
+        say(note, { bad, ms: bad ? 14000 : 6000 });
+      }
+      dlgSubmit = submit;
+      go.addEventListener('click', submit);
+      const row = mk('div', 'gd-dlg-row');
+      row.append(draft, mk('span', 'gd-dlg-hint', 'Ctrl+Enter to commit'));
+      d.append(msg, row, pushLabel, acct, status, mk('div', 'gd-dlg-buttons'));
+      d.lastChild.append(cancel, go);
+    });
+  }
+
+  function openDiscard(files) {
+    if (!files.length) return;
+    const paths = files.map((f) => f.path);
+    const fresh = files.filter((f) => f.kind === 'untracked' || f.kind === 'added').length;
+    showDialog((d) => {
+      d.append(mk('div', 'gd-dlg-title', `Discard changes in ${plural(files.length, 'file')}?`), fileLines(files));
+      d.append(mk('div', 'gd-dlg-warn',
+        (fresh ? `${plural(fresh, 'new file')} will be deleted. ` : '') +
+        (files.length > fresh ? 'The other files go back to the last commit. ' : '') +
+        'A backup is kept for a week, and you can undo right after.'));
+      const status = mk('div', 'gd-dlg-status');
+      const cancel = mk('button', 'gd-btn', 'Cancel');
+      cancel.dataset.focus = '1'; // the safe choice has the focus
+      const go = mk('button', 'gd-btn danger', 'Discard');
+      cancel.addEventListener('click', closeDialog);
+      async function submit() {
+        if (dlgBusy) return;
+        dlgBusy = true; go.disabled = cancel.disabled = true; status.textContent = 'Discarding…'; status.classList.remove('bad');
+        const r = await api.gitDiscard(state.cwd, paths).catch((e) => ({ error: e.message }));
+        dlgBusy = false; go.disabled = cancel.disabled = false;
+        if (r?.error) { status.textContent = r.error; status.classList.add('bad'); if (r.backup) await load(true); return; }
+        closeDialog();
+        paths.forEach((p) => ticked.delete(p));
+        await load(true);
+        say(`Discarded ${plural(r.count, 'file')}`, { ms: 15000, action: { label: 'Undo', run: async () => {
+          const u = await api.gitUndoDiscard(state.cwd, r.backup).catch((e) => ({ error: e.message }));
+          await load(true);
+          say(u?.error ? u.error : `Put back ${plural(u.count, 'file')}`, { bad: !!u?.error });
+        } } });
+      }
+      // no Ctrl+Enter shortcut for the destructive one: it has to be clicked
+      go.addEventListener('click', submit);
+      d.append(status, mk('div', 'gd-dlg-buttons'));
+      d.lastChild.append(cancel, go);
+    });
+  }
+
   // ---- load / open / close ----
   async function load(keepSelection) {
     btnRefresh.classList.add('spin');
@@ -535,6 +751,7 @@
     }
     state.top = r.top;
     state.files = r.files;
+    for (const p of [...ticked]) if (!state.files.some((f) => f.path === p)) ticked.delete(p); // gone since last look
     drawList();
     const still = keepSelection && state.files.some((f) => f.path === state.selected);
     const first = visibleOrder[0]; // top file in the tree
@@ -547,14 +764,19 @@
     const same = cwd === state.cwd;
     state.cwd = cwd;
     state.branch = branch || '';
-    if (!same) state.selected = '';
+    if (!same) { state.selected = ''; ticked.clear(); }
     title.textContent = 'Changes';
     document.body.classList.add('gd-open');
     liftApprovals(true);
     panel.focus();
     load(same);
   }
-  function close() { hideMenu(); document.body.classList.remove('gd-open'); liftApprovals(false); }
+  function close() {
+    hideMenu();
+    dlgOpen = false; dlgSubmit = null; dlgBack.classList.remove('show'); // (a commit in progress carries on)
+    document.body.classList.remove('gd-open');
+    liftApprovals(false);
+  }
 
   // Tool-approval cards live inside the main window card, which sits under this
   // panel — so a card that arrives while the panel is open would be hidden and
@@ -594,6 +816,11 @@
   });
   document.addEventListener('keydown', (e) => {
     if (!isOpen()) return;
+    if (dlgOpen) { // a dialog has the keyboard: Esc closes it, Ctrl+Enter confirms (commit only)
+      if (e.key === 'Escape') { e.stopPropagation(); closeDialog(); }
+      else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && dlgSubmit) { e.preventDefault(); dlgSubmit(); }
+      return;
+    }
     if (e.key === 'Escape') { e.stopPropagation(); if (menuFor) hideMenu(); else if (hasPick()) clearPick(); else close(); return; }
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && hasPick()) { e.preventDefault(); addToChat(); return; }
     if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && visibleOrder.length && !/INPUT|TEXTAREA/.test(document.activeElement?.tagName)) {

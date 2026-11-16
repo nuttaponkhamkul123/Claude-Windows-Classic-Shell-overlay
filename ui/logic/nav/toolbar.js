@@ -74,12 +74,32 @@
   });
 
   // ---------------- Claude Code: Model ▾ → pick a model, then its effort ----------------
+  // Scope: 'chat' = every next message (sticky) · 'once' = only the next message,
+  // then back to the chat's model (e.g. Haiku for a quick question).
+  let modelScope = 'chat';
+  function scopeSwitch(step, model) {
+    const wrap = el('div', 'fx-scope');
+    for (const [value, label, tip] of [
+      ['once', 'This message', 'Only the next message uses it, then the chat goes back to its model'],
+      ['chat', 'Every message', 'All next messages in this chat use it'],
+    ]) {
+      const b = el('button', 'fx-scope-btn' + (modelScope === value ? ' on' : ''), label);
+      b.title = tip;
+      b.addEventListener('click', (e) => { e.stopPropagation(); modelScope = value; renderClaudeModel(step, model); });
+      wrap.appendChild(b);
+    }
+    return wrap;
+  }
   function renderClaudeModel(step, model) {
     const s = currentActiveSession;
     if (!s) return;
     const opts = getReplyOptions(s);
+    const once = modelScope === 'once';
+    const curModel = (once ? opts.oneShotModel : opts.model) || 'default';
+    const curEffort = (once ? opts.oneShotEffort : opts.effort) || 'default';
     const cmd = (n) => BUILTIN_COMMANDS.find((c) => c.name === n);
     claudeModelPanel.innerHTML = '';
+    claudeModelPanel.appendChild(scopeSwitch(step, model));
     const head = el('div', 'mcp-panel-head');
     const list = el('div', 'fx-skill-list');
     const row = (value, desc, selected, onPick) => {
@@ -94,19 +114,25 @@
     if (step === 'model') {
       head.append(el('span', null, 'Model'));
       for (const o of cmd('model').options) {
-        row(o.value, o.description, (opts.model || 'default') === o.value, () => renderClaudeModel('effort', o.value));
+        const desc = once && o.value === 'default' ? 'Keep this chat’s model' : o.description;
+        row(o.value, desc, curModel === o.value, () => renderClaudeModel('effort', o.value));
       }
     } else {
       const back = el('button', 'tb-btn', '‹ Model');
       back.addEventListener('click', (e) => { e.stopPropagation(); renderClaudeModel('model'); });
       head.append(back, el('span', null, 'Effort · ' + model));
       for (const o of cmd('effort').options) {
-        row(o.value, o.description, (opts.effort || 'default') === o.value, () => {
-          if (model === 'default') delete opts.model; else opts.model = model;
-          if (o.value === 'default') delete opts.effort; else opts.effort = o.value;
+        const desc = once && o.value === 'default' ? 'Keep this chat’s effort' : o.description;
+        row(o.value, desc, curEffort === o.value, () => {
+          const [mKey, eKey] = once ? ['oneShotModel', 'oneShotEffort'] : ['model', 'effort'];
+          if (model === 'default') delete opts[mKey]; else opts[mKey] = model;
+          if (o.value === 'default') delete opts[eKey]; else opts[eKey] = o.value;
           closeAll();
           renderReplyOptions();
-          addSystemNote(`Next replies: model ${model}, effort ${o.value}.`);
+          addSystemNote(once
+            ? `This message only: model ${model}, effort ${o.value}. After it, the chat goes back to its own model.`
+            : `Next replies: model ${model}, effort ${o.value}.`);
+          replyTextarea.focus();
         });
       }
     }

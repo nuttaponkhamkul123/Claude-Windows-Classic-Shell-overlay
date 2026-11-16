@@ -327,6 +327,23 @@
 .fx-model-row.selected { border-color: #7da2ce; background: linear-gradient(180deg, #e8f2fd 0%, #d4e6fa 100%); }
 .fx-model-row .fx-skill-desc { padding-left: 18px; font-family: Consolas, monospace; font-size: 10.5px; }
 
+/* Cost chip in the chat header (cost-meter.js) */
+.cost-chip { display: block; width: fit-content; margin: 6px 0 0; padding: 1px 8px; border-radius: 9px; font-size: 11px; white-space: nowrap;
+  background: rgba(127,127,127,.14); border: 1px solid rgba(127,127,127,.28); cursor: default; }
+.cost-chip[hidden] { display: none; }
+.cost-chip.warn { color: #b87700; background: rgba(210,153,34,.14); border-color: rgba(210,153,34,.5); }
+body.style-work .cost-chip { color: var(--wk-dim); }
+body.style-work .cost-chip.warn, body.theme-vista .cost-chip.warn { color: #e3c27a; }
+
+/* Model menu: "This message" / "Every message" switch */
+.fx-scope { display: flex; gap: 2px; margin: 4px 6px 6px; padding: 2px; border: 1px solid rgba(127,127,127,.35); border-radius: 6px; }
+.fx-scope-btn { flex: 1; font: inherit; font-size: 11px; padding: 3px 6px; border: 0; border-radius: 4px;
+  background: transparent; color: inherit; opacity: .7; cursor: pointer; }
+.fx-scope-btn:hover { opacity: 1; }
+.fx-scope-btn.on { opacity: 1; font-weight: 600; background: rgba(31,111,184,.16); color: #1f6fb8; }
+body.style-work .fx-scope { border-color: var(--wk-line); }
+body.style-work .fx-scope-btn.on, body.theme-vista .fx-scope-btn.on, body.style-shelter .fx-scope-btn.on { background: rgba(76,141,255,.18); color: #8fb6ff; }
+
 /* ---- Workspace line in the conversation header ---- */
 .convo-workspace {
   display: flex; align-items: baseline; gap: 5px;
