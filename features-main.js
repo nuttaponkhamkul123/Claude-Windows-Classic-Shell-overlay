@@ -718,6 +718,35 @@ async function openFile(raw) {
   }
 }
 
+// Open a folder or file in the Antigravity IDE. Starts its program directly (no shell, so the path is
+// never parsed as a command); if the IDE is already running it opens the folder/file in that window.
+function findAntigravityExe() {
+  const roots = [process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'Programs'),
+    process.env.ProgramFiles, process.env['ProgramFiles(x86)']].filter(Boolean);
+  for (const r of roots) {
+    const exe = path.join(r, 'Antigravity IDE', 'Antigravity IDE.exe');
+    if (fs.existsSync(exe)) return exe;
+  }
+  return null;
+}
+function openInAntigravity(target, line) {
+  if (typeof target !== 'string' || !path.isAbsolute(target)) return 'missing';
+  let isDir;
+  try { isDir = fs.statSync(target).isDirectory(); } catch (_) { return 'missing'; }
+  const exe = findAntigravityExe();
+  if (!exe) return 'no-ide';
+  const n = Number.isInteger(line) && line > 0 ? line : 0;
+  const args = isDir ? [target] : ['--goto', n ? `${target}:${n}` : target];
+  const env = { ...process.env };
+  delete env.ELECTRON_RUN_AS_NODE; delete env.VSCODE_DEV;
+  try {
+    const child = require('child_process').spawn(exe, args, { env, detached: true, stdio: 'ignore', windowsHide: false });
+    child.on('error', () => {});
+    child.unref();
+    return 'ok';
+  } catch (_) { return 'error'; }
+}
+
 // ---------------------------------------------------------------------------
 // Git (the chat header's git box and the Changes panel) lives in main/git.js
 // ---------------------------------------------------------------------------
@@ -779,6 +808,7 @@ function register(c) {
 
   ipcMain.handle('search-transcripts', (_e, q) => searchTranscripts(q).catch(() => []));
   ipcMain.handle('open-file', (_e, p) => openFile(p));
+  ipcMain.handle('open-in-antigravity', (_e, p, line) => openInAntigravity(p, line));
   ipcMain.handle('stop-reply', (_e, id) => stopReply(id));
   ipcMain.handle('voice-typing', () => startVoiceTyping());
   ipcMain.handle('get-digest', () => digestText());

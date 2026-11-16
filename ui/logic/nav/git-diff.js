@@ -226,6 +226,14 @@
     submitReply(text);
   }
 
+  // Hand a file or folder to the Antigravity IDE; say so in the status line if that is not possible
+  async function openInAntigravity(p) {
+    const r = await api.openInAntigravity?.(p);
+    const msg = { 'no-ide': 'Antigravity IDE is not installed on this PC', missing: 'That file or folder no longer exists', error: 'Could not start Antigravity' }[r];
+    if (msg && typeof replyStatusMsg !== 'undefined') replyStatusMsg.textContent = '⚠ ' + msg;
+  }
+  window.openInAntigravity = openInAntigravity;
+
   function fileMenu(f) {
     const open = chatIsOpen();
     return [
@@ -237,6 +245,8 @@
       '-',
       { icon: '↗', label: 'Open in VS Code', disabled: f.kind === 'deleted',
         run: () => api.openFile?.(state.top + '\\' + f.path.replace(/\//g, '\\')) },
+      { icon: '↗', label: 'Open in Antigravity', disabled: f.kind === 'deleted',
+        run: () => openInAntigravity(state.top + '\\' + f.path.replace(/\//g, '\\')) },
       { icon: '⧉', label: 'Copy path', hint: f.path.length > 28 ? '…' + f.path.slice(-27) : f.path,
         run: () => api.copyToClipboard?.(f.path) },
     ];
@@ -251,6 +261,7 @@
       { icon: '✓', label: 'Commit this folder…', hint: `${n} file${n > 1 ? 's' : ''}`, run: () => openCommit(under(key)) },
       { icon: '↶', label: "Discard this folder's changes…", danger: true, run: () => openDiscard(under(key)) },
       '-',
+      { icon: '↗', label: 'Open folder in Antigravity', run: () => openInAntigravity(state.top + '\\' + key.replace(/\//g, '\\')) },
       { icon: '⧉', label: 'Copy folder path', run: () => api.copyToClipboard?.(key + '/') },
     ];
   }

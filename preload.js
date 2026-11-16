@@ -39,6 +39,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   storeSet: (key, value) => ipcRenderer.send('store-set', { key, value }),
   searchTranscripts: (q) => ipcRenderer.invoke('search-transcripts', q),
   openFile: (p) => ipcRenderer.invoke('open-file', p),
+  openInAntigravity: (p, line) => ipcRenderer.invoke('open-in-antigravity', p, line),
   stopReply: (sessionId) => ipcRenderer.invoke('stop-reply', sessionId),
   voiceTyping: () => ipcRenderer.invoke('voice-typing'),
   getDigest: () => ipcRenderer.invoke('get-digest'),

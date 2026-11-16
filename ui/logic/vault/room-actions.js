@@ -48,6 +48,7 @@
     const noFolder = 'This room groups chats by status, not by folder';
     item('＋ New chat here', () => newChatIn(g), canChat, canChat ? `New chat in ${g.cwd}` : noFolder);
     item('📂 Open folder', () => api.openFolder?.(g.cwd), !!g.cwd, g.cwd || noFolder);
+    item('↗ Open in Antigravity', () => window.openInAntigravity?.(g.cwd), !!g.cwd && !!window.openInAntigravity, g.cwd || noFolder);
     if (typeof window.openFurnitureShop === 'function') {
       const wall = room.querySelector('.vault-wall')?.getBoundingClientRect();
       const pct = wall?.width ? ((e.clientX - wall.left) / wall.width) * 100 : 50;
