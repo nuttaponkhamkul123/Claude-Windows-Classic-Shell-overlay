@@ -371,10 +371,16 @@
   activityRow?.appendChild(btnStop);
   btnStop.addEventListener('click', async () => {
     if (!currentActiveSession) return;
+    const id = currentActiveSession.id;
     btnStop.disabled = true;
-    const ok = await api.stopReply?.(currentActiveSession.id);
+    const ok = await api.stopReply?.(id);
     btnStop.disabled = false;
-    if (!ok) replyStatusMsg.textContent = 'Only replies sent from this HUD can be stopped here';
+    if (!ok) { replyStatusMsg.textContent = 'Only replies sent from this HUD can be stopped here'; return; }
+    // Stop means stop: don't fire the queued messages right after
+    const dropped = queues.get(id)?.length || 0;
+    queues.delete(id);
+    renderQueue();
+    replyStatusMsg.textContent = dropped ? `■ Stopped — ${dropped} queued message${dropped > 1 ? 's' : ''} cancelled` : '■ Stopping…';
   });
 
   // -------------------------------------------------------------------------

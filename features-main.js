@@ -764,6 +764,91 @@ async function gitInfo(cwd) {
   return info;
 }
 
+// Changed files for the git diff panel: every file that differs from HEAD
+// (staged or not) plus untracked files, with +/− line counts. Read-only.
+function gitBig(cwd, args) {
+  return new Promise((resolve) => {
+    execFile('git', ['-C', cwd, '-c', 'core.quotepath=false', ...args],
+      { windowsHide: true, timeout: 8000, maxBuffer: 16 * 1024 * 1024 },
+      (err, stdout) => resolve(err ? null : String(stdout)));
+  });
+}
+const MAX_TEXT = 512 * 1024; // untracked files bigger than this aren't shown inline
+async function gitChanges(cwd) {
+  if (!cwd || typeof cwd !== 'string' || !path.isAbsolute(cwd) || !fs.existsSync(cwd)) return null;
+  const top = (await git(cwd, ['rev-parse', '--show-toplevel']))?.replace(/\//g, path.sep);
+  if (!top) return null;
+  const hasHead = !!(await git(top, ['rev-parse', '--verify', '--quiet', 'HEAD']));
+  const [status, numstat] = await Promise.all([
+    gitBig(top, ['status', '--porcelain=v1', '-z', '--untracked-files=all']),
+    gitBig(top, hasHead ? ['diff', 'HEAD', '--numstat', '-z', '-M'] : ['diff', '--cached', '--numstat', '-z']),
+  ]);
+  // numstat -z: "added\tremoved\tpath\0", renames: "added\tremoved\t\0old\0new\0"
+  const counts = new Map();
+  const ns = (numstat || '').split('\0');
+  for (let i = 0; i < ns.length; i++) {
+    const m = ns[i].match(/^(-|\d+)\t(-|\d+)\t(.*)$/s);
+    if (!m) continue;
+    let p = m[3];
+    if (!p) { i += 2; p = ns[i]; } // rename: take the new path
+    counts.set(p, { added: m[1] === '-' ? null : +m[1], removed: m[2] === '-' ? null : +m[2], binary: m[1] === '-' });
+  }
+  const files = [];
+  const st = (status || '').split('\0');
+  for (let i = 0; i < st.length; i++) {
+    const e = st[i];
+    if (!e || e.length < 4) continue;
+    const x = e[0], y = e[1], p = e.slice(3);
+    let from = '';
+    if (x === 'R' || x === 'C') from = st[++i] || '';
+    const kind = x === '?' ? 'untracked' : (x === 'D' || y === 'D') ? 'deleted'
+      : (x === 'A') ? 'added' : (x === 'R') ? 'renamed' : 'modified';
+    const c = counts.get(p) || {};
+    let added = c.added ?? 0, removed = c.removed ?? 0, binary = !!c.binary, large = false;
+    if (kind === 'untracked') {
+      try {
+        const full = path.join(top, p);
+        const size = fs.statSync(full).size;
+        large = size > MAX_TEXT;
+        if (!large) {
+          const buf = fs.readFileSync(full);
+          if (buf.includes(0)) binary = true;
+          else added = buf.toString('utf8').split(/\r?\n/).length - (buf.length && buf[buf.length - 1] === 10 ? 1 : 0);
+        }
+      } catch (_) {}
+    }
+    files.push({ path: p, from, kind, staged: x !== ' ' && x !== '?', added, removed, binary, large });
+  }
+  files.sort((a, b) => a.path.localeCompare(b.path));
+  return { top, files };
+}
+// Unified diff of one file vs HEAD (untracked: the whole file as added lines)
+async function gitFileDiff(cwd, rel) {
+  const info = await gitChanges(cwd);
+  if (!info || typeof rel !== 'string') return { error: 'Not a git repository' };
+  const f = info.files.find((x) => x.path === rel);
+  if (!f) return { error: 'This file has no changes any more' };
+  const full = path.resolve(info.top, rel);
+  if (!full.toLowerCase().startsWith(info.top.toLowerCase() + path.sep)) return { error: 'Bad path' };
+  if (f.binary) return { binary: true };
+  if (f.kind === 'untracked') {
+    try {
+      if (fs.statSync(full).size > MAX_TEXT) return { error: 'File is too big to show here' };
+      return { lines: fs.readFileSync(full, 'utf8').replace(/\r?\n$/, '').split(/\r?\n/).map((t) => '+' + t), untracked: true };
+    } catch (err) { return { error: err.message }; }
+  }
+  const hasHead = !!(await git(info.top, ['rev-parse', '--verify', '--quiet', 'HEAD']));
+  const args = hasHead ? ['diff', 'HEAD', '-M', '-U3', '--no-color', '--'] : ['diff', '--cached', '-U3', '--no-color', '--'];
+  if (f.from) args.push(f.from);
+  args.push(rel);
+  const out = await gitBig(info.top, args);
+  if (out == null) return { error: 'git diff failed' };
+  if (/^Binary files /m.test(out)) return { binary: true };
+  const lines = out.replace(/\r/g, '').split('\n');
+  const start = lines.findIndex((l) => l.startsWith('@@'));
+  return { lines: start < 0 ? [] : lines.slice(start).filter((l, i, a) => i < a.length - 1 || l) };
+}
+
 // ---------------------------------------------------------------------------
 // Register IPC
 // ---------------------------------------------------------------------------
@@ -890,6 +975,8 @@ function register(c) {
 
   // Git info for a session's folder (read-only git commands, cached a few seconds)
   ipcMain.handle('git-info', (_e, cwd) => gitInfo(cwd));
+  ipcMain.handle('git-changes', (_e, cwd) => gitChanges(cwd));
+  ipcMain.handle('git-file-diff', (_e, cwd, rel) => gitFileDiff(cwd, rel));
 
   // Desktop shortcut creator (Windows .lnk via Electron's shell.writeShortcutLink)
   function createDesktopShortcut({ force = false } = {}) {
@@ -938,4 +1025,5 @@ function register(c) {
 module.exports = {
   register, onSync, readClaudeHistory, readAntigravityHistory, readSessionHistory, pathForSession,
   getSetting, setSetting, trackChild, aliasChild, wasStopped, editFromToolUse, mergeEdit, openFile,
+  gitChanges, gitFileDiff,
 };

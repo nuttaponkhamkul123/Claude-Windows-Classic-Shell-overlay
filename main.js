@@ -34,7 +34,7 @@ let saveWindowTimer = null;
 function saveWindowSoon() {
   clearTimeout(saveWindowTimer);
   saveWindowTimer = setTimeout(() => {
-    if (!mainWindow || mainWindow.isDestroyed() || dockState.docked || boundsAnim) return; // never save the mini tab
+    if (!mainWindow || mainWindow.isDestroyed() || dockState.docked || boundsAnim || maxRestore) return; // never save the mini tab / maximized size
     const [x, y] = mainWindow.getPosition();
     features.setSetting('window', { x, y, width: currentWidth, height: currentExpandedHeight });
   }, 400);
@@ -242,9 +242,32 @@ let isWindowExpanded = true; // always expanded
 let compactExtra = 0;
 const compactHeight = () => COMPACT_HEIGHT + compactExtra;
 
+// Maximize: fill the screen's work area (win.maximize() doesn't work on a
+// transparent frameless window). maxRestore = bounds to go back to, or null.
+let maxRestore = null;
+const restoreMaxSize = () => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setMaximumSize(1400, 1200); };
+function setMaximized(on) {
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+  if (on && !maxRestore) {
+    if (dockState.docked) undock();
+    maxRestore = mainWindow.getBounds();
+    const { workArea } = screen.getDisplayMatching(maxRestore);
+    mainWindow.setMaximumSize(0, 0); // lift the 1400×1200 cap, or a big screen is only ~70% filled
+    mainWindow.setBounds(workArea);
+  } else if (!on && maxRestore) {
+    const b = maxRestore;
+    maxRestore = null;
+    mainWindow.setBounds(b);
+    restoreMaxSize();
+  }
+  mainWindow.webContents.send('maximized', !!maxRestore);
+  return !!maxRestore;
+}
+ipcMain.handle('toggle-maximize', () => setMaximized(!maxRestore));
+
 ipcMain.on('resize-window', (_event, expanded) => {
   isWindowExpanded = !!expanded;
-  if (!mainWindow || dockState.docked) return; // mini tab keeps its size; renderer re-syncs on undock
+  if (!mainWindow || dockState.docked || maxRestore) return; // mini tab keeps its size; renderer re-syncs on undock
   const targetHeight = expanded ? currentExpandedHeight : compactHeight();
   mainWindow.setSize(currentWidth, targetHeight);
 });
@@ -254,13 +277,14 @@ ipcMain.on('set-compact-extra', (_event, px) => {
   const next = Math.max(0, Math.min(400, Math.round(Number(px) || 0)));
   if (next === compactExtra) return;
   compactExtra = next;
-  if (mainWindow && !mainWindow.isDestroyed() && !isWindowExpanded && !dockState.docked && !dragTimer) {
+  if (mainWindow && !mainWindow.isDestroyed() && !isWindowExpanded && !dockState.docked && !dragTimer && !maxRestore) {
     mainWindow.setSize(currentWidth, compactHeight());
   }
 });
 
 ipcMain.on('set-window-size', (_event, { width, height }) => {
   if (!mainWindow || dockState.docked) return;
+  if (maxRestore) { maxRestore = null; restoreMaxSize(); mainWindow.webContents.send('maximized', false); } // resized by hand → no longer maximized
   currentWidth = Math.round(width);
   if (height > COMPACT_HEIGHT + 30) {
     currentExpandedHeight = Math.round(height);
@@ -1030,6 +1054,8 @@ ipcMain.on('send-reply', async (_event, { text, image, images, files, session, c
       let stdoutBuf = '';
       let accumulatedText = '';
       let currentStatusLabel = 'Running (Thinking...)';
+      let errorText = '';
+      let stderrText = '';
 
       child.stdout.on('data', (chunk) => {
         stdoutBuf += chunk.toString('utf-8');
@@ -1050,6 +1076,12 @@ ipcMain.on('send-reply', async (_event, { text, image, images, files, session, c
               if (mainWindow && !mainWindow.isDestroyed()) {
                 mainWindow.webContents.send('reply-rekey', { oldId: startedAsId, newId, sessionUuid: obj.session_id });
               }
+            }
+            if (obj.type === 'result' && obj.is_error) {
+              errorText = String(obj.result || (obj.errors || []).join('\n') || obj.subtype || 'error');
+            } else if (obj.type === 'assistant' && (obj.error || obj.message?.model === '<synthetic>')) {
+              const t = (obj.message?.content || []).find((b) => b.type === 'text')?.text;
+              if (t) errorText = t;
             }
             if (obj.type === 'system' && obj.subtype === 'thinking_tokens') {
               currentStatusLabel = 'Running (Thinking...)';
@@ -1098,12 +1130,38 @@ ipcMain.on('send-reply', async (_event, { text, image, images, files, session, c
       });
 
       child.stderr.on('data', (chunk) => {
-        console.error('[Claude STDERR]', chunk.toString('utf-8'));
+        const s = chunk.toString('utf-8');
+        stderrText = (stderrText + s).slice(-4000);
+        console.error('[Claude STDERR]', s);
       });
 
-      child.on('error', cleanupTemp);
+      // Process gone (finished, crashed, or never started) → drop the "running"
+      // hold so the session can't stay on "thinking" forever.
+      const endRun = (code, err) => {
+        // Stopped or crashed mid-turn: the log never gets an end marker, so it would
+        // read as "running" for 10 min. markTurnEnded keeps it idle until the log changes.
+        const cut = features.wasStopped(sessionId) || code !== 0;
+        const end = (id) => (cut ? watcher.markTurnEnded(id, features.wasStopped(sessionId) ? 'Idle (Stopped)' : 'Idle (Error)') : watcher.cancelRunning(id));
+        if (watcher && sessionId) end(sessionId);
+        if (watcher && startedAsId && startedAsId !== sessionId) end(startedAsId);
+        if (code === 0 && !errorText) return '';
+        const first = (errorText || stderrText || (err && err.message) || '').split(/\r?\n/).find((l) => l.trim()) || '';
+        return first.trim().slice(0, 300);
+      };
+
+      child.on('error', (err) => {
+        cleanupTemp();
+        const why = endRun(-1, err);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('reply-status', {
+            sessionId, status: 'idle', statusLabel: 'Idle (Error)', text: accumulatedText,
+            message: '⚠ ' + (why || 'Could not start Claude')
+          });
+        }
+      });
       child.on('close', (code) => {
         cleanupTemp();
+        const why = endRun(code);
         // Any approval prompts from this run can no longer be answered
         for (const [pid, p] of permState.pendingPermissions) {
           if (p.sessionId === sessionId || p.sessionId === startedAsId) {
@@ -1120,7 +1178,9 @@ ipcMain.on('send-reply', async (_event, { text, image, images, files, session, c
             text: accumulatedText,
             edits: runEdits,
             code,
-            message: features.wasStopped(sessionId) ? '■ Stopped' : code === 0 ? '✓ Claude replied!' : `Claude exited (${code})`
+            message: features.wasStopped(sessionId) ? '■ Stopped'
+              : why ? `⚠ ${why}`
+              : code === 0 ? '✓ Claude replied!' : `Claude exited (${code})`
           });
         }
       });
@@ -1503,6 +1563,7 @@ function clampY(y, height, wa) {
 function dockToEdge(side) {
   if (!mainWindow) return;
   if (dockSwapTimer) { clearTimeout(dockSwapTimer); dockSwapTimer = null; }
+  if (maxRestore) { mainWindow.setBounds(maxRestore); maxRestore = null; restoreMaxSize(); mainWindow.webContents.send('maximized', false); }
   const b = mainWindow.getBounds();
   const wa = workAreaAt({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
   dockState = { docked: false, side, restore: { width: b.width, height: b.height } };
@@ -1620,6 +1681,16 @@ ipcMain.on('window-drag-start', () => {
       dragInfo.moved = true;
     }
     if (!dragInfo.moved) return;
+    if (maxRestore) {
+      // dragging a maximized window: back to its old size, keeping the cursor
+      // at the same spot across the title bar (like Windows)
+      const { width, height } = maxRestore;
+      dragInfo.offsetX = Math.round(width * (dragInfo.offsetX / dragInfo.width));
+      dragInfo.width = width;
+      dragInfo.height = height;
+      maxRestore = null; restoreMaxSize();
+      mainWindow.webContents.send('maximized', false);
+    }
 
     const wa = workAreaAt(p);
     let x = p.x - dragInfo.offsetX;

@@ -43,7 +43,9 @@
     }
     for (const r of rules) {
       const item = el('div', 'mcp-row rule-row');
-      const what = r.prefix ? `${r.tool}: ${r.prefix}…` : r.tool.replace(/^mcp__(.+?)__(.+)$/, '$1 › $2');
+      const what = r.prefix ? `${r.tool}: ${r.prefix}…`
+        : (r.tool === 'Bash' || r.tool === 'run_command') ? `${r.tool}: all commands`
+        : r.tool.replace(/^mcp__(.+?)__(.+)$/, '$1 › $2');
       const name = el('span', 'mcp-name', what);
       name.title = `${what}\nFolder: ${r.folder || 'any'}`;
       const where = el('span', 'mcp-status', folderName(r.folder) || 'any folder');

@@ -125,13 +125,17 @@ function startPermissionServer(ctx, state) {
         stillAsks: check.offer.stillAsks,
         folder: cwd,
       } : null;
+      // "Always allow all commands in this folder": a blanket shell rule for the
+      // session's folder (checkRules treats an empty prefix as "any command").
+      const trustFolder = cwd && isShellToolName(toolName) && typeof input.command === 'string'
+        ? { tool: toolName, folder: cwd } : null;
 
       const id = crypto.randomBytes(8).toString('hex');
       const timer = setTimeout(() => {
         answerPermission(state, id, { behavior: 'deny', message: 'No answer in the HUD within 10 minutes.' });
         sendToWin(ctx, 'permission-expired', { id });
       }, PERMISSION_TIMEOUT_MS);
-      state.pendingPermissions.set(id, { res, timer, sessionId, toolName, always });
+      state.pendingPermissions.set(id, { res, timer, sessionId, toolName, always, trustFolder });
 
       // If the client gives up (e.g. Claude was stopped), drop the prompt
       res.on('close', () => {
@@ -146,7 +150,7 @@ function startPermissionServer(ctx, state) {
       if (win && !win.isDestroyed()) {
         if (ctx.window.isDocked()) ctx.window.undock();
         win.showInactive();
-        win.webContents.send('permission-request', { id, sessionId, toolName, input, always });
+        win.webContents.send('permission-request', { id, sessionId, toolName, input, always, trustFolder });
       }
     });
   });
@@ -179,6 +183,14 @@ function register(r, ctx, state) {
         added = true;
       }
       if (added) saveRules(state);
+    }
+    if (choice === 'always-folder' && p.trustFolder) {
+      const folder = normFolder(p.trustFolder.folder);
+      const tool = p.trustFolder.tool;
+      // the blanket rule replaces any per-command rules for this tool + folder
+      state.approvalRules = state.approvalRules.filter((rule) => !(rule.tool === tool && rule.folder === folder));
+      state.approvalRules.push({ id: crypto.randomBytes(4).toString('hex'), tool, prefix: '', folder, created: Date.now() });
+      saveRules(state);
     }
     const note = typeof message === 'string' && message.trim() ? message.trim().slice(0, 4000) : 'The user denied this in the HUD.';
     answerPermission(state, id, choice === 'deny'

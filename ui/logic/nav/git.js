@@ -63,7 +63,7 @@
       info.changed ? `${info.changed} file(s) changed${info.staged ? `, ${info.staged} staged` : ''}${info.untracked ? `, ${info.untracked} untracked` : ''}` : 'Working tree clean',
       `Git user: ${info.userName || '(not set)'}${info.userEmail ? ` <${info.userEmail}>` : ''}`,
       '',
-      'Click to copy the branch name',
+      window.openGitDiff ? 'Click to see the changed files and their diffs' : 'Click to copy the branch name',
     ].join('\n');
   }
 
@@ -92,6 +92,8 @@
   box.addEventListener('click', () => {
     const b = box.querySelector('.git-branch');
     if (!b) return;
+    // changes panel (logic/nav/git-diff.js); copying the branch moved into it
+    if (window.openGitDiff && currentActiveSession?.cwd) { window.openGitDiff(currentActiveSession.cwd, b.textContent); return; }
     api.copyToClipboard(b.textContent);
     box.classList.add('copied');
     setTimeout(() => box.classList.remove('copied'), 900);

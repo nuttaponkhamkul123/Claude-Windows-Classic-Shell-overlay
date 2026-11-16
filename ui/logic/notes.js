@@ -16,7 +16,8 @@
     document.body.classList.toggle('np-light', !dark);
     document.body.classList.toggle('np-shelter', shelter);
   }
-  applyTheme(api.settings.uiStyle === 'classic' ? (api.settings.theme || 'aero') : 'shelter');
+  const st = api.settings.uiStyle;
+  applyTheme(st === 'classic' ? (api.settings.theme || 'aero') : st === 'work' ? 'dark' : 'shelter');
   api.onTheme?.(applyTheme);
 
   const el = (tag, cls, text) => {

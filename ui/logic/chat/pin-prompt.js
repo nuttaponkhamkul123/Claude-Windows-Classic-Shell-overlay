@@ -28,7 +28,14 @@
 
   function fillFrom(bubble) {
     const content = bubble.querySelector('.bubble-content');
-    const text = (content ? content.textContent : '').trim();
+    let text = (content ? content.textContent : '').trim();
+    if (content?.querySelector('.explain-pill')) {
+      // "Explain …" pills: show their short labels, not the hidden full prompt
+      const c = content.cloneNode(true);
+      c.querySelectorAll('.ep-detail').forEach((n) => n.remove());
+      c.querySelectorAll('.explain-pill').forEach((n) => { n.textContent = ' ' + [...n.children].filter((x) => !x.classList.contains('ep-meta')).map((x) => x.textContent).join(' ') + ' '; });
+      text = c.textContent.replace(/\s+/g, ' ').trim();
+    }
     const nImg = bubble.querySelectorAll('.chat-bubble-image').length;
     const nFile = bubble.querySelectorAll('.bubble-file').length;
     textEl.textContent = text || (nImg ? '(image)' : nFile ? '(file)' : '');

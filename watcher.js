@@ -219,7 +219,7 @@ class MultiAISessionWatcher extends EventEmitter {
       status: 'idle',
       state: 'waiting',
       statusLabel: ended.statusLabel,
-      title: 'Antigravity stopped',
+      title: updated.source === 'claude' ? 'Claude stopped' : 'Antigravity stopped',
       detail: ended.detail ? this.formatDetail(ended.detail) : updated.detail,
       runningSince: null,
     };
@@ -290,6 +290,13 @@ class MultiAISessionWatcher extends EventEmitter {
         let updated = this.parseClaudeSession(f.path, f.mtime, existing);
         if (updated) {
           updated = this.holdRunningAfterSend(updated, existing);
+          // HUD-run claude was stopped/crashed mid-turn → stay idle until the log changes again
+          if (this.endedTurns?.has(sessionId)) {
+            updated.sig = `${f.mtime}_${f.size}`;
+            const ended = this.endedTurns.get(sessionId);
+            if (!ended.appliedSig) ended.appliedSig = updated.sig;
+            updated = this.applyEndedTurn(sessionId, updated);
+          }
           updated.size = f.size;
           updated.subagents = existing?.subagents || [];
           this.sessions.set(sessionId, updated);
@@ -517,7 +524,11 @@ class MultiAISessionWatcher extends EventEmitter {
           const stopReason = e.message?.stop_reason;
           const contents = Array.isArray(e.message?.content) ? e.message.content : [];
           const tu = contents.find(c => c.type === 'tool_use');
-          if (stopReason === 'end_turn') {
+          // API errors (403 Cloudflare, auth failed, overloaded…) are written as a
+          // synthetic assistant message with no end_turn — the turn is over, not thinking.
+          const firstText = contents.find(c => c.type === 'text')?.text || '';
+          if (stopReason === 'end_turn' || e.isApiErrorMessage || e.message?.model === '<synthetic>' ||
+              /^\s*(API Error|Failed to authenticate)/i.test(firstText)) {
             turnState = 'idle';
             break;
           }

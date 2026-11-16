@@ -1,0 +1,614 @@
+/* ===================================================================
+   Work style (Settings → Style → Work).
+   A plain, office-friendly look: flat slate panels, one blue accent,
+   small status dots instead of robots, no glow, no blinking, no Vault.
+   Built on the plain dark layout (no .theme-aero); every rule is scoped
+   to body.style-work, so Shelter and Classic are untouched.
+   =================================================================== */
+body.style-work {
+  --wk-bg: #16181d;
+  --wk-panel: #1c1f26;
+  --wk-panel-2: #23262e;
+  --wk-line: #2c3039;
+  --wk-text: #e4e6eb;
+  --wk-dim: #8b919c;
+  --wk-accent: #4c8dff;
+  --wk-green: #3fb950;
+  --wk-blue: #4c8dff;
+  --wk-amber: #d29922;
+  --wk-red: #f85149;
+  --wk-font: "Segoe UI", "Inter", system-ui, sans-serif;
+  --wk-mono: "Cascadia Mono", Consolas, monospace;
+  font-family: var(--wk-font);
+}
+
+/* ---------- window ---------- */
+body.style-work .overlay-card {
+  color: var(--wk-text);
+  background: var(--wk-bg);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  border: 1px solid var(--wk-line);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+body.style-work .overlay-card.attention {
+  animation: none;
+  border-color: var(--wk-amber);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+body.style-work .overlay-card.nudged { animation: none; }
+
+/* ---------- no blinking / glowing anywhere ---------- */
+body.style-work .status-indicator,
+body.style-work .row-orb::after,
+body.style-work .quick-chip,
+body.style-work .dp-frame,
+body.style-work .mini-dot,
+body.style-work .session-row.just-done,
+body.style-work .run-card *,
+body.style-work.docked .mini-dock { animation: none !important; box-shadow: none !important; }
+
+/* ---------- no game parts: Vault, robots, avatars, dress-up ---------- */
+body.style-work #lbView,                 /* Vault / List switch (Work is always a list) */
+body.style-work #btnSleep,               /* sleeping robots */
+body.style-work #btnWindows,             /* room windows */
+body.style-work #btnTheme,
+body.style-work .theme-sub.theme-pills,  /* Windows themes belong to Classic */
+body.style-work .convo-side,             /* chat pictures */
+body.style-work #dpAgent, body.style-work #dpUser,
+body.style-work .act-runwrap,            /* running robot in the activity line */
+body.style-work .robot-avatar,
+body.style-work .dress-panel,
+body.style-work .msn-top { display: none !important; }
+
+/* robot pictures become small status dots */
+body.style-work .row-orb {
+  width: 10px; height: 10px; margin-top: 5px; border-radius: 50%;
+  background: var(--wk-green); font-size: 0; color: transparent;
+}
+body.style-work .row-orb::after { display: none; }
+body.style-work .state-running .row-orb { background: var(--wk-blue); }
+body.style-work .state-attention .row-orb { background: var(--wk-amber); }
+body.style-work .run-pic {
+  width: 8px; height: 8px; min-width: 8px; border-radius: 50%;
+  background: var(--wk-blue); font-size: 0; color: transparent;
+}
+body.style-work .has-robot:not(.row-orb):not(.run-pic) { font-size: 0; color: transparent; }
+body.style-work .has-robot:not(.row-orb):not(.run-pic)::before {
+  content: ""; display: block; width: 8px; height: 8px; margin: auto; border-radius: 50%;
+  background: var(--wk-dim);
+}
+
+/* ---------- status dots in the title bar / mini tab ---------- */
+body.style-work .status-indicator.ready { background: var(--wk-green); }
+body.style-work .status-indicator.thinking,
+body.style-work .status-indicator.tool { background: var(--wk-blue); }
+body.style-work .status-indicator.attention { background: var(--wk-amber); }
+body.style-work .agent-badge { background: var(--wk-panel-2); border: 1px solid var(--wk-line); box-shadow: none; }
+body.style-work .status-title { font: 600 13px var(--wk-font); color: var(--wk-text); }
+body.style-work .status-sub, body.style-work .badge-count { color: var(--wk-dim); }
+body.style-work .pill-header,
+body.style-work .explorer-bar { background: var(--wk-panel); border-bottom: 1px solid var(--wk-line); box-shadow: none; }
+body.style-work .quick-chip { background: var(--wk-panel-2); border: 1px solid var(--wk-line); color: var(--wk-text); }
+body.style-work .quick-chip.attention { border-color: var(--wk-amber); }
+body.style-work .btn-icon:hover { background: var(--wk-panel-2); color: var(--wk-text); }
+body.style-work #btnClose:hover { background: var(--wk-red); color: #fff; }
+
+/* ---------- toolbars and tabs: flat buttons ---------- */
+body.style-work .list-toolbar,
+body.style-work .convo-toolbar,
+body.style-work .tabs-bar {
+  background: var(--wk-panel); border-bottom: 1px solid var(--wk-line); box-shadow: none;
+}
+body.style-work .tb-btn,
+body.style-work .tab-btn,
+body.style-work .fx-compact-btn {
+  font: 500 12px var(--wk-font); letter-spacing: 0; text-transform: none; text-shadow: none;
+  color: var(--wk-dim); background: transparent;
+  border: 1px solid transparent; border-radius: 5px; box-shadow: none;
+  padding: 3px 9px;
+}
+body.style-work .tb-btn:hover,
+body.style-work .tab-btn:hover,
+body.style-work .fx-compact-btn:hover { color: var(--wk-text); background: var(--wk-panel-2); }
+body.style-work .tb-btn.open,
+body.style-work .fx-compact-btn.active { color: var(--wk-text); background: var(--wk-panel-2); border-color: var(--wk-line); }
+body.style-work .tab-btn.active {
+  color: var(--wk-text); background: var(--wk-panel-2);
+  border-color: var(--wk-line); box-shadow: inset 0 -2px 0 var(--wk-accent);
+}
+
+/* primary buttons (Send, Done): solid accent */
+body.style-work .btn-action.primary,
+body.style-work .sk-btn.primary {
+  font: 600 12px var(--wk-font); letter-spacing: 0; text-transform: none; text-shadow: none;
+  color: #fff; background: var(--wk-accent);
+  border: 1px solid transparent; border-radius: 5px; box-shadow: none;
+}
+body.style-work .btn-action.primary:hover,
+body.style-work .sk-btn.primary:hover { background: #3b7cf0; transform: none; }
+
+/* ---------- session list ---------- */
+body.style-work .sessions-container { background: var(--wk-bg); }
+body.style-work .session-row { border-radius: 0; }
+body.style-work .session-row + .session-row { border-top: 1px solid var(--wk-line); }
+body.style-work .session-row:hover { background: var(--wk-panel); }
+body.style-work .session-row.state-attention { background: rgba(210, 153, 34, 0.07); }
+body.style-work .session-row.state-attention:hover { background: rgba(210, 153, 34, 0.12); }
+body.style-work .row-title { color: var(--wk-text); }
+body.style-work .row-preview, body.style-work .row-time, body.style-work .row-meta { color: var(--wk-dim); }
+body.style-work .workspace-header {
+  font: 600 11px var(--wk-font); letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--wk-dim); background: var(--wk-bg); border-bottom: 1px solid var(--wk-line);
+}
+body.style-work .popup-footer { background: var(--wk-panel); border-top: 1px solid var(--wk-line); }
+
+/* ---------- chat ---------- */
+body.style-work .convo-contact {
+  background: var(--wk-panel); border: 1px solid var(--wk-line); border-radius: 6px; box-shadow: none;
+}
+body.style-work .convo-name { font: 600 14px var(--wk-font); color: var(--wk-text); }
+body.style-work .convo-status { color: var(--wk-dim); }
+body.style-work .convo-personal { color: var(--wk-dim); }
+
+body.style-work .chat-stream { background: var(--wk-bg); border: 0; box-shadow: none; }
+body.style-work .chat-bubble { border-radius: 6px; box-shadow: none; }
+body.style-work .chat-bubble.assistant,
+body.style-work .chat-bubble.assistant.claude {
+  background: transparent; color: var(--wk-text); border: 0;
+}
+body.style-work .chat-bubble.user {
+  background: var(--wk-panel-2); color: var(--wk-text); border: 1px solid var(--wk-line);
+}
+body.style-work .bubble-meta .meta-name { font: 600 11px var(--wk-font); color: var(--wk-text); text-transform: none; letter-spacing: 0; }
+body.style-work .bubble-meta .meta-time { color: var(--wk-dim); }
+body.style-work .chat-bubble :not(pre) > code { background: var(--wk-panel-2); color: #c9d1d9; border: 1px solid var(--wk-line); }
+body.style-work .chat-bubble pre { background: #0f1115; border: 1px solid var(--wk-line); border-radius: 5px; }
+
+/* activity line: one quiet row */
+body.style-work #activityRow.activity-row {
+  color: var(--wk-text); background: var(--wk-panel); border: 1px solid var(--wk-line); border-radius: 6px;
+}
+body.style-work .activity-target { font-family: var(--wk-mono); color: #c9d1d9; background: var(--wk-panel-2); border: 1px solid var(--wk-line); }
+body.style-work .activity-meta { color: var(--wk-dim); opacity: 1; }
+body.style-work .convo-infobar { background: rgba(210, 153, 34, 0.1); border: 1px solid rgba(210, 153, 34, 0.4); color: #e3c27a; border-radius: 5px; }
+
+/* input */
+body.style-work .reply-box { background: var(--wk-panel); border: 1px solid var(--wk-line); border-radius: 6px; box-shadow: none; }
+body.style-work .reply-box:focus-within { border-color: var(--wk-accent); }
+body.style-work .reply-textarea { color: var(--wk-text); background: transparent; font-family: var(--wk-font); }
+body.style-work .reply-textarea::placeholder { color: #5f6570; }
+body.style-work .reply-toolbar { background: transparent; border-top: 1px solid var(--wk-line); }
+body.style-work .rt-btn { color: var(--wk-dim); border-radius: 4px; }
+body.style-work .rt-btn:hover { color: var(--wk-text); background: var(--wk-panel-2); }
+
+/* context meter + git */
+body.style-work .ctx-track { background: var(--wk-panel-2); }
+body.style-work .ctx-fill { background: var(--wk-accent); box-shadow: none; }
+body.style-work .ctx-fill.warning { background: var(--wk-amber); }
+body.style-work .ctx-fill.critical { background: var(--wk-red); }
+body.style-work .git-box { background: var(--wk-panel-2); border: 1px solid var(--wk-line); box-shadow: none; }
+
+/* ---------- approvals ---------- */
+body.style-work .perm-toast { background: var(--wk-panel); border: 1px solid var(--wk-amber); color: var(--wk-text); box-shadow: 0 4px 12px rgba(0, 0, 0, .35); }
+body.style-work .perm-toast .toast-cmd { font-family: var(--wk-mono); color: #c9d1d9; }
+body.style-work .perm-toast .toast-btn { border-radius: 5px; box-shadow: none; }
+body.style-work .perm-toast .toast-btn.allow { color: #fff; background: #238636; border: 1px solid transparent; }
+body.style-work .perm-toast .toast-btn.deny { color: #fff; background: #b62324; border: 1px solid transparent; }
+body.style-work .perm-toast .toast-btn.open { color: var(--wk-text); background: var(--wk-panel-2); border: 1px solid var(--wk-line); }
+
+/* ---------- dialogs, menus ---------- */
+body.style-work .sk-dialog { color: var(--wk-text); background: var(--wk-panel); border: 1px solid var(--wk-line); border-radius: 8px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5); }
+body.style-work .sk-head { background: var(--wk-panel); border-bottom: 1px solid var(--wk-line); }
+body.style-work .sk-title { font: 600 13px var(--wk-font); color: var(--wk-text); }
+body.style-work .set-row { color: var(--wk-text); border-radius: 5px; }
+body.style-work .set-row:hover { background: var(--wk-panel-2); }
+body.style-work .theme-pill { font: 500 12px var(--wk-font); color: var(--wk-dim); background: var(--wk-panel-2); border: 1px solid var(--wk-line); border-radius: 5px; }
+body.style-work .theme-pill.active { color: #fff; background: var(--wk-accent); border-color: var(--wk-accent); }
+body.style-work .fx-menu,
+body.style-work .ctx-menu,
+body.style-work .mcp-panel,
+body.style-work .usage-panel,
+body.style-work .slash-menu {
+  color: var(--wk-text); background: var(--wk-panel); border: 1px solid var(--wk-line); border-radius: 6px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+}
+body.style-work .mcp-panel-head { color: var(--wk-text); background: var(--wk-panel-2); border-bottom: 1px solid var(--wk-line); }
+body.style-work .fx-menu-item, body.style-work .ctx-item { color: var(--wk-text); }
+body.style-work .fx-menu-item:hover, body.style-work .ctx-item:hover:not(:disabled) { background: var(--wk-panel-2); border-color: var(--wk-line); }
+
+/* Skills / Model / Effort / New chat / Remote dropdowns: base text is dark (made for
+   the light Windows panel), so it vanished on the dark Work panel */
+body.style-work .fx-skill-filter { color: var(--wk-text); background: var(--wk-bg); border: 1px solid var(--wk-line); border-radius: 5px; box-shadow: none; }
+body.style-work .fx-skill-filter::placeholder { color: #5f6570; }
+body.style-work .fx-skill-filter:focus { border-color: var(--wk-accent); }
+body.style-work .fx-skill-group { color: var(--wk-dim); letter-spacing: .04em; text-transform: uppercase; }
+body.style-work .fx-skill-row:hover { background: var(--wk-panel-2); border-color: var(--wk-line); }
+body.style-work .fx-skill-row.disabled:hover { background: none; border-color: transparent; }
+body.style-work .fx-skill-name { color: var(--wk-text); }
+body.style-work .fx-skill-desc { color: var(--wk-dim); }
+body.style-work .fx-skill-scope { color: var(--wk-dim); background: var(--wk-bg); border-color: var(--wk-line); }
+body.style-work .fx-model-check { color: var(--wk-accent); }
+body.style-work .fx-model-row.selected { background: rgba(76, 141, 255, 0.12); border-color: rgba(76, 141, 255, 0.45); }
+body.style-work .fx-hidden-toggle { color: var(--wk-accent); }
+body.style-work .fx-nc-folder { background: var(--wk-bg); border-color: var(--wk-line); }
+body.style-work .fx-nc-folder-name { color: var(--wk-text); }
+body.style-work .fx-nc-folder-path { color: var(--wk-dim); }
+body.style-work .fx-nc-browse,
+body.style-work .fx-nc-recent {
+  color: var(--wk-text); background: var(--wk-panel-2); border: 1px solid var(--wk-line); border-radius: 4px; box-shadow: none;
+}
+body.style-work .fx-nc-browse:hover,
+body.style-work .fx-nc-recent:hover { background: #2c3039; border-color: #3a3f4a; }
+body.style-work .fx-newchat-ico { box-shadow: none; }
+body.style-work .fx-rename,
+body.style-work .agent-rename { color: var(--wk-text); background: var(--wk-bg); border: 1px solid var(--wk-accent); box-shadow: none; }
+body.style-work #convoName.renamable:hover { background: var(--wk-panel-2); box-shadow: 0 0 0 1px var(--wk-line); }
+body.style-work .set-digest { color: var(--wk-text); background: var(--wk-bg); border-color: var(--wk-line); }
+body.style-work .mcp-name { color: var(--wk-text); }
+body.style-work .mcp-status, body.style-work .mcp-empty, body.style-work .mcp-hint { color: var(--wk-dim); }
+body.style-work .mcp-row:hover { background: var(--wk-panel-2); }
+body.style-work .mcp-add .mcp-in { color: var(--wk-text); background: var(--wk-bg); border: 1px solid var(--wk-line); }
+
+/* ---------- address bar: dark like the rest (base is light Windows glass) ---------- */
+body.style-work .explorer-bar { background: var(--wk-panel); border-bottom: 1px solid var(--wk-line); }
+body.style-work .xb-orb {
+  background: var(--wk-panel-2); border: 1px solid var(--wk-line); box-shadow: none;
+}
+body.style-work .xb-orb svg { stroke: var(--wk-text); filter: none; }
+body.style-work .xb-orb:hover:not(:disabled) { background: #2c3039; border-color: #3a3f4a; }
+body.style-work .xb-orb:active:not(:disabled) { background: var(--wk-bg); }
+body.style-work .xb-orb:disabled { background: var(--wk-panel); border-color: var(--wk-line); }
+body.style-work .xb-orb:disabled svg { stroke: #4a505c; }
+body.style-work .xb-address,
+body.style-work .xb-search {
+  background: var(--wk-bg); border: 1px solid var(--wk-line); border-radius: 5px; box-shadow: none;
+}
+body.style-work .xb-address:hover,
+body.style-work .xb-search:hover,
+body.style-work .xb-search:focus-within { background: var(--wk-bg); border-color: var(--wk-accent); }
+body.style-work .xb-addr-ico { background: transparent; border-color: transparent; }
+body.style-work .xb-crumb { color: var(--wk-text); background: none; border-color: transparent; }
+body.style-work .xb-crumb:disabled { color: var(--wk-text); }
+body.style-work .xb-crumb:hover:not(:disabled) { background: var(--wk-panel-2); border-color: var(--wk-line); }
+body.style-work .xb-sep { color: #5f6570; }
+body.style-work .xb-refresh { color: var(--wk-dim); background: none; border-left-color: var(--wk-line); }
+body.style-work .xb-refresh:hover { color: var(--wk-text); background: var(--wk-panel-2); }
+body.style-work .xb-search-input { color: var(--wk-text); font-family: var(--wk-font); }
+body.style-work .xb-search-input::placeholder { color: #5f6570; font-style: normal; }
+body.style-work .xb-search-ico svg { stroke: var(--wk-dim); }
+
+/* ---------- session rows: quiet labels and bars ---------- */
+body.style-work .row-agent,
+body.style-work .row-agent.claude,
+body.style-work .row-agent.antigravity {
+  color: var(--wk-dim); background: var(--wk-panel-2); border: 1px solid var(--wk-line); box-shadow: none;
+}
+body.style-work .row-ctxbar { background: var(--wk-panel-2); }
+body.style-work .row-ctxfill { background: #5c6370; }
+body.style-work .row-ctxbar.warning .row-ctxfill { background: var(--wk-amber); }
+body.style-work .row-ctxbar.critical .row-ctxfill { background: var(--wk-red); }
+body.style-work .row-ctxbar.compacting .row-ctxfill { background: var(--wk-blue); animation: none; }
+body.style-work .state-running .row-status { color: var(--wk-blue); }
+body.style-work .state-attention .row-status { color: var(--wk-amber); }
+
+/* ---------- chat header: folder link was dark blue on dark ---------- */
+body.style-work .convo-workspace { background: none; border-color: transparent; }
+body.style-work .convo-workspace:hover { background: var(--wk-panel-2); border-color: var(--wk-line); }
+body.style-work .convo-workspace .ws-name { color: var(--wk-text); }
+body.style-work .convo-workspace .ws-path { color: var(--wk-dim); }
+
+/* ===================================================================
+   Layout: chat list as a sidebar + the open chat beside it (no Explorer
+   address bar). Narrow windows fall back to one pane at a time.
+   (logic/nav/work-layout.js moves the search box and marks the open row.)
+   =================================================================== */
+.wk-empty, .wk-back { display: none; }
+
+body.style-work .explorer-bar { display: none !important; }
+body.style-work #popupBody {
+  container-type: inline-size; container-name: wkbody;
+  flex-direction: row; gap: 0; padding: 0; background: var(--wk-bg);
+}
+
+/* sidebar */
+body.style-work #listView {
+  display: flex !important; flex: 0 0 250px; width: 250px; min-width: 0; gap: 0;
+  background: var(--wk-panel); border-right: 1px solid var(--wk-line);
+}
+body.style-work .tabs-bar,               /* groups show the status instead */
+body.style-work #lbQuit { display: none !important; } /* ✕ in the title bar quits */
+/* footer: only its New-chat dropdown stays (it opens from "+ New chat") */
+body.style-work #listView .popup-footer { order: 3; padding: 0; border: 0; background: none; min-height: 0; }
+body.style-work #listView .popup-footer > :not(.fx-newchat) { display: none !important; }
+body.style-work #listView .fx-newchat {
+  position: fixed; left: 12px; top: 84px; bottom: auto; right: auto;
+  width: 380px; max-width: calc(100vw - 24px); max-height: calc(100vh - 100px); overflow: auto; z-index: 60;
+}
+body.style-work #lbBuild,                /* Vault builder */
+body.style-work #listToolbar .tb-find,   /* search box + Ctrl+K instead */
+body.style-work #listToolbar .tb-spacer { display: none !important; }
+
+/* sidebar:  [        + New chat        ]
+             [ Group: Folder ][ 📌 Notes ]
+             [ Search conversations    ]
+             …chats…
+             [        ⚙ Settings        ]   (pinned to the bottom) */
+body.style-work #listView { position: relative; }
+body.style-work #listToolbar {
+  order: 0; position: static; display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  height: auto; margin: 0; padding: 12px 12px 8px; border: 0; background: none; box-shadow: none; flex: none;
+}
+body.style-work #listToolbar .tb-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  height: 30px; padding: 0 8px; margin: 0; white-space: nowrap; box-sizing: border-box;
+  color: var(--wk-text); background: var(--wk-panel-2); border: 1px solid var(--wk-line); border-radius: 6px;
+}
+body.style-work #listToolbar .tb-btn:hover { background: #2a2e37; border-color: #3a3f4a; }
+body.style-work #lbNewChat { grid-column: 1 / -1; font-weight: 600; color: #fff !important; background: var(--wk-accent) !important; border-color: transparent !important; }
+body.style-work #lbNewChat:hover { background: #3b7cf0 !important; }
+body.style-work #lbNewChat::before { content: "+"; font-size: 16px; font-weight: 400; line-height: 1; }
+body.style-work #lbGroup { grid-column: 1; }
+body.style-work #lbNotes { grid-column: 2; }
+body.style-work #lbSettings { position: absolute; left: 12px; right: 12px; bottom: 10px; z-index: 2; }
+body.style-work #lbSettings::before { content: "⚙"; font-size: 14px; }
+body.style-work #listView .xb-search {
+  order: 1; flex: 0 0 auto; height: 30px; margin: 0 12px 8px; box-sizing: border-box; border-radius: 6px;
+}
+body.style-work #sessionsContainer { order: 2; flex: 1; background: none; padding: 0 0 56px; }
+/* strip behind the bottom Settings button so the list doesn't show through */
+body.style-work #listView::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 50px; pointer-events: none;
+  background: var(--wk-panel); border-top: 1px solid var(--wk-line); z-index: 1;
+}
+
+/* sidebar rows: dot · title · time, one dim preview line */
+/* rows are soft rounded tiles inset from the edges; the open one is a filled tile, no side bar */
+body.style-work #listView .session-row { padding: 6px 10px; margin: 1px 8px; border: 0 !important; border-radius: 6px !important; }
+body.style-work #listView .session-row:hover { background: var(--wk-panel-2); }
+body.style-work #listView .session-row.wk-active,
+body.style-work #listView .session-row.wk-active:hover { background: #2a3140 !important; }
+body.style-work #listView .session-row.wk-active .row-title { color: #fff; }
+body.style-work #listView .row-meta,
+body.style-work #listView .row-agent,
+body.style-work #listView .row-ctxbar,
+body.style-work #listView .row-dismiss { display: none !important; }
+body.style-work #listView .session-row,
+body.style-work #listView .workspace-body { background: none; box-shadow: none; border-radius: 0; }
+body.style-work #listView .session-row.state-attention { background: rgba(210, 153, 34, 0.08); }
+body.style-work #listView .row-title { font-size: 12.5px; }
+body.style-work #listView .row-preview { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.style-work #listView .workspace-header { background: none; border: 0; padding: 10px 12px 3px; }
+
+/* chat pane */
+body.style-work #detailView { display: flex !important; flex: 1; min-width: 0; padding: 0 12px 10px; }
+body.style-work #detailView:not(.active) { display: none !important; }
+body.style-work #detailView .convo-toolbar { margin: 0 -12px 8px; padding: 6px 10px; }
+body.style-work #tbNewChat,
+body.style-work #tbSettings,
+body.style-work #tbNotes { display: none !important; } /* in the sidebar */
+
+/* nothing open yet */
+body.style-work #detailView:not(.active) ~ .wk-empty {
+  display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+}
+.wk-empty-title { font: 600 14px var(--wk-font); color: var(--wk-text); }
+.wk-empty-sub { font-size: 12px; color: var(--wk-dim); }
+
+/* narrow window: one pane at a time, "‹ Chats" goes back */
+@container wkbody (max-width: 620px) {
+  body.style-work #listView { flex: 1; width: auto; border-right: 0; }
+  body.style-work #detailView.active ~ * { display: none; }
+  body.style-work #listView:has(~ #detailView.active) { display: none !important; }
+  body.style-work .wk-empty { display: none !important; }
+  body.style-work .wk-back { display: inline-block; }
+}
+
+/* no Maximize text button: the title bar has □ (Shelter has no title bar, so it keeps it) */
+body:not(.style-shelter) #tbMax { display: none !important; }
+
+/* ---------- chat header: bigger, with room to breathe ---------- */
+body.style-work .convo-contact { padding: 14px 18px 14px; margin: 4px 0 12px; border-radius: 8px; }
+body.style-work .convo-contact.has-git { padding-right: calc(250px + 18px); }
+body.style-work .convo-name-row { gap: 8px; }
+body.style-work .convo-name { font-size: 19px; font-weight: 600; }
+body.style-work .convo-status { font-size: 13px; }
+body.style-work .convo-personal { font-size: 14px; color: var(--wk-text); opacity: 0.85; margin-top: 3px; }
+body.style-work .convo-workspace { font-size: 13px; margin-top: 6px; }
+body.style-work .convo-context { margin-top: 8px; }
+body.style-work .ctx-label { font-size: 12px; color: var(--wk-dim); }
+/* ---------- git box: the header's full right side, shaped as a half pill
+   (round on the left, flush with the card on the right) ---------- */
+body.style-work .convo-contact > .git-box {
+  top: 0; right: 0; bottom: 0; width: 250px; height: auto;
+  display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  padding: 0 18px 0 24px;
+  border: 0; border-left: 1px solid var(--wk-line);
+  --git-radius: 18px; /* left corners — change this one value to tune the shape */
+  border-radius: var(--git-radius) 7px 7px var(--git-radius); /* right: the card's own corner */
+}
+body.style-work .convo-contact > .git-box.git-none { padding: 0 18px 0 24px; }
+/* bigger text inside it */
+body.style-work .convo-contact > .git-box { font-size: 13.5px; line-height: 1.5; gap: 3px; }
+body.style-work .convo-contact > .git-box .git-branch { font-size: 14.5px; font-weight: 600; }
+body.style-work .convo-contact > .git-box .git-ico,
+body.style-work .convo-contact > .git-box :is(.git-dirty-dot, .git-clean-dot) { width: 16px; font-size: 13px; }
+body.style-work .convo-contact > .git-box .git-tag { font-size: 11px; }
+
+/* ---------- git box: readable on dark ---------- */
+body.style-work .git-box {
+  padding: 7px 10px; font-size: 12px; color: var(--wk-text);
+  background: var(--wk-panel-2); border: 1px solid var(--wk-line); border-radius: 6px; box-shadow: none;
+}
+body.style-work .git-box:hover,
+body.style-work .git-box.git-none:hover { background: #2a2e37; border-color: #3a3f4a; }
+body.style-work .git-box.copied { background: rgba(63, 185, 80, 0.12); border-color: var(--wk-green); }
+body.style-work .git-ico { color: var(--wk-dim); }
+body.style-work .git-branch { color: var(--wk-text); font-family: var(--wk-mono); }
+body.style-work .git-ahead { color: var(--wk-blue); }
+body.style-work .git-behind,
+body.style-work .git-dirty,
+body.style-work .git-dirty-dot { color: var(--wk-amber); }
+body.style-work .git-clean,
+body.style-work .git-clean-dot { color: var(--wk-green); }
+body.style-work .git-user { color: var(--wk-dim); }
+body.style-work .git-warn { color: var(--wk-red); }
+body.style-work .git-tag { color: var(--wk-dim); background: var(--wk-bg); border-color: var(--wk-line); border-radius: 4px; }
+body.style-work .git-faint { color: var(--wk-dim); font-style: normal; }
+
+/* ---------- "You said: …" bar pinned at the top of the chat ---------- */
+body.style-work .pinned-prompt {
+  color: var(--wk-text); background: rgba(28, 31, 38, 0.92); border: 1px solid var(--wk-line);
+  border-radius: 8px; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+body.style-work .pinned-prompt::after { display: none; }
+body.style-work .pinned-prompt:hover { background: var(--wk-panel-2); }
+body.style-work .pinned-prompt .pp-label,
+body.style-work .pinned-prompt .pp-images { color: var(--wk-dim); }
+body.style-work .pinned-prompt .pp-text { color: var(--wk-text); }
+
+/* ---------- "Edited N files" box under a reply ---------- */
+body.style-work .edit-list {
+  margin: 10px 0 2px; font-size: 12px;
+  background: var(--wk-panel); border: 1px solid var(--wk-line); border-radius: 8px;
+}
+body.style-work .edit-head {
+  padding: 8px 12px; font-weight: 600; color: var(--wk-text);
+  background: var(--wk-panel-2); border-bottom: 1px solid var(--wk-line);
+}
+body.style-work .edit-add { color: var(--wk-green); font-family: var(--wk-mono); }
+body.style-work .edit-del { color: var(--wk-red); font-family: var(--wk-mono); }
+body.style-work .edit-row { padding: 7px 12px; border-top: 1px solid var(--wk-line); }
+body.style-work .edit-head + .edit-row { border-top: 0; }
+body.style-work .edit-row:hover,
+body.style-work .edit-row.open { background: rgba(255, 255, 255, 0.035); }
+body.style-work .edit-name { color: var(--wk-text); font-family: var(--wk-mono); font-weight: 500; }
+body.style-work .edit-dir { color: var(--wk-dim); }
+body.style-work .edit-open {
+  height: 24px; padding: 0 12px; font: 500 11.5px var(--wk-font); cursor: pointer;
+  color: var(--wk-text); background: transparent; border: 1px solid var(--wk-line); border-radius: 5px;
+}
+body.style-work .edit-open:hover { background: var(--wk-panel-2); border-color: var(--wk-accent); }
+body.style-work .edit-diff { color: #c9d1d9; background: #0f1115; border-top: 1px solid var(--wk-line); font-family: var(--wk-mono); }
+body.style-work .df-add { background: rgba(63, 185, 80, 0.15); color: #aff5b4; }
+body.style-work .df-del { background: rgba(248, 81, 73, 0.15); color: #ffdcd7; }
+body.style-work .df-ctx,
+body.style-work .df-sep,
+body.style-work .df-more { color: var(--wk-dim); }
+
+/* ---------- "working…" dots at the end of the chat after you send ---------- */
+.wk-typing { display: none; }
+body.style-work .wk-typing {
+  display: flex; align-items: center; gap: 10px; margin: 8px 0 6px 4px;
+  font-size: 12.5px; color: var(--wk-dim);
+}
+body.style-work .wk-typing .wk-dots { display: inline-flex; gap: 4px; }
+body.style-work .wk-typing .wk-dots i {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--wk-accent);
+  animation: wk-dot 1.2s infinite ease-in-out;
+}
+body.style-work .wk-typing .wk-dots i:nth-child(2) { animation-delay: 0.15s; }
+body.style-work .wk-typing .wk-dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes wk-dot { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { body.style-work .wk-typing .wk-dots i { animation: none; opacity: 0.7; } }
+
+/* ---------- "Update ready … Restart" bar and the small reload toast ---------- */
+body.style-work .hot-bar {
+  top: 10px; gap: 10px; padding: 6px 6px 6px 12px; border-radius: 8px;
+  font: 12.5px var(--wk-font); color: var(--wk-text);
+  background: rgba(35, 38, 46, 0.96); border: 1px solid #3a3f4a;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+body.style-work .hot-ico { color: var(--wk-accent); font-size: 14px; }
+body.style-work .hot-bar button {
+  height: 26px; padding: 0 12px; font: 500 12px var(--wk-font); border-radius: 6px;
+  color: var(--wk-text); background: var(--wk-panel-2); border: 1px solid var(--wk-line); box-shadow: none;
+}
+body.style-work .hot-bar button:hover { background: #2a2e37; border-color: #3a3f4a; }
+body.style-work .hot-bar .hot-go { font-weight: 600; color: #fff; background: var(--wk-accent); border-color: transparent; }
+body.style-work .hot-bar .hot-go:hover { background: #3b7cf0; border-color: transparent; }
+/* docked mini tab (76px tall): compact, so the text and both buttons fit */
+body.style-work.docked .hot-bar { top: 50%; padding: 5px 7px; gap: 4px; border-radius: 7px; } /* top: undo the 10px above, the tab centres it */
+body.style-work.docked .hot-bar .hot-text { font-size: 11px; }
+body.style-work.docked .hot-bar button { height: 22px; padding: 0 6px; font-size: 11px; border-radius: 5px; }
+body.style-work .hot-toast {
+  font: 12px var(--wk-font); color: var(--wk-text); border-radius: 8px;
+  background: rgba(35, 38, 46, 0.96); border: 1px solid #3a3f4a; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+/* ===================================================================
+   Motion: short, soft, and only where something actually changes.
+   One easing curve and three durations for everything; nothing loops
+   except the running dot and the working dots. Off with reduced motion.
+   =================================================================== */
+body.style-work {
+  --wk-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --wk-fast: 120ms;
+  --wk-med: 200ms;
+  --wk-slow: 320ms;
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* hover / press feedback */
+  body.style-work :is(.tb-btn, .rt-btn, .btn-action, .sk-btn, .set-row, .theme-pill, .edit-open, .edit-row,
+    .fx-menu-item, .ctx-item, .fx-skill-row, .mcp-row, .git-box, .pinned-prompt, .md-diagram-btn, .btn-icon, .xb-search) {
+    transition: background-color var(--wk-fast) ease, border-color var(--wk-fast) ease,
+      color var(--wk-fast) ease, transform var(--wk-fast) var(--wk-ease), box-shadow var(--wk-med) ease;
+  }
+  body.style-work :is(.tb-btn, .btn-action, .sk-btn, .edit-open):active { transform: scale(0.97); }
+  /* rows are redrawn every second, so only the hover fades (a transition on the row
+     itself would restart on every redraw and the open row would never fill) */
+  body.style-work #listView .session-row:hover:not(.wk-active) { transition: background-color var(--wk-med) var(--wk-ease); }
+  body.style-work .reply-box { transition: border-color var(--wk-med) ease, box-shadow var(--wk-med) ease; }
+  body.style-work .reply-box:focus-within { box-shadow: 0 0 0 3px rgba(76, 141, 255, 0.15); }
+  body.style-work :is(.ctx-fill, .row-ctxfill) { transition: width var(--wk-slow) var(--wk-ease); }
+
+  /* opening a chat: the pane settles in */
+  body.style-work #detailView.wk-enter .convo-main { animation: wk-rise var(--wk-slow) var(--wk-ease) both; }
+  body.style-work #detailView:not(.active) ~ .wk-empty { animation: wk-fade var(--wk-slow) ease both; }
+
+  /* new messages, edited-files box, working dots */
+  body.style-work .chat-bubble { animation: wk-rise var(--wk-med) var(--wk-ease) both; }
+  body.style-work .edit-list { animation: wk-fade var(--wk-slow) ease both; }
+  body.style-work .wk-typing { animation: wk-fade var(--wk-med) ease both; }
+  body.style-work #activityRow.activity-row:not([style*="none"]) { animation: wk-fade var(--wk-med) ease both; }
+
+  /* menus and dropdowns pop from where they open */
+  body.style-work :is(.fx-menu, .ctx-menu, .mcp-panel, .usage-panel, .slash-menu, .fx-newchat) {
+    animation: wk-pop var(--wk-med) var(--wk-ease) both; transform-origin: top center;
+  }
+  body.style-work :is(.usage-panel, .slash-menu) { transform-origin: bottom center; }
+
+  /* dialogs: dim the back, lift the card */
+  body.style-work .sk-overlay { animation: wk-fade var(--wk-med) ease both; }
+  body.style-work .sk-dialog { animation: wk-pop var(--wk-slow) var(--wk-ease) both; }
+
+  /* update-ready bar drops in from the top */
+  body.style-work:not(.docked) .hot-bar { animation: wk-drop-center var(--wk-slow) var(--wk-ease) both; } /* docked tab centres it differently */
+
+  /* approval cards slide in */
+  body.style-work .perm-toast { animation: wk-drop var(--wk-slow) var(--wk-ease) both; }
+
+  /* a running chat's dot breathes, slowly */
+  body.style-work .state-running .row-orb { animation: wk-breathe 2.4s ease-in-out infinite !important; }
+
+  /* diagram full-window */
+  body.style-work .md-diagram-full { animation: wk-pop var(--wk-med) var(--wk-ease) both; }
+}
+@keyframes wk-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes wk-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes wk-pop { from { opacity: 0; transform: scale(0.97) translateY(-3px); } to { opacity: 1; transform: none; } }
+@keyframes wk-drop { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+/* same, for things centred with translateX(-50%) */
+@keyframes wk-drop-center { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translateX(-50%); } }
+@keyframes wk-breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(76, 141, 255, 0.45); }
+  50% { box-shadow: 0 0 0 4px rgba(76, 141, 255, 0); }
+}
+
+/* ---------- scrollbars ---------- */
+body.style-work ::-webkit-scrollbar { width: 8px; height: 8px; }
+body.style-work ::-webkit-scrollbar-track { background: transparent; }
+body.style-work ::-webkit-scrollbar-thumb { background: #3a3f4a; border-radius: 4px; }
+body.style-work ::-webkit-scrollbar-thumb:hover { background: #4a505c; }

@@ -190,7 +190,7 @@ function appendBubble(msgArg) {
     if (window.marked && role === 'assistant') {
       contentBox.innerHTML = window.marked.parse(text);
     } else {
-      contentBox.textContent = text;
+      renderUserText(contentBox, String(text));
     }
   }
   bubble.appendChild(contentBox);
@@ -282,7 +282,54 @@ function typeInto(box, text, bubble, before) {
   st.raf = setTimeout(step, 16);
 }
 
+// Your own messages: keep line breaks, and draw ```fenced``` blocks as code boxes
+// (e.g. lines referenced from the Changes panel). Everything stays plain text —
+// nothing you typed is turned into HTML.
+function renderUserText(box, text) {
+  box.classList.add('user-text');
+  // "Explain …" requests from the Changes panel → pills (logic/chat/prompt-pills.js)
+  const segs = window.splitExplainPrompts?.(text);
+  if (segs) {
+    for (const s of segs) {
+      if (s.pill) box.appendChild(window.makeExplainPill(s.pill));
+      else if (s.text.trim()) { const span = document.createElement('div'); renderUserTextPlain(span, s.text.trim()); box.appendChild(span); }
+    }
+    return;
+  }
+  renderUserTextPlain(box, text);
+}
+function renderUserTextPlain(box, text) {
+  const fence = /^([ \t]*)(`{3,}|~{3,})[ \t]*([\w+#.-]*)[^\n]*\n([\s\S]*?)\n?^\1?\2[ \t]*$/gm;
+  let last = 0, m;
+  const addText = (t) => { if (t) box.appendChild(document.createTextNode(t)); };
+  while ((m = fence.exec(text))) {
+    addText(text.slice(last, m.index).replace(/\n$/, ''));
+    const pre = document.createElement('pre');
+    const code = document.createElement('code');
+    if (m[3]) code.className = `language-${m[3].toLowerCase()}`;
+    code.textContent = m[4];
+    pre.appendChild(code);
+    box.appendChild(pre);
+    last = fence.lastIndex;
+    if (text[last] === '\n') last++;
+  }
+  // an unclosed ``` (still typing, or cut off) → show the rest as code too
+  const rest = text.slice(last);
+  const open = rest.match(/^([\s\S]*?)(?:^|\n)[ \t]*(`{3,}|~{3,})[ \t]*([\w+#.-]*)[^\n]*\n([\s\S]*)$/);
+  if (open) {
+    addText(open[1]);
+    const pre = document.createElement('pre');
+    const code = document.createElement('code');
+    if (open[3]) code.className = `language-${open[3].toLowerCase()}`;
+    code.textContent = open[4];
+    pre.appendChild(code);
+    box.appendChild(pre);
+  } else addText(rest);
+}
+
 function attachCodeCopyHandlers(container) {
+  window.renderDiagrams?.(container); // ```mermaid blocks → diagrams (logic/chat/diagrams.js)
+  window.highlightCode?.(container);  // syntax colours (logic/chat/highlight.js)
   container.querySelectorAll('pre').forEach((pre) => {
     if (pre.dataset.copyBound) return;
     pre.dataset.copyBound = '1';
@@ -843,7 +890,8 @@ if (resizeGrip) {
   const LABELS = { aero: 'Windows 7', xp: 'Windows XP', vista: 'Vista Dark', dark: 'Dark' };
   // Style: "shelter" (default) = the underground-base look in theme-shelter.css, built on
   // the plain dark layout; "classic" = the Windows themes below.
-  let uiStyle = window.electronAPI.settings?.uiStyle === 'classic' ? 'classic' : 'shelter';
+  // "work" = a plain, flat office look (theme-work.css): no Vault, robots or avatars.
+  let uiStyle = ['classic', 'work'].includes(window.electronAPI.settings?.uiStyle) ? window.electronAPI.settings.uiStyle : 'shelter';
   // Shelter's chat layout: both pictures live in the contact strip (agent left, you
   // right) instead of a column beside the chat. Classic keeps the column.
   const placeChatPictures = (shelter) => {
@@ -856,14 +904,17 @@ if (resizeGrip) {
   };
   const apply = (theme) => {
     const shelter = uiStyle === 'shelter';
+    const work = uiStyle === 'work';
+    const classic = uiStyle === 'classic';
     placeChatPictures(shelter);
     document.body.classList.toggle('style-shelter', shelter);
-    document.body.classList.toggle('theme-aero', !shelter && theme !== 'dark');
-    document.body.classList.toggle('theme-vista', !shelter && theme === 'vista');
-    document.body.classList.toggle('theme-xp', !shelter && theme === 'xp');
+    document.body.classList.toggle('style-work', work);
+    document.body.classList.toggle('theme-aero', classic && theme !== 'dark');
+    document.body.classList.toggle('theme-vista', classic && theme === 'vista');
+    document.body.classList.toggle('theme-xp', classic && theme === 'xp');
     const v = document.getElementById('setThemeVal');
     if (v) v.textContent = LABELS[theme] || 'Aero';
-    window.electronAPI.notesTheme?.(shelter ? 'shelter' : theme); // the pinned-notes panel follows
+    window.electronAPI.notesTheme?.(shelter ? 'shelter' : work ? 'dark' : theme); // the pinned-notes panel follows
   };
   let theme = 'aero';
   theme = window.electronAPI.settings?.theme || 'aero';
@@ -876,20 +927,26 @@ if (resizeGrip) {
     styleRow.innerHTML = '<span class="set-ico">🏗</span><span class="set-label">Style</span>';
     const stylePills = document.createElement('div');
     stylePills.className = 'theme-pills style-pills';
-    const styleBtns = [['shelter', 'Shelter'], ['classic', 'Classic (Windows)']].map(([key, label]) => {
+    const STYLES = [['shelter', 'Shelter'], ['classic', 'Classic (Windows)'], ['work', 'Work']];
+    const markStyle = () => styleBtns.forEach((x, i) => x.classList.toggle('active', STYLES[i][0] === uiStyle));
+    const styleBtns = STYLES.map(([key, label]) => {
       const b = document.createElement('button');
       b.className = 'theme-pill';
       b.textContent = label;
       b.addEventListener('click', () => {
+        if (key === 'work' && document.body.classList.contains('vault-focus')) window.closeVaultFocus?.(false);
         uiStyle = key;
         window.electronAPI.storeSet('uiStyle', uiStyle);
         apply(theme);
-        styleBtns.forEach((x, i) => x.classList.toggle('active', ['shelter', 'classic'][i] === uiStyle));
+        markStyle();
+        // Work has no Vault: the contact list switches to plain rows (and back)
+        applyListView();
+        renderSessionCards(true);
       });
       stylePills.appendChild(b);
       return b;
     });
-    styleBtns.forEach((x, i) => x.classList.toggle('active', ['shelter', 'classic'][i] === uiStyle));
+    markStyle();
     btnTheme.before(styleRow, stylePills);
     // Segmented theme pills inside the Settings dialog
     const sub = document.createElement('div');
@@ -1061,6 +1118,36 @@ document.getElementById('lbNewChat')?.addEventListener('click', (e) => {
 
 // Expand/Collapse
 btnClose.addEventListener('click', () => window.electronAPI.closeWindow());
+
+// Maximize / restore: title-bar button, double-click on the title bar, Ctrl+Shift+M
+(() => {
+  const btnMax = document.getElementById('btnMax');   // title bar (hidden in Shelter)
+  const tbMax = document.getElementById('tbMax');     // chat toolbar
+  const api = window.electronAPI;
+  if (!api.toggleMaximize) { btnMax?.remove(); tbMax?.remove(); return; }
+  const show = (on) => {
+    document.body.classList.toggle('hud-maximized', !!on);
+    const what = (on ? 'Restore size' : 'Maximize') + ' (Ctrl+Shift+M)';
+    if (btnMax) {
+      btnMax.innerHTML = on
+        ? '<svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="0.6" y="2.6" width="7.8" height="7.8"/><path d="M2.6 2.6V0.6h7.8v7.8H8.4"/></svg>'
+        : '<svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="0.6" y="0.6" width="9.8" height="9.8"/></svg>';
+      btnMax.title = what + ', or double-click the title bar';
+    }
+    if (tbMax) { tbMax.textContent = on ? 'Restore' : 'Maximize'; tbMax.title = what; }
+  };
+  const toggle = async () => show(await api.toggleMaximize());
+  btnMax?.addEventListener('click', toggle);
+  tbMax?.addEventListener('click', (e) => { e.stopPropagation(); toggle(); });
+  show(false);
+  api.onMaximized?.(show);
+  document.querySelector('.pill-header')?.addEventListener('dblclick', (e) => {
+    if (!e.target.closest('button, input, textarea, a, .quick-chip')) toggle();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && !e.altKey && e.key.toLowerCase() === 'm') { e.preventDefault(); toggle(); }
+  });
+})();
 // Shelter has no title bar: its ⏻ key at the end of the contact-list toolbar quits
 document.getElementById('lbQuit')?.addEventListener('click', () => window.electronAPI.closeWindow());
 
@@ -1605,7 +1692,8 @@ lbGroupBtn?.addEventListener('click', (e) => {
 let listViewMode = window.electronAPI.settings?.listView === 'list' ? 'list' : 'grid'; // grid unless you picked list
 const lbViewBtn = document.getElementById('lbView');
 function applyListView() {
-  document.body.classList.toggle('list-grid', listViewMode === 'grid');
+  // Work style never shows the Vault (your saved choice is kept for the other styles)
+  document.body.classList.toggle('list-grid', listViewMode === 'grid' && !document.body.classList.contains('style-work'));
   if (lbViewBtn) lbViewBtn.textContent = listViewMode === 'grid' ? 'View: Vault' : 'View: List';
 }
 applyListView();
@@ -3489,6 +3577,15 @@ function renderApprovalCard(req) {
       '\nChained commands run without asking only when every part is covered.';
     actions.append(b);
   }
+  // Trust the whole folder: every shell command here runs without asking
+  if (req.trustFolder) {
+    const name = String(req.trustFolder.folder).split(/[\\/]/).filter(Boolean).pop() || req.trustFolder.folder;
+    const b = mk(`Always allow all commands in “${name}”`, 'always-folder', 'dismiss perm-trust');
+    b.title = `Allows this now and saves a rule (Settings → Approval rules) so every ${req.toolName} command ` +
+      `runs without asking in ${req.trustFolder.folder} — including rm, node and other risky commands.\n` +
+      'Delete the rule in Settings → Approval rules to be asked again.';
+    actions.append(b);
+  }
   actions.append(mk('Deny', 'deny', 'dismiss perm-deny'));
 
   card.append(head, body, actions);
@@ -3519,7 +3616,10 @@ function answerApproval(req, choice) {
   window.electronAPI.respondPermission(req.id, choice);
   pendingApprovals.delete(req.id);
   if (currentActiveSession) updateConvoHeader(currentActiveSession);
-  resolveApprovalCard(req.id, choice === 'deny' ? 'Denied' : choice === 'always' ? `Allowed — rule saved: always allow ${alwaysLabel(req)} in this folder` : 'Allowed');
+  resolveApprovalCard(req.id, choice === 'deny' ? 'Denied'
+    : choice === 'always' ? `Allowed — rule saved: always allow ${alwaysLabel(req)} in this folder`
+    : choice === 'always-folder' ? 'Allowed — rule saved: all commands run without asking in this folder'
+    : 'Allowed');
   renderApprovalToasts();
   renderSessionCards(true); // the robot puts its hand down
 }
@@ -3552,7 +3652,8 @@ function buildRoomApproval(req, toLeft) {
 
 // Is this request's conversation open on screen right now?
 function isApprovalInView(req) {
-  return isExpanded && document.body.classList.contains('in-detail') &&
+  // the Changes panel (logic/nav/git-diff.js) covers the chat → show it as a card on top instead
+  return isExpanded && document.body.classList.contains('in-detail') && !document.body.classList.contains('gd-open') &&
     currentActiveSession?.id === req.sessionId;
 }
 

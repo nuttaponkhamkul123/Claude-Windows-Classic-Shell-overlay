@@ -12,6 +12,8 @@
   <link rel="stylesheet" href="styles/skill-install.css" />
   <link rel="stylesheet" href="styles/list-grid.css" />
   <link rel="stylesheet" href="styles/theme-shelter.css" />
+  <link rel="stylesheet" href="styles/theme-work.css" />
+  <link rel="stylesheet" href="styles/git-diff.css" />
 </head>
 <body class="theme-aero">
   <!-- Mini tab shown while the HUD is docked to a screen edge.
@@ -63,6 +65,7 @@
 
       <!-- Controls -->
       <div class="controls">
+        <button id="btnMax" class="btn-icon" title="Maximize (Ctrl+Shift+M, or double-click the title bar)">□</button>
         <button id="btnClose" class="btn-icon" title="Close">✕</button>
       </div>
     </div>
@@ -137,6 +140,7 @@
           <button id="tbNotes" class="tb-btn tb-notes" title="Pinned notes (Claude pins them with the pin_note tool)">📌 Notes<span class="notes-badge"></span></button>
           <span class="tb-spacer"></span>
           <button id="btnMcp" class="tb-btn btn-mcp" title="MCP servers for this workspace">MCP ▾</button>
+          <button id="tbMax" class="tb-btn tb-max" title="Maximize (Ctrl+Shift+M)">⛶</button>
 
           <!-- Legacy identity elements (hidden; kept so existing code can update them) -->
           <div class="detail-identity" hidden>
@@ -297,6 +301,9 @@
 
   <script src="lib/dom.js"></script>
   <script src="lib/marked.min.js"></script>
+  <script src="logic/chat/diagrams.js"></script>
+  <script src="lib/highlight.min.js"></script>
+  <script src="logic/chat/highlight.js"></script>
   <script src="lib/sound.js"></script>
   <script src="lib/robot-outfits.js"></script>
   <script src="lib/robot-runner.js"></script>
@@ -314,6 +321,7 @@
   <script src="features.js"></script>
   <script src="logic/nav/toolbar.js"></script>
   <script src="logic/nav/git.js"></script>
+  <script src="logic/nav/git-diff.js"></script>
   <script src="logic/personalization/names.js"></script>
   <script src="logic/nav/workspace.js"></script>
   <script src="logic/personalization/dressup.js"></script>
@@ -329,5 +337,7 @@
   <script src="logic/personalization/compact.js"></script>
   <script src="logic/chat/pin-prompt.js"></script>
   <script src="logic/system/skillinstall.js"></script>
+  <script src="logic/nav/work-layout.js"></script>
+  <script src="logic/chat/prompt-pills.js"></script>
 </body>
 </html>
