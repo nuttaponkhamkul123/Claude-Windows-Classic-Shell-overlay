@@ -697,6 +697,10 @@ async function openFile(raw) {
     }
   } catch (_) {}
 
+  // Files Windows would RUN when "opened" (a link in a reply can point at a file Claude just wrote).
+  // VS Code only shows them as text, so that path stays open; the fallback below must not run them.
+  const RUNS_CODE = /\.(exe|com|scr|msi|msp|bat|cmd|lnk|url|pif|ps1|psm1|vbs|vbe|js|jse|wsf|wsh|hta|cpl|jar|reg|dll|appx|msix|application|gadget|inf|sct|chm)$/i;
+
   try {
     const encodedPath = filePath
       .replace(/\\/g, '/')
@@ -708,6 +712,7 @@ async function openFile(raw) {
     await shell.openExternal(vscodeUri);
     return 'vscode';
   } catch (_) {
+    if (RUNS_CODE.test(filePath)) return 'blocked';
     const err = await shell.openPath(filePath);
     return err ? 'error' : 'default';
   }
@@ -774,8 +779,10 @@ function gitBig(cwd, args) {
   });
 }
 const MAX_TEXT = 512 * 1024; // untracked files bigger than this aren't shown inline
+const COUNT_MAX = 300;       // untracked files whose lines are counted for the list
 async function gitChanges(cwd) {
   if (!cwd || typeof cwd !== 'string' || !path.isAbsolute(cwd) || !fs.existsSync(cwd)) return null;
+  let counted = 0;
   const top = (await git(cwd, ['rev-parse', '--show-toplevel']))?.replace(/\//g, path.sep);
   if (!top) return null;
   const hasHead = !!(await git(top, ['rev-parse', '--verify', '--quiet', 'HEAD']));
@@ -804,37 +811,59 @@ async function gitChanges(cwd) {
     const kind = x === '?' ? 'untracked' : (x === 'D' || y === 'D') ? 'deleted'
       : (x === 'A') ? 'added' : (x === 'R') ? 'renamed' : 'modified';
     const c = counts.get(p) || {};
-    let added = c.added ?? 0, removed = c.removed ?? 0, binary = !!c.binary, large = false;
+    let added = c.added ?? 0, removed = c.removed ?? 0, binary = !!c.binary, large = false, uncounted = false;
     if (kind === 'untracked') {
+      // Untracked files have no git numbers, so their lines are counted here — but only for the first
+      // COUNT_MAX of them, and without blocking the app (a project with no .gitignore can have thousands).
+      // The rest show as "new"; opening one still shows its content.
       try {
         const full = path.join(top, p);
-        const size = fs.statSync(full).size;
+        const size = (await fs.promises.stat(full)).size;
         large = size > MAX_TEXT;
         if (!large) {
-          const buf = fs.readFileSync(full);
-          if (buf.includes(0)) binary = true;
-          else added = buf.toString('utf8').split(/\r?\n/).length - (buf.length && buf[buf.length - 1] === 10 ? 1 : 0);
+          if (counted < COUNT_MAX) {
+            counted++;
+            const buf = await fs.promises.readFile(full);
+            if (buf.includes(0)) binary = true;
+            else added = buf.toString('utf8').split(/\r?\n/).length - (buf.length && buf[buf.length - 1] === 10 ? 1 : 0);
+          } else uncounted = true;
         }
       } catch (_) {}
     }
-    files.push({ path: p, from, kind, staged: x !== ' ' && x !== '?', added, removed, binary, large });
+    files.push({ path: p, from, kind, staged: x !== ' ' && x !== '?', added, removed, binary, large, uncounted });
   }
   files.sort((a, b) => a.path.localeCompare(b.path));
-  return { top, files };
+  const info = { top, files };
+  changesCache.set(cwd, { at: Date.now(), info });
+  return info;
+}
+// The file list changes rarely compared with how fast you click through files, so opening a file's diff
+// reuses a recent list instead of scanning the whole working tree again for every click.
+const changesCache = new Map(); // cwd -> { at, info }
+async function recentChanges(cwd, maxAgeMs) {
+  const c = changesCache.get(cwd);
+  return c && Date.now() - c.at < maxAgeMs ? c.info : gitChanges(cwd);
 }
 // Unified diff of one file vs HEAD (untracked: the whole file as added lines)
 async function gitFileDiff(cwd, rel) {
-  const info = await gitChanges(cwd);
-  if (!info || typeof rel !== 'string') return { error: 'Not a git repository' };
-  const f = info.files.find((x) => x.path === rel);
+  if (typeof rel !== 'string') return { error: 'Not a git repository' };
+  let info = await recentChanges(cwd, 20000);
+  let f = info && info.files.find((x) => x.path === rel);
+  if (info && !f) { // not in the recent list: it may be new since then
+    info = await gitChanges(cwd);
+    f = info && info.files.find((x) => x.path === rel);
+  }
+  if (!info) return { error: 'Not a git repository' };
   if (!f) return { error: 'This file has no changes any more' };
   const full = path.resolve(info.top, rel);
   if (!full.toLowerCase().startsWith(info.top.toLowerCase() + path.sep)) return { error: 'Bad path' };
   if (f.binary) return { binary: true };
   if (f.kind === 'untracked') {
     try {
-      if (fs.statSync(full).size > MAX_TEXT) return { error: 'File is too big to show here' };
-      return { lines: fs.readFileSync(full, 'utf8').replace(/\r?\n$/, '').split(/\r?\n/).map((t) => '+' + t), untracked: true };
+      if ((await fs.promises.stat(full)).size > MAX_TEXT) return { error: 'File is too big to show here' };
+      const buf = await fs.promises.readFile(full);
+      if (buf.includes(0)) return { binary: true }; // (uncounted files were never checked for this)
+      return { lines: buf.toString('utf8').replace(/\r?\n$/, '').split(/\r?\n/).map((t) => '+' + t), untracked: true };
     } catch (err) { return { error: err.message }; }
   }
   const hasHead = !!(await git(info.top, ['rev-parse', '--verify', '--quiet', 'HEAD']));
@@ -917,7 +946,7 @@ async function gitCommit(cwd, rels, message) {
     const com = await gitRun(sel.top, ['commit', '--only', '-F', msgFile, ...PATHSPEC], { input: nulList(sel.paths), timeout: 120000 });
     if (!com.ok) return { error: (com.err || com.out || 'git commit failed').slice(-1500) };
   } finally { fs.unlink(msgFile, () => {}); }
-  gitCache.clear();
+  gitCache.clear(); changesCache.clear();
   return { ok: true, sha: (await git(sel.top, ['rev-parse', '--short', 'HEAD'])) || '', count: sel.files.length };
 }
 
@@ -945,7 +974,7 @@ async function gitPush(cwd, account) {
   }
   try {
     const r = await gitRun(top, acct ? ['-c', 'credential.helper=', '-c', 'credential.helper=!gh auth git-credential', ...push] : push, { timeout: 120000 });
-    gitCache.clear();
+    gitCache.clear(); changesCache.clear();
     return r.ok ? { ok: true, text: (r.err || r.out).slice(-500) } : { error: (r.err || r.out || 'git push failed').slice(-1500) };
   } finally {
     if (back) await runCmd('gh', ['auth', 'switch', '-u', back]);
@@ -993,7 +1022,7 @@ async function gitDiscard(cwd, rels) {
     await gitRun(sel.top, ['rm', '-f', '--cached', '--ignore-unmatch', '-q', ...PATHSPEC], { input: nulList(toRemove) });
     for (const rel of toRemove) fs.rmSync(path.join(sel.top, rel), { force: true });
   }
-  gitCache.clear();
+  gitCache.clear(); changesCache.clear();
   return { ok: true, backup: id, count: sel.files.length };
 }
 async function gitUndoDiscard(cwd, id) {
@@ -1018,7 +1047,7 @@ async function gitUndoDiscard(cwd, id) {
     fs.copyFileSync(path.join(filesDir, rel), dest);
   }
   fs.rm(dir, { recursive: true, force: true }, () => {});
-  gitCache.clear();
+  gitCache.clear(); changesCache.clear();
   return { ok: true, count: meta.count };
 }
 // keep the backup folder small: drop anything older than a week

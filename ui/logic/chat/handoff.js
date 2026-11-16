@@ -16,11 +16,11 @@
   btn.hidden = true;
   btn.title = 'Summarise this chat and continue in a fresh one — keeps long chats cheap';
   row.appendChild(btn);
-  setInterval(() => {
+  setInterval(() => { // (two property writes: cheap enough to keep the button in step with chat switches)
     const s = currentActiveSession;
     btn.hidden = !usable(s);
     btn.classList.toggle('hot', (s?.context?.used || 0) >= LONG_CHAT);
-  }, 1000);
+  }, 250);
 
   const INTRO = 'This continues an earlier chat. Here is the handoff note from it:\n\n';
   const OUTRO = '\n\nRead the key files above, tell me briefly what you understand, then wait for my instruction.';

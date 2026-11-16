@@ -958,29 +958,33 @@ ipcMain.on('send-reply', async (_event, { text, image, images, files, session, c
   }
   if (!text && !image) return;
 
-  // 1. Always write to system clipboard as backup
-  try {
-    if (image) {
-      const nImg = nativeImage.createFromDataURL(image);
-      if (!nImg.isEmpty()) {
-        clipboard.writeImage(nImg);
-      } else if (typeof ClipboardItem !== 'undefined') {
-        const base64Data = image.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '');
-        const imgBuffer = Buffer.from(base64Data, 'base64');
-        const imgBlob = new Blob([imgBuffer], { type: 'image/png' });
-        await clipboard.write([new ClipboardItem({ 'image/png': imgBlob })]);
+  // 1. The system clipboard is used ONLY when it is the way the message travels: the "Copy" button, and the
+  //    keystroke-paste fallback into the Antigravity IDE (3b below). Claude Code (stdin) and the agy CLI do not need
+  //    it — and every message put on the clipboard stays in Windows' clipboard history (Win+V), passwords included.
+  const toClipboard = async () => {
+    try {
+      if (image) {
+        const nImg = nativeImage.createFromDataURL(image);
+        if (!nImg.isEmpty()) {
+          clipboard.writeImage(nImg);
+        } else if (typeof ClipboardItem !== 'undefined') {
+          const base64Data = image.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '');
+          const imgBuffer = Buffer.from(base64Data, 'base64');
+          const imgBlob = new Blob([imgBuffer], { type: 'image/png' });
+          await clipboard.write([new ClipboardItem({ 'image/png': imgBlob })]);
+        }
+      } else if (text) {
+        clipboard.writeText(text);
       }
-    } else if (text) {
-      clipboard.writeText(text);
+    } catch (err) {
+      console.error('[Main] Clipboard error:', err.message);
+      if (text) {
+        try { clipboard.writeText(text); } catch (e) {}
+      }
     }
-  } catch (err) {
-    console.error('[Main] Clipboard error:', err.message);
-    if (text) {
-      try { clipboard.writeText(text); } catch (e) {}
-    }
-  }
+  };
 
-  if (copyOnly) return;
+  if (copyOnly) { await toClipboard(); return; }
 
   const source = session?.source || 'claude';
   let sessionId = session?.id || '';
@@ -1230,6 +1234,7 @@ ipcMain.on('send-reply', async (_event, { text, image, images, files, session, c
   }
 
   // 3b. Fallback (agy not installed): Focus Antigravity IDE window, paste via Win32 keybd_event (with proper Ctrl hold timing), and press Enter
+  await toClipboard(); // this path pastes from the clipboard
   if (watcher && sessionId) {
     watcher.setSessionRunning(sessionId, 'Running (Thinking...)', text || 'Sent image to Antigravity');
   }

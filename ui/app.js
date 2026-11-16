@@ -216,6 +216,10 @@ function handleHudLinkClick(e, a) {
     return;
   }
   window.electronAPI.openFile?.(href).then((res) => {
+    if (res === 'blocked' && replyStatusMsg) {
+      replyStatusMsg.textContent = '⚠ Not opened: that file type can run programs. Open it from Explorer if you trust it.';
+      setTimeout(() => { if (/^⚠ Not opened/.test(replyStatusMsg.textContent)) replyStatusMsg.textContent = ''; }, 6000);
+    }
     if (res === 'missing' && replyStatusMsg) {
       replyStatusMsg.textContent = '⚠ File not found on disk';
       setTimeout(() => {

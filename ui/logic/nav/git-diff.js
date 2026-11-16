@@ -124,6 +124,7 @@
     const stats = mk('span', 'gd-stats');
     if (f.binary) stats.append(mk('span', 'gd-dim', 'binary'));
     else if (f.large) stats.append(mk('span', 'gd-dim', 'large'));
+    else if (f.uncounted) stats.append(mk('span', 'gd-dim', 'new')); // lines not counted (many untracked files)
     else {
       if (f.added) stats.append(mk('span', 'gd-add', `+${f.added}`));
       if (f.removed) stats.append(mk('span', 'gd-del', `−${f.removed}`));
@@ -178,7 +179,7 @@
   const chatIsOpen = () => !!(typeof currentActiveSession !== 'undefined' && currentActiveSession &&
     document.getElementById('detailView')?.classList.contains('active'));
   const KIND_WORD = { modified: 'modified', added: 'added', deleted: 'deleted', renamed: 'renamed', untracked: 'new, not committed yet' };
-  const counts = (f) => (f.binary ? 'binary' : f.large ? 'large file' : `+${f.added || 0} −${f.removed || 0}`);
+  const counts = (f) => (f.binary ? 'binary' : f.large ? 'large file' : f.uncounted ? 'new' : `+${f.added || 0} −${f.removed || 0}`);
   const gitCmd = (rel) => `git -C "${state.top}" diff HEAD -- "${rel}"`;
 
   function explainFilePrompt(f) {
