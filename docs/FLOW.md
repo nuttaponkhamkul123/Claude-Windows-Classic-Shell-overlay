@@ -18,7 +18,7 @@ flowchart LR
     W["watcher.js<br/>polls every 0.8s"]
     M["main.js<br/>windows, send-reply"]
     P["main/ipc/permissions.js<br/>approval server + rules"]
-    F["features-main.js<br/>settings, search, git, costs"]
+    F["features-main.js + main/git.js<br/>settings, search, git, costs"]
   end
   subgraph UI["Renderer (ui/)"]
     PL["preload.js<br/>window.electronAPI"]
@@ -112,7 +112,13 @@ stateDiagram-v2
 | Reading logs, session state | `watcher.js` |
 | Windows, sending messages, MCP list | `main.js` |
 | Approvals and rules | `main/ipc/permissions.js`, `mcp/permission.js`, `approval-shell.js` |
-| Settings, search, git, costs | `features-main.js` |
+| Settings, search, notifications, hand-off note | `features-main.js` |
+| Git: changed files, diff, commit, push, discard | `main/git.js` (helpers in `main/proc.js`) |
 | Bridge between main and UI | `preload.js` |
-| Main UI | `ui/app.js` |
+| Main UI (cards, chat, header) | `ui/app.js` |
+| Activity line and helper agents | `ui/logic/chat/activity.js` |
+| Slash commands, model/effort options, new chat | `ui/logic/chat/slash.js` |
+| Changes panel (tree, diff, commit, discard) | `ui/logic/nav/git-diff.js` |
+| Replies shown safely | `ui/logic/chat/safe-markdown.js` (+ the CSP in `ui/index.html`) |
+| Tests | `tests/` (`npm test`) |
 | Chat extras, nav, Vault, themes | `ui/logic/*`, `ui/styles/*` |

@@ -1,88 +1,78 @@
-# Claude & Antigravity Desktop Overlay HUD
+# ovly-claude: a desktop HUD for Claude Code (and Antigravity)
 
-A lightweight, frosted-glass, always-on-top desktop overlay that monitors **Claude Code (extension in Antigravity / VS Code)** and **Antigravity IDE Agent** in real-time.
+A small always-on-top Windows window that watches your **Claude Code** chats (and **Antigravity** agent chats), tells you when one needs you, and lets you **reply, approve tool use, review and commit changes** without leaving it.
 
-It provides an ambient status pill and **automatically alerts you with sound and an expanded popup whenever Claude or Antigravity is asking for confirmation, asking a question, or finished a turn**.
-
----
-
-## Features
-
-- **Floating Frameless Glass HUD**: Translucent obsidian frosted glass with neon glow borders.
-- **Fully Resizable**:
-  - Drag from any window edge or use the corner grip handle at the bottom-right (`///`).
-  - Supports width from 320px to 1400px and height up to 1200px.
-  - Remembers your custom width/height when expanding and collapsing.
-  - Reset size anytime from the system tray menu (`Reset Size & Position`).
-- **Draggable Anywhere**: Drag and place the widget anywhere on your screens.
-- **Always-on-Top Toggle**: Pin or unpin easily from the HUD.
-- **Attention Popup & Audio Chime**:
-  - Automatically pulses amber and expands when Claude/Antigravity asks a question or requires input.
-  - Plays a crisp, pleasant dual-tone chime (synthesized via Web Audio API, 100% offline).
-- **Real-Time State Indicators**:
-  - **Ready / Idle**: Calmed green indicator.
-  - **Thinking / Processing**: Electric blue/purple pulse.
-  - **Running Tool**: Cyan indicator showing active tool (e.g. `Bash`, `Edit`).
-  - **Needs Attention**: Pulsing amber glow + auto-slide question card.
-- **Clear Running & Idle Status on Each Card**:
-  - **Running Badge** (`● Running`): Cyan glowing badge with animated pulsing dot when Claude/Antigravity is actively executing tools or thinking (e.g. `Running: Bash`, `Running: Thinking`).
-  - **Idle Badge** (`○ Idle`): Emerald badge when the AI is waiting for commands.
-  - **Needs Input Badge** (`Needs Input`): Amber pulsing badge when a question or confirmation is awaiting reply.
-  - Quick filter tabs: `All`, `Running`, `Idle`, and `Needs Input`.
-- **Full Markdown Response Viewer**:
-  - Click on any session card to drill into the **full AI response**.
-  - Complete Markdown formatting: headers, bold/italic, bullet lists, blockquotes, tables.
-  - Formatted code blocks with syntax styling and **click-to-copy**.
-- **Live Running vs. Idle State Engine**:
-  - Distinguishes when an AI is actively thinking, executing tools (e.g. `Running: run_command`, `Running: read_file`), analyzing tool results, or idle.
-  - Automatically identifies conversation turn lifecycle in Antigravity IDE and Claude Code logs.
-  - Real-time status transitions update live inside open cards without manual refresh.
-- **Interactive Conversation Dialog & User Bubbles**:
-  - Displays conversation flow with distinct assistant and right-aligned user speech bubbles.
-  - When you type and press `Enter` or click `Send`, your message bubble immediately appears in the dialog with timestamp.
-- **Image Attachment Support**:
-  - Attach images via the **attach (paperclip) button**, or simply **paste images with `Ctrl+V`** directly into the input area.
-  - Supports **drag-and-drop** of image files directly into the window.
-  - Displays an attached image preview thumbnail with a quick remove `[✕]` button.
-  - User bubble displays the attached image thumbnail (click to expand).
-  - Copies both the image and your text directly to the clipboard for instant pasting into Claude or Antigravity!
-- **1-Click Copy & Switch to Editor**:
-  - Type a reply in the overlay and click **`Copy & Switch ↵`** (or press `Enter`).
-  - Automatically copies your text to the clipboard and brings Antigravity IDE directly to the foreground.
-  - You can immediately paste with `Ctrl + V` into your Claude Code prompt or Antigravity chat with zero risk of stray keystrokes in your code files.
-  - Fast-track approval pills: `[✓ Approve / Yes]`, `[✕ Reject / No]`, `[Looks good!]`, `[Explain further]`.
-- **Multi-Session & Multi-AI Concurrent Support**:
-  - Automatically discovers and tracks multiple active sessions across different projects (`mmo-test`, `hrs-ally-csa`, `het`, etc.).
-  - Tracks multiple Claude sessions and Antigravity sessions concurrently.
-  - Header displays quick mini-chips for each active AI (`[C: mmo-test]`, `[C: ally-csa]`, `[A: Antigravity]`).
-  - Clicking any chip navigates and scrolls directly to that session.
-  - Filter tabs in expanded view: `All`, `Needs Input`, `Claude`, `Antigravity`.
-  - Individual "Dismiss" buttons per session card.
-  - Monitors Claude Code session logs (`~/.claude/projects/`) and Antigravity brain transcripts (`~/.gemini/antigravity/brain/`).
+It reads the logs Claude Code already writes (`~/.claude/projects/`, and `~/.gemini/…/brain/` for Antigravity). It does not need an API key. Replies you send from the HUD run the `claude` command on your PC (`claude -p`, resuming the chat).
 
 ---
 
-## Quick Start
+## What it does
 
-### 1. Launch via Batch File
-Double-click `start.bat` in this folder.
+**Watch**
+- One card or row per chat, with a live status: *Running* (thinking / which tool), *Idle*, *Needs input*. Filter by All, Running, Idle, Needs input.
+- Chime and a pop-out when a chat asks a question, needs an approval, or finishes. Desktop notification when a long run ends.
+- Docks to a screen edge as a small tab. System-tray menu to reset size and position.
+- Context meter per chat, cost of the chat (`$…`), tokens used today, and a **Usage** panel (tokens per day, plan limits).
 
-### 2. Or Launch via Terminal
+**Reply**
+- Full conversation view with Markdown, syntax-coloured code, and **Mermaid diagrams** (ask Claude for "a Mermaid diagram of…").
+- Attach images and files (paste, drag, paperclip). Slash commands and your own skills: type `/`.
+- **Model per message:** the Model menu has *This message* (one-off, e.g. Haiku for a quick question) and *Every message*. Effort works the same way.
+- **Plan** mode, a message queue while Claude is busy, **Stop** that really stops, and a **Hand off ↗** button (or `/handoff`) that writes a short note from a long chat and opens a fresh chat with it, which keeps long chats cheap.
+- Remote Control, pinned notes, Ctrl+K finder, search across all chats, export a chat to Markdown.
+
+**Approve**
+- Claude's tool requests appear in the HUD with **Allow / Allow always / Deny**. "Always" saves a narrow rule (for example `npm test`). Rules never cover chained or hidden commands, and delete / kill / download-and-run commands never get a rule.
+- *Always allow all commands in this folder* is available for shell commands. It still asks for delete, kill, downloads, `| sh`, `git push`, `git reset --hard` and `git clean`.
+- Manage or delete rules in Settings → Approval rules.
+
+**Review and ship** (click the git box in the chat header)
+- A side panel with every changed file as a **folder tree** and a coloured diff.
+- Pick lines or select text and **Add to chat**. Right-click a file or folder for **Explain this change**.
+- Tick files, then **Commit** (Claude can draft the message, optional push, optional GitHub account for the push) or **Discard** (backed up for a week, with Undo).
+
+**Looks**
+- Three styles: **Classic** (Windows 7, XP, Vista Dark themes), **Work** (sidebar + chat) and **Shelter** (rooms with robots). Maximize with the title-bar button, double-click on the header, or `Ctrl+Shift+M`.
+
+---
+
+## Quick start
+
+Windows, Node.js, and Claude Code installed (VS Code extension or `claude` on your PATH).
+
 ```bash
+npm install
 npm start
 ```
 
----
+Or double-click **`Launch AI HUD.vbs`** (no console window). The app also creates a desktop shortcut the first time it runs. Global hotkey: `Ctrl+Alt+Space` brings the HUD up with the cursor in the input box.
 
-## Project Structure
+## Tests
 
-- `main.js`: Electron main process controlling the transparent borderless window and tray.
-- `preload.js`: Secure context bridge between Electron IPC and the overlay UI.
-- `watcher.js`: High-speed tailing scanner for Claude Code and Antigravity logs.
-- `ui/index.html`: Clean glassmorphic overlay widget layout.
-- `ui/app.js`: State management, alert triggers, and expand/collapse behaviors.
-- `ui/logic/`: Feature scripts, grouped by area (`chat/`, `nav/`, `personalization/`, `system/`).
-- `ui/lib/`: Shared helpers: robot drawing and outfits, Markdown, the alert-chime synthesizer.
-- `ui/styles/`: Base styles, themes (Windows 7, XP, Vista Dark), and feature styles.
-- `mcp/`: MCP servers Claude runs: `pinner.js` (pin notes to the HUD) and `permission.js` (approval prompts).
+```bash
+npm test
+```
 
+Runs `tests/` with Node's built-in test runner (no extra packages): the approval-rule parser and the git actions behind the Changes panel.
+
+## Safety notes
+
+- Replies are cleaned before they are shown (scripts, event handlers, `javascript:` links, forms and frames are removed, and remote images become links), and the page has a strict Content-Security-Policy. See `ui/logic/chat/safe-markdown.js`.
+- Settings, approval rules and discard backups live in `~/.ovly-claude/`.
+- The **Usage** panel reads your Claude login token from `~/.claude/.credentials.json` to ask Anthropic for plan limits. Nothing else uses it.
+- Commit messages and hand-off notes are written by a one-off `claude -p --model haiku` call. It runs from the temp folder, does not save a chat, and may cost a little.
+
+## Project structure
+
+- `main.js`: Electron main process: window, tray, docking, sending replies.
+- `main/`: main-process parts: `ipc/` (approvals, clipboard, snapshots), `notes.js`, `git.js` and `proc.js` (git and one-off process helpers).
+- `features-main.js`: settings store, history, search, notifications, remote control, hand-off note.
+- `watcher.js`: reads Claude Code and Antigravity logs and works out each chat's state.
+- `approval-shell.js`: splits shell commands and decides what an "Always allow" rule may cover.
+- `usage.js`: token and plan-limit numbers. `skill-install-main.js`: skill installer.
+- `preload.js`: the only bridge between the page and the main process.
+- `mcp/`: small MCP servers Claude runs: `permission.js` (approval prompts) and `pinner.js` (pin notes).
+- `ui/`: the interface. `app.js` (core), `features.js`, `logic/` by area (`chat/`, `nav/`, `system/`, `vault/`, `personalization/`), `lib/` (Markdown, Mermaid, highlighting, robots), `styles/`.
+- `tests/`: automated tests. `docs/FLOW.md`: how the app works, with diagrams.
+
+More detail, with diagrams: [`docs/FLOW.md`](docs/FLOW.md).

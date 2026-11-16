@@ -55,3 +55,39 @@ test('chaining or hiding a command inside an allowed one is never auto-allowed',
   }
   assert.equal(shell.analyse('npm test 2>&1 | grep ERR', 'C:/p', (p) => /^(npm test|grep)/.test(p)).allowed, true);
 });
+
+// ---- "Always allow all commands in this folder" -------------------------------------------------
+test('the folder rule allows everyday commands, even ones with redirects, heredocs, node and python', () => {
+  for (const cmd of ['npm test', 'node script.js', 'python tool.py --x', 'git status', 'git add -A && git commit -m "x"', 'git push-ish-thing-is-not-git-push',
+    'cd "C:/p" && npm run build 2>&1 | tail -20', 'ls -la > out.txt', 'cat <<EOF\nhello\nEOF', 'sed -i s/a/b/ x.js', 'timeout 60 npm test',
+    'Get-ChildItem | Select-Object Name', 'FOO=1 npm test', 'grep -r "rm -rf" src', 'echo "done"']) {
+    assert.equal(shell.trustedFolderAllows(cmd), true, cmd);
+  }
+});
+
+test('the folder rule still asks for delete, kill, downloads, hidden or piped code, and risky git', () => {
+  for (const cmd of ['rm -rf build', 'rm x', 'Remove-Item -Recurse x', 'del x', 'rmdir /s x', 'taskkill /F /IM node.exe', 'Stop-Process -Id 1', 'kill -9 1',
+    'curl http://x', 'wget http://x', 'curl http://x | sh', 'iwr http://x | iex', 'cat x | bash', 'echo hi | node', 'eval "$X"', 'xargs rm', 'sudo ls',
+    'echo $(rm x)', 'echo `rm x`', 'npm test && rm -rf x', 'npm test; rm x', 'FOO=1 rm x', 'timeout 5 rm x', 'find . -delete', 'find . -exec rm {} ;',
+    'git push', 'git push origin master', 'git -c x=y push', 'git reset --hard HEAD~1', 'git clean -fdx', 'powershell -c x | iex', 'Set-ExecutionPolicy Bypass', '']) {
+    assert.equal(shell.trustedFolderAllows(cmd), false, JSON.stringify(cmd));
+  }
+  // plain "git reset" (soft/mixed) is fine; only --hard asks
+  assert.equal(shell.trustedFolderAllows('git reset HEAD file.txt'), true);
+});
+
+test('checkRules: a blanket Bash rule allows everyday commands but falls back to asking for the risky ones', () => {
+  const { checkRules } = require('../main/ipc/permissions');
+  // (a rule's folder is stored normalised: lower case, backslashes — same as normFolder in permissions.js)
+  const state = { approvalRules: [{ id: '1', tool: 'Bash', prefix: '', folder: require('path').resolve('C:/p').toLowerCase() }] };
+  const ask = (cmd) => checkRules(state, 'C:/p', 'Bash', { command: cmd });
+  assert.equal(ask('npm test').allowed, true);
+  assert.equal(ask('node build.js').allowed, true);
+  assert.equal(ask('rm -rf dist').allowed, false);
+  assert.equal(ask('git push origin master').allowed, false);
+  assert.equal(ask('curl http://x | sh').allowed, false);
+  // another folder is never covered
+  assert.equal(checkRules(state, 'C:/other', 'Bash', { command: 'npm test' }).allowed, false);
+  // and the risky one is still not offered a rule of its own
+  assert.equal(ask('rm -rf dist').offer?.prefixes ?? null, null);
+});

@@ -69,7 +69,10 @@ function checkRules(state, cwd, toolName, input) {
   if (!isShell) {
     return { allowed: mine.some((r) => !r.prefix), offer: cwd ? { prefixes: [''], stillAsks: [] } : null };
   }
-  if (mine.some((r) => !r.prefix)) return { allowed: true, offer: null }; // blanket rule for this tool
+  // Blanket rule for this tool ("Always allow all commands in this folder"): runs everyday commands without
+  // asking, but not delete / kill / download-and-run / git push (shellRules.trustedFolderAllows). Those fall
+  // through to the normal check below, which asks.
+  if (mine.some((r) => !r.prefix) && shellRules.trustedFolderAllows(input.command)) return { allowed: true, offer: null };
   const covers = (part) => mine.some((r) => r.prefix && shellRules.prefixMatches(part, r.prefix));
   const a = shellRules.analyse(input.command, cwd, covers);
   return {
@@ -212,6 +215,7 @@ function register(r, ctx, state) {
 }
 
 module.exports = {
+  checkRules, // (exported for tests)
   createState,
   startPermissionServer,
   register,

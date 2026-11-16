@@ -196,4 +196,51 @@ function analyse(command, folder, ruleMatches) {
   return { allowed: false, prefixes: prefixes.length ? prefixes : null, stillAsks: [...new Set(stillAsks)] };
 }
 
-module.exports = { splitShell, suggestPrefix, isHarmless, analyse, prefixMatches, effective };
+// ---- "Always allow all commands in this folder" ------------------------------------------------
+// That rule is meant to stop the constant prompts for normal work (build, test, edit, git status…),
+// not to let Claude delete things or fetch and run code unasked. These still ask, whatever the rule says.
+const TRUST_STILL_ASKS = new Set([
+  // delete / wipe / power
+  'rm', 'rmdir', 'del', 'erase', 'rd', 'remove-item', 'ri', 'remove-itemproperty', 'clear-content', 'clear-disk', 'format', 'format-volume', 'dd', 'mkfs',
+  'shutdown', 'reboot', 'restart-computer', 'stop-computer',
+  // kill / privileges / system settings
+  'kill', 'pkill', 'killall', 'taskkill', 'stop-process', 'spps', 'sudo', 'su', 'runas', 'chmod', 'chown', 'reg', 'netsh', 'set-executionpolicy',
+  'new-service', 'set-service', 'stop-service',
+  // download, or run what was downloaded
+  'curl', 'wget', 'iex', 'invoke-expression', 'invoke-webrequest', 'iwr', 'invoke-restmethod', 'irm', 'start-bitstransfer',
+  // run something else (so the real command is hidden)
+  'eval', 'exec', 'source', '.', 'xargs', 'invoke-command', 'icm', 'start-process', 'saps', 'start-job', 'add-type',
+]);
+const PIPE_INTO_INTERPRETER = /\|\s*(?:sudo\s+)?(?:ba|z|da|k)?sh\b|\|\s*(?:pwsh|powershell|iex|cmd|node|python3?|py|ruby|perl|php)\b/i;
+
+/**
+ * Should a blanket folder rule allow this shell command without asking?
+ * Yes for everyday commands. No (→ the normal check runs and asks) when it deletes or kills things,
+ * downloads or runs unseen code, pipes into an interpreter, hides a command in $( ) or backticks,
+ * or uses git push / reset --hard / clean.
+ * It over-splits on purpose (a quoted "; rm" also counts): an extra question is fine, a missed one is not.
+ */
+function trustedFolderAllows(command) {
+  const s = String(command || '');
+  if (!s.trim()) return false;
+  if (/`|\$\(|<\(|>\(/.test(s)) return false;           // a command hidden inside another one
+  if (PIPE_INTO_INTERPRETER.test(s)) return false;       // "… | sh", "… | node"
+  for (const raw of s.split(/\r?\n|;|&&|\|\||\||&/)) {
+    let part = raw.trim().replace(/^[\s({]+/, '');
+    while (/^[A-Za-z_]\w*=\S*\s+/.test(part)) part = part.replace(/^[A-Za-z_]\w*=\S*\s+/, ''); // FOO=1 rm x
+    if (!part) continue;
+    const words = effective(part).split(/\s+/);
+    const head = baseName(words[0].replace(/^["']|["']$/g, ''));
+    if (TRUST_STILL_ASKS.has(head)) return false;
+    if (head === 'git') {
+      // look at every word, not just the first non-flag one: "git -c x=y push" hides the subcommand behind a value
+      const w = new Set(words.slice(1).map((x) => x.toLowerCase()));
+      if (w.has('push') || w.has('clean')) return false;
+      if (w.has('reset') && /--hard\b/.test(part)) return false;
+    }
+    if (head === 'find' && /\s-(exec|execdir|ok|okdir|delete)\b/.test(' ' + part)) return false;
+  }
+  return true;
+}
+
+module.exports = { splitShell, suggestPrefix, isHarmless, analyse, prefixMatches, effective, trustedFolderAllows };

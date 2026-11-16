@@ -1,6 +1,7 @@
 // Robot dress-up: hats, glasses and clothes drawn as SVG on top of the robot avatar.
 // Loaded before app.js. Everything is placed from the robot's data-anchors
-// (written by tools/vectorize_robot.py), so it still fits after re-vectorizing.
+// (written when robot_1_small.svg was made — the script that did it is in git history:
+//  git show 4a43108:tools/vectorize_robot.py), so it still fits after re-vectorizing.
 //
 //   window.ROBOT_OUTFIT_CATALOG          — items + default colours (for the Dress-up panel)
 //   window.decorateRobotSvg(svg, outfit)  — returns the SVG text with the outfit added
