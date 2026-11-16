@@ -893,6 +893,15 @@ async function pickChanged(cwd, rels) {
   return { top: info.top, files, paths: [...new Set(files.flatMap((f) => [f.path, f.from].filter(Boolean)))] };
 }
 
+// A fresh `claude -p` session can open (or end) with the organisation's weekly notice block. It is meant
+// for you in the chat, not for a commit message or a handoff note, so cut it from generated text.
+function stripNotice(text) {
+  const i = text.indexOf('重要なお知らせ');
+  if (i < 0) return text;
+  const head = text.slice(0, i).replace(/[\s\-*【[]+$/, ''); // also drops the "---" and "**【" in front of it
+  return head.trim() ? head : text; // (if the notice came first there is nothing safe to cut)
+}
+
 async function gitCommit(cwd, rels, message) {
   const msg = typeof message === 'string' ? message.trim() : '';
   if (!msg) return { error: 'Write a commit message first' };
@@ -1021,7 +1030,8 @@ try {
 } catch (_) { /* no backups yet */ }
 
 // A commit message drafted by Claude (Haiku: cheap), from the selected files' diff.
-// --no-session-persistence keeps it out of the chat list; --tools "" = no tool use.
+// --no-session-persistence keeps it out of the chat list; --tools "" = no tool use; run from the temp folder so the
+// project's CLAUDE.md and saved memory are not loaded into a note that should only use what it is given.
 async function gitDraftMessage(cwd, rels) {
   const sel = await pickChanged(cwd, rels);
   if (sel.error) return sel;
@@ -1045,9 +1055,50 @@ async function gitDraftMessage(cwd, rels) {
     'saying what changed and why (skip the bullets if the change is tiny). Match the style of the recent commits.\n' +
     'Reply with the commit message only: no quotes, no code fences, no commentary.\n\n' +
     (recent ? `Recent commit subjects:\n${recent}\n\n` : '') + 'Changes:\n' + body;
-  const r = await runCmd(bin, ['-p', '--model', 'haiku', '--no-session-persistence', '--tools', ''], { cwd: sel.top, input: prompt, timeout: 90000 });
+  const r = await runCmd(bin, ['-p', '--model', 'haiku', '--no-session-persistence', '--tools', '', '--system-prompt', 'You write short, accurate developer notes from the text you are given. Use nothing but that text.'], { cwd: os.tmpdir(), input: prompt, timeout: 90000 });
   if (!r.ok || !r.out.trim()) return { error: (r.err || 'Claude gave no answer').slice(-300) };
-  return { message: r.out.trim().replace(/^```[a-z]*\n?|\n?```$/g, '').trim() };
+  return { message: stripNotice(r.out.trim()).replace(/^```[a-z]*\n?|\n?```$/g, '').trim() };
+}
+
+// A handoff note for continuing a chat in a fresh one. Haiku reads the recent
+// transcript (so the long chat itself is NOT re-sent — that is the whole point) and
+// writes goal / done / next / key files. `opts.history` lets tests skip the transcript.
+async function handoffNote(sessionId, opts = {}) {
+  const bin = ctx?.findClaudeBinary?.() || 'claude';
+  if (bin !== 'claude' && !fs.existsSync(bin)) return { error: 'Claude Code was not found on this PC' };
+  let msgs = opts.history;
+  if (!msgs) {
+    try { msgs = readSessionHistory(sessionId, { tailBytes: 3 * 1024 * 1024, max: 60 }); } catch (_) { msgs = null; }
+  }
+  msgs = (msgs || []).filter((m) => m && (m.text || m.edits?.length));
+  if (!msgs.length) return { error: 'There is nothing in this chat to summarise yet' };
+
+  const cut = (t, n) => (t.length > n ? t.slice(0, n) + ' …' : t);
+  const edited = new Map(); // file -> times edited
+  for (const m of msgs) for (const e of m.edits || []) edited.set(e.path, (edited.get(e.path) || 0) + 1);
+  // newest messages first until the budget is used, then back in order
+  const lines = [];
+  let budget = 30000;
+  for (let i = msgs.length - 1; i >= 0 && budget > 0; i--) {
+    const m = msgs[i];
+    const line = `${m.role === 'user' ? 'USER' : 'CLAUDE'}: ${cut(m.text || '(edited files)', m.role === 'user' ? 2000 : 1500)}`;
+    lines.unshift(line);
+    budget -= line.length;
+  }
+  const cwd = ctx?.getWatcher?.()?.sessions?.get(sessionId)?.cwd || opts.cwd || '';
+  const prompt =
+    'Below is the recent conversation of a coding session. Write a HANDOFF NOTE so a brand-new Claude Code session, ' +
+    'which remembers nothing of it, can carry on seamlessly.\n' +
+    'Use exactly these markdown headings: ## Goal, ## Done so far, ## In progress, ## Next steps, ## Key files, ## Decisions and gotchas.\n' +
+    'Be concrete: file names, commands, decisions and why. At most 350 words. Use only facts from the conversation; ' +
+    'say "unknown" rather than guess. Reply with the note only, no preamble.\n\n' +
+    (cwd ? `Project folder: ${cwd}\n` : '') +
+    (edited.size ? `Files edited in this session: ${[...edited.keys()].slice(0, 30).join(', ')}\n` : '') +
+    `\nConversation (oldest first):\n${lines.join('\n\n')}`;
+  const r = await runCmd(bin, ['-p', '--model', 'haiku', '--no-session-persistence', '--tools', '', '--system-prompt', 'You write short, accurate developer notes from the text you are given. Use nothing but that text.'],
+    { cwd: os.tmpdir(), input: prompt, timeout: 120000 });
+  if (!r.ok || !r.out.trim()) return { error: (r.err || 'Claude gave no answer').slice(-300) };
+  return { note: stripNotice(r.out.trim()).replace(/^```[a-z]*\n?|\n?```$/g, '').trim() };
 }
 
 // ---------------------------------------------------------------------------
@@ -1183,6 +1234,7 @@ function register(c) {
   ipcMain.handle('git-discard', (_e, cwd, files) => gitDiscard(cwd, files));
   ipcMain.handle('git-undo-discard', (_e, cwd, id) => gitUndoDiscard(cwd, id));
   ipcMain.handle('git-draft-message', (_e, cwd, files) => gitDraftMessage(cwd, files));
+  ipcMain.handle('handoff-note', (_e, sessionId) => handoffNote(sessionId));
 
   // Desktop shortcut creator (Windows .lnk via Electron's shell.writeShortcutLink)
   function createDesktopShortcut({ force = false } = {}) {
@@ -1231,5 +1283,5 @@ function register(c) {
 module.exports = {
   register, onSync, readClaudeHistory, readAntigravityHistory, readSessionHistory, pathForSession,
   getSetting, setSetting, trackChild, aliasChild, wasStopped, editFromToolUse, mergeEdit, openFile,
-  gitChanges, gitFileDiff, gitCommit, gitPush, gitDiscard, gitUndoDiscard, gitDraftMessage,
+  gitChanges, gitFileDiff, gitCommit, gitPush, gitDiscard, gitUndoDiscard, gitDraftMessage, handoffNote,
 };

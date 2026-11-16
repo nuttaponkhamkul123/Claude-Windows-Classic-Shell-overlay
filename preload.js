@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   gitDiscard: (cwd, files) => ipcRenderer.invoke('git-discard', cwd, files),
   gitUndoDiscard: (cwd, id) => ipcRenderer.invoke('git-undo-discard', cwd, id),
   gitDraftMessage: (cwd, files) => ipcRenderer.invoke('git-draft-message', cwd, files),
+  handoffNote: (sessionId) => ipcRenderer.invoke('handoff-note', sessionId),
   agyModels: () => ipcRenderer.invoke('agy-models'),
   openFolder: (dir) => ipcRenderer.invoke('open-folder', dir),
   pickFolder: (startDir) => ipcRenderer.invoke('pick-folder', startDir),

@@ -15,7 +15,12 @@
   const chip = document.createElement('span');
   chip.className = 'cost-chip';
   chip.hidden = true;
-  box.after(chip); // its own line under the context meter (the meter row is narrow next to the git box)
+  // its own line under the context meter (the meter row is narrow next to the git box);
+  // handoff.js adds its button to the same row
+  const row = document.createElement('div');
+  row.className = 'cost-row';
+  row.appendChild(chip);
+  box.after(row);
 
   let cost = null;        // this chat, USD
   let costFor = '';       // session id `cost` belongs to
@@ -51,7 +56,7 @@
     lastUsed.set(s.id, used);
     if (before != null && before < LONG_CHAT && used >= LONG_CHAT) {
       addSystemNote(`This chat is now ${fmtTokens(used)} tokens long. Each new message re-sends all of it — ` +
-        'a new chat (or /compact) would be cheaper if you are changing topic.');
+        'a new chat (or /compact) would be cheaper. "Hand off ↗" (or /handoff) carries the key points over to a fresh chat.');
     }
   }
 

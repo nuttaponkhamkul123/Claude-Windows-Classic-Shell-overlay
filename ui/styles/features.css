@@ -328,7 +328,9 @@
 .fx-model-row .fx-skill-desc { padding-left: 18px; font-family: Consolas, monospace; font-size: 10.5px; }
 
 /* Cost chip in the chat header (cost-meter.js) */
-.cost-chip { display: block; width: fit-content; margin: 6px 0 0; padding: 1px 8px; border-radius: 9px; font-size: 11px; white-space: nowrap;
+.cost-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.cost-row:not(:has(> :not([hidden]))) { display: none; }
+.cost-chip { display: block; width: fit-content; margin: 0; padding: 1px 8px; border-radius: 9px; font-size: 11px; white-space: nowrap;
   background: rgba(127,127,127,.14); border: 1px solid rgba(127,127,127,.28); cursor: default; }
 .cost-chip[hidden] { display: none; }
 .cost-chip.warn { color: #b87700; background: rgba(210,153,34,.14); border-color: rgba(210,153,34,.5); }
@@ -1874,3 +1876,21 @@ code.hljs span, .gd-code span { font-family: inherit !important; font-size: inhe
 /* light Windows themes */
 body.theme-aero:not(.theme-vista) .explain-pill, body.theme-xp .explain-pill { color: #1d3d75; background: #e8f0ff; border-color: #9dbcf0; }
 body.theme-aero:not(.theme-vista) .explain-pill .ep-ico, body.theme-xp .explain-pill .ep-ico { color: #2f6fd6; }
+
+/* Hand off ↗ (logic/chat/handoff.js) */
+.handoff-btn { font: inherit; font-size: 11px; padding: 1px 9px; border-radius: 9px; cursor: pointer; color: inherit;
+  background: transparent; border: 1px solid rgba(127,127,127,.4); }
+.handoff-btn[hidden] { display: none; }
+.handoff-btn:hover { background: rgba(127,127,127,.16); }
+.handoff-btn.hot { color: #b87700; border-color: rgba(210,153,34,.6); background: rgba(210,153,34,.12); }
+body.style-work .handoff-btn { color: var(--wk-dim); }
+body.style-work .handoff-btn:hover { color: var(--wk-text); }
+body.style-work .handoff-btn.hot, body.theme-vista .handoff-btn.hot { color: #e3c27a; }
+.ho-dialog { max-width: 560px; }
+.ho-note { width: 100%; box-sizing: border-box; padding: 8px 10px; resize: vertical; outline: none;
+  font: 12px "Cascadia Mono", Consolas, monospace; line-height: 1.5; color: var(--sk-text); background: var(--sk-input);
+  border: 1px solid var(--sk-line); border-radius: 3px; }
+.ho-note:focus { border-color: var(--sk-accent); }
+.ho-note:disabled { opacity: .6; }
+.ho-actions { align-items: center; margin-top: 4px; }
+.ho-spacer { flex: 1; }

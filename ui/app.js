@@ -2965,6 +2965,7 @@ const BUILTIN_COMMANDS = [
     ],
   },
   { name: 'clear', args: '', description: 'Open a new, empty conversation in the same folder', kind: 'hud' },
+  { name: 'handoff', args: '', description: 'Summarise this chat and continue in a fresh one (keeps long chats cheap)', kind: 'hud' },
   { name: 'mcp', args: '', description: 'Show MCP servers and their status', kind: 'hud' },
   { name: 'help', args: '', description: 'List available commands', kind: 'hud' },
   { name: 'compact', args: '[instructions]', description: 'Summarize the conversation to free up context', kind: 'claude' },
@@ -3136,6 +3137,7 @@ function runHudCommand(input) {
     return true;
   }
   if (name === 'mcp') { openMcpPanel(); return true; }
+  if (name === 'handoff') { if (window.openHandoff) window.openHandoff(); else addSystemNote('Handoff is not available.'); return true; }
 
   if (!s || (s.source !== 'claude' && s.source !== 'antigravity')) {
     if (['model', 'effort', 'clear'].includes(name)) {
