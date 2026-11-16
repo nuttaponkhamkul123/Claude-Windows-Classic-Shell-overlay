@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Replies come from an AI (and from whatever it read): no inline scripts or handlers, nothing loaded
+       from the internet, no plugins or frames. Second layer behind logic/chat/safe-markdown.js. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data: blob:; font-src 'self' file: data:; media-src 'self' file: data: blob:; connect-src 'self' file: data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
   <title>Multi-AI Session Overlay HUD</title>
   <link rel="stylesheet" href="styles/style.css" />
   <link rel="stylesheet" href="styles/theme-aero.css" />
@@ -301,6 +305,7 @@
 
   <script src="lib/dom.js"></script>
   <script src="lib/marked.min.js"></script>
+  <script src="logic/chat/safe-markdown.js"></script>
   <script src="logic/chat/diagrams.js"></script>
   <script src="lib/highlight.min.js"></script>
   <script src="logic/chat/highlight.js"></script>

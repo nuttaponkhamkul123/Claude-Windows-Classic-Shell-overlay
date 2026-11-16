@@ -16,6 +16,10 @@ const RISKY_HEADS = new Set([
   'chmod', 'chown', 'dd', 'mkfs', 'curl', 'wget', 'iex', 'invoke-expression', 'invoke-webrequest', 'powershell', 'pwsh', 'cmd',
   'bash', 'sh', 'zsh', 'eval', 'exec', 'source', '.', 'node', 'python', 'python3', 'py', 'npx', 'reg', 'netsh', 'git-push',
   'electron', 'deno', 'bun', 'ruby', 'perl', 'php', 'java', 'wscript', 'cscript', 'mshta', 'rundll32', 'regsvr32',
+  // PowerShell: delete / kill / run / download / reconfigure (and their short aliases)
+  'remove-item', 'ri', 'remove-itemproperty', 'clear-content', 'clear-disk', 'format-volume', 'stop-process', 'spps', 'start-process', 'saps',
+  'invoke-command', 'icm', 'invoke-item', 'ii', 'invoke-restmethod', 'irm', 'start-job', 'start-bitstransfer', 'add-type',
+  'set-executionpolicy', 'new-service', 'set-service', 'stop-service', 'restart-computer', 'stop-computer',
   // wrappers that run whatever follows them (timeout is unwrapped instead, see effective())
   'xargs', 'env', 'nohup', 'start', 'time', 'watch', 'nice', 'command', 'builtin', 'parallel', 'runas',
   // changes where the following commands run — never a blanket rule (cd inside the folder is allowed anyway)
@@ -130,7 +134,10 @@ function suggestPrefix(part) {
   if (base === 'git' && /^(push|reset|clean|checkout|rebase|rm|config)$/i.test(words[1] || '')) return null;
   if (base === 'find' && /\s-(exec|execdir|ok|okdir|delete)\b/.test(' ' + c)) return null;
   const plain = (w) => w && !w.startsWith('-') && !/[\\/:'"$=]/.test(w);
-  if (!SUBCOMMAND_TOOLS.has(base) || !plain(words[1])) return words[0];
+  if (!SUBCOMMAND_TOOLS.has(base)) return words[0];
+  // "git --no-pager diff" / "npm --silent test" / bare "git": the first word alone would
+  // become a rule covering EVERY git / npm command (push, reset --hard, publish…), so no rule is offered
+  if (!plain(words[1])) return null;
   const sub = words[1].toLowerCase();
   if (EXEC_SUBCOMMANDS.has(sub)) return null;
   if (RUN_SUBCOMMANDS.has(sub)) return plain(words[2]) ? `${words[0]} ${words[1]} ${words[2]}` : null;

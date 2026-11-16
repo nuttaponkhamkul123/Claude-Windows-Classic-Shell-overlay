@@ -69,11 +69,12 @@
       if (r && typeof r[s.id] === 'number') { cost = r[s.id]; costFor = s.id; }
       else if (costFor !== s.id) cost = null;
     } catch (_) { /* keep the old number */ }
-    if (Date.now() - todayAt > 60000 && api.getUsage) {
+    // Local-logs-only call (no network, no login token), and at most every 5 minutes: it re-reads the
+    // day's transcripts, which takes about half a second.
+    if (Date.now() - todayAt > 5 * 60000 && api.getUsageToday) {
       todayAt = Date.now();
-      api.getUsage().then((u) => {
-        const t = u?.claude?.today?.tokens;
-        if (typeof t === 'number') { todayTokens = t; draw(); }
+      api.getUsageToday().then((u) => {
+        if (typeof u?.tokens === 'number') { todayTokens = u.tokens; draw(); }
       }).catch(() => {});
     }
     draw();

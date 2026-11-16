@@ -72,6 +72,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readClipboard: () => ipcRenderer.invoke('read-clipboard'),
   readRobotSvg: (name) => ipcRenderer.invoke('read-robot-svg', name),
   getUsage: (refresh) => ipcRenderer.invoke('get-usage', { refresh }),
+  getUsageToday: () => ipcRenderer.invoke('get-usage-today'),
   testNudge: () => ipcRenderer.send('test-nudge'),
   onSessionNudge: (callback) => ipcRenderer.on('session-nudge', (_event, data) => callback(data)),
   // Tool approvals

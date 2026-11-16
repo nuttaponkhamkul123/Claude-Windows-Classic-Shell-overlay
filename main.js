@@ -645,6 +645,16 @@ ipcMain.handle('get-usage', async (_event, { refresh } = {}) => {
   try { return await usageInFlight; }
   catch (e) { return { error: e.message }; }
 });
+// Just today's token total, from the local logs only. No network and no login token — unlike
+// 'get-usage', which also asks Anthropic for plan limits. The header cost chip uses this one.
+let todayInFlight = null;
+ipcMain.handle('get-usage-today', async () => {
+  if (!todayInFlight) todayInFlight = getUsage().finally(() => { todayInFlight = null; });
+  try {
+    const u = await todayInFlight;
+    return { tokens: u?.claude?.today?.tokens ?? null };
+  } catch (e) { return { error: e.message }; }
+});
 
 // Robot avatar SVG source (renderer crops it into a headshot).
 // Only robot_*.svg files from the app folder can be read.
