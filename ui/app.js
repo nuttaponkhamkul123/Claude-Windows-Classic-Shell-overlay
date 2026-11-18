@@ -931,7 +931,6 @@ if (resizeGrip) {
     document.body.classList.toggle('theme-xp', classic && theme === 'xp');
     const v = document.getElementById('setThemeVal');
     if (v) v.textContent = LABELS[theme] || 'Aero';
-    window.electronAPI.notesTheme?.(shelter || pip ? 'shelter' : work ? 'dark' : theme); // the pinned-notes panel follows
   };
   let theme = 'aero';
   theme = window.electronAPI.settings?.theme || 'aero';

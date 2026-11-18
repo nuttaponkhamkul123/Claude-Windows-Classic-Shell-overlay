@@ -12,18 +12,17 @@ const { app } = require('electron');
 const ROOT = path.join(__dirname, '..');
 const IGNORE = /(^|[\\/])(node_modules|\.git|\.claude|dist|tools)([\\/]|$)|\.tmp\.|~$|\.log$/i;
 // main-process files: changes need a restart (mcp/pinner.js is run by Claude, not by the HUD)
-const isMainSide = (rel) => /^(main|watcher|features-main|skill-install-main|usage|approval-shell|preload|notes-preload|snip-preload|run)\.js$/i.test(rel) ||
+const isMainSide = (rel) => /^(main|watcher|features-main|skill-install-main|usage|approval-shell|preload|snip-preload|run)\.js$/i.test(rel) ||
   /^(main|mcp)[\\/].+\.js$/i.test(rel) && !/^mcp[\\/]pinner\.js$/i.test(rel);
 
-function register({ getWin, getNotesWin }) {
+function register({ getWin }) {
   if (app.isPackaged) return;
   let timer = null;
-  const pending = { css: new Set(), page: false, notesPage: false, main: new Set() };
+  const pending = { css: new Set(), page: false, main: new Set() };
 
   const flush = () => {
     timer = null;
     const win = getWin();
-    const notes = getNotesWin ? getNotesWin() : null;
     const alive = (w) => w && !w.isDestroyed();
     if (pending.main.size && alive(win)) {
       win.webContents.send('hot:update-ready', [...pending.main]);
@@ -34,10 +33,7 @@ function register({ getWin, getNotesWin }) {
     } else if (pending.css.size && alive(win)) {
       win.webContents.send('hot:css', [...pending.css]);
     }
-    if (alive(notes) && (pending.notesPage || [...pending.css].some((f) => /notes\.css$/i.test(f)))) {
-      notes.webContents.reloadIgnoringCache();
-    }
-    pending.css.clear(); pending.page = false; pending.notesPage = false; pending.main.clear();
+    pending.css.clear(); pending.page = false; pending.main.clear();
   };
 
   let watcher;
@@ -47,7 +43,6 @@ function register({ getWin, getNotesWin }) {
       const rel = String(file).replace(/\\/g, '/');
       if (IGNORE.test(rel)) return;
       if (/^ui\/.+\.css$/i.test(rel)) pending.css.add(path.basename(rel));
-      else if (/^ui\/(notes\.html|logic\/notes\.js)$/i.test(rel)) pending.notesPage = true;
       else if (/^ui\/.+\.(js|html|svg)$/i.test(rel) || /^robot_.*\.svg$/i.test(rel)) pending.page = true;
       else if (isMainSide(rel)) pending.main.add(rel);
       else return;

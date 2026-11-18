@@ -196,7 +196,7 @@ app.whenReady().then(() => {
   const notes = require('./main/notes');
   notes.register({ getWin: () => mainWindow });
   app.on('will-quit', () => notes.cleanup());
-  require('./main/hot-reload').register({ getWin: () => mainWindow, getNotesWin: notes.getWin });
+  require('./main/hot-reload').register({ getWin: () => mainWindow });
 
   // Channels that no longer need window/dock state.
   const { createRegistry } = require('./main/ipc');

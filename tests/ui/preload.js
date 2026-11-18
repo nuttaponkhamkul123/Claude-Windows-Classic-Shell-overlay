@@ -49,5 +49,4 @@ const api = new Proxy({ settings, listSlashCommands, gitInfo, getSessionHistory,
   }
 });
 window.electronAPI = api;
-window.notesAPI = api;
 window.__cbs = cbs;

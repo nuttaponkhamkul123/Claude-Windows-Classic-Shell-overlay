@@ -133,19 +133,22 @@
   });
 })();
 
-// 📌 Notes buttons: open/close the pinned-notes panel docked left of the HUD
+// Notes buttons: open/close the pinned-notes panel (ui/logic/chat/notes-panel.js). The badge is the note count.
 (function () {
   const api = window.electronAPI;
-  if (!api || !api.notesToggle) return;
+  if (!api || !api.notesState) return;
   const btns = [...document.querySelectorAll('.tb-notes')];
-  const paint = (st) => {
+  let count = 0;
+  const paint = () => {
+    const open = document.body.classList.contains('np-open');
     for (const b of btns) {
-      b.classList.toggle('open', !!(st && st.open));
+      b.classList.toggle('open', open);
       const badge = b.querySelector('.notes-badge');
-      if (badge) badge.textContent = st && st.count ? String(st.count) : '';
+      if (badge) badge.textContent = count ? String(count) : '';
     }
   };
-  btns.forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); api.notesToggle(); }));
-  api.onNotesState(paint);
-  api.notesState().then(paint).catch(() => {});
+  btns.forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); window.toggleNotes?.(); }));
+  api.onNotesState((st) => { count = (st && st.count) || 0; paint(); });
+  api.notesState().then((st) => { count = (st && st.count) || 0; paint(); }).catch(() => {});
+  window.paintNotesButtons = paint; // the panel calls this when it opens or closes
 })();
