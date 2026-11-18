@@ -840,3 +840,22 @@ body.style-shelter.pip-tabs-on .pip-menu-back { display: none; }
 /* the open menu's tab is boxed; Chat steps back while a menu is open */
 body.style-shelter #detailView .convo-toolbar > .tb-btn.pip-on { border-color: var(--pip) !important; background: #2b1a07 !important; }
 body.style-shelter #detailView .convo-toolbar.pip-away > .tb-btn.pip-current { border-color: transparent !important; background: #1e1002 !important; }
+
+/* ===================================================================
+   Round 16: easier to drag the window in Shelter (logic/system/pip-drag.js adds the drag areas)
+   =================================================================== */
+.pip-dragstrip { display: none; }
+body.style-shelter:not(.docked) .pip-dragstrip { display: block; position: absolute; top: 0; left: 0; right: 0; height: 11px; z-index: 4000; cursor: grab; }
+body.style-shelter .dragging, body.style-shelter .pip-dragstrip:active { cursor: grabbing; }
+/* the chat top line: a little more room above it, as part of the drag area (was a margin) */
+body.style-shelter #detailView > .pip-head { margin: 0 2px 2px; padding-top: 14px; cursor: grab; }
+body.style-shelter #detailView > .pip-head :is(.pip-hbox, .pip-hbox *) { cursor: inherit; }
+body.style-shelter #detailView > .pip-head :is(.pip-head-title, .pip-hgit) { cursor: pointer; }
+/* the bottom tab bar: a 26px band with the line drawn through its middle, so the gaps between the tabs can be grabbed */
+body.style-shelter #detailView .convo-toolbar {
+  height: 26px; margin: 10px 2px 6px; background: linear-gradient(var(--pip), var(--pip)) 0 50% / 100% 2px no-repeat; cursor: grab;
+}
+body.style-shelter #detailView .convo-toolbar > .tb-btn { cursor: pointer; }
+body.style-shelter #detailView .convo-toolbar::before, body.style-shelter #detailView .convo-toolbar::after { bottom: calc(50% - 1px); }
+body.style-shelter :is(.pip-subtabs, .convo-contact, .tabs-bar, .popup-footer) { cursor: grab; }
+body.style-shelter :is(.pip-subtabs, .convo-contact, .tabs-bar, .popup-footer) :is(button, a, .convo-workspace, #convoName) { cursor: pointer; }
