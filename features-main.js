@@ -413,6 +413,65 @@ async function listTranscripts() {
   return out.slice(0, SEARCH_MAX_FILES);
 }
 
+// Steps (what Claude did) of one chat, from the end of its transcript
+const stepsLib = require('./main/steps');
+function stepsOfSession(id) {
+  const empty = { steps: [], turns: [], total: 0 };
+  id = String(id || '');
+  const p = pathForSession(id);
+  if (!p) return empty;
+  try {
+    const lines = readTail(p, 8 * 1024 * 1024);
+    return stepsLib.finish(id.startsWith('antigravity_') ? stepsLib.parseAgSteps(lines) : stepsLib.parseClaudeSteps(lines));
+  } catch (_) { return empty; }
+}
+
+// Find steps (a command, a file, a tool) across all chats, newest first
+async function searchSteps(query) {
+  const q = String(query || '').trim().toLowerCase();
+  if (q.length < 2) return [];
+  const hits = [];
+  for (const f of await listTranscripts()) {
+    if (hits.length >= 40) break;
+    let raw;
+    try {
+      if (f.size > SEARCH_MAX_BYTES) {
+        const fd = await fs.promises.open(f.path, 'r');
+        const buf = Buffer.alloc(SEARCH_MAX_BYTES);
+        await fd.read(buf, 0, SEARCH_MAX_BYTES, f.size - SEARCH_MAX_BYTES);
+        await fd.close();
+        raw = buf.toString('utf-8');
+      } else raw = await fs.promises.readFile(f.path, 'utf-8');
+    } catch (_) { continue; }
+    if (!raw.toLowerCase().includes(q)) continue;
+    const lines = raw.split('\n');
+    const ag = f.source === 'antigravity';
+    const { steps } = ag ? stepsLib.parseAgSteps(lines) : stepsLib.parseClaudeSteps(lines);
+    const found = steps.filter((s) => stepsLib.stepText(s).includes(q)).slice(-3).reverse();
+    if (!found.length) continue;
+    let cwd = '', title = '';
+    if (!ag) {
+      for (const line of lines) {
+        if (!cwd && line.includes('"cwd"')) { try { cwd = JSON.parse(line).cwd || ''; } catch (_) {} }
+        if (!title && line.includes('"ai-title"')) { try { const t = JSON.parse(line); title = t.aiTitle || t.title || ''; } catch (_) {} }
+        if (cwd && title) break;
+      }
+    }
+    const uuid = ag ? f.uuid : path.basename(f.path, '.jsonl');
+    const id = (ag ? 'antigravity_' : 'claude_') + uuid;
+    if (ag) extraPaths.set(id, f.path);
+    for (const s of found) {
+      hits.push({
+        id, uuid, source: f.source, path: f.path, cwd, title, project: cwd ? path.basename(cwd) : (ag ? 'Antigravity' : ''),
+        ts: s.ts || f.mtime, n: s.n, tool: s.tool, kind: s.kind, verb: s.verb, target: s.target, ok: s.ok,
+        snippet: snippetAround(`${s.verb} ${s.detail || s.target}`, q),
+      });
+    }
+  }
+  hits.sort((a, b) => b.ts - a.ts);
+  return hits.slice(0, 40);
+}
+
 function snippetAround(text, q, radius = 70) {
   const i = text.toLowerCase().indexOf(q);
   if (i < 0) return text.slice(0, radius * 2);
@@ -837,6 +896,8 @@ function register(c) {
   });
 
   ipcMain.handle('search-transcripts', (_e, q) => searchTranscripts(q).catch(() => []));
+  ipcMain.handle('get-steps', (_e, id) => stepsOfSession(id));
+  ipcMain.handle('search-steps', (_e, q) => searchSteps(q).catch(() => []));
   ipcMain.handle('open-file', (_e, p) => openFile(p));
   ipcMain.handle('open-in-antigravity', (_e, p, line) => openInAntigravity(p, line));
   ipcMain.handle('stop-reply', (_e, id) => stopReply(id));
@@ -1008,5 +1069,5 @@ function register(c) {
 module.exports = {
   register, onSync, readClaudeHistory, readAntigravityHistory, readSessionHistory, pathForSession,
   getSetting, setSetting, trackChild, aliasChild, wasStopped, editFromToolUse, mergeEdit, openFile,
-  gitChanges, gitFileDiff, gitCommit, gitPush, gitDiscard, gitUndoDiscard, gitDraftMessage, handoffNote, flushStore,
+  gitChanges, gitFileDiff, gitCommit, gitPush, gitDiscard, gitUndoDiscard, gitDraftMessage, handoffNote, flushStore, searchSteps,
 };

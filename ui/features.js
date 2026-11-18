@@ -714,11 +714,12 @@
     results.appendChild(el('div', 'fx-results-note', 'Searching…'));
     results.style.display = '';
     sessionsContainer.style.display = 'none';
-    const hits = await api.searchTranscripts?.(q) || [];
+    const safe = (p) => Promise.resolve(p).then((r) => (Array.isArray(r) ? r : [])).catch(() => []);
+    const [hits, stepHits] = await Promise.all([safe(api.searchTranscripts?.(q)), safe(api.searchSteps?.(q))]);
     if (seq !== searchSeq) return;
     results.innerHTML = '';
-    if (!hits.length) { results.appendChild(el('div', 'fx-results-note', `No messages contain “${q}” (last 60 days).`)); return; }
-    results.appendChild(el('div', 'fx-results-note', `${hits.length} match${hits.length > 1 ? 'es' : ''} — click to open`));
+    if (!hits.length && !stepHits.length) { results.appendChild(el('div', 'fx-results-note', `No messages or steps contain “${q}” (last 60 days).`)); return; }
+    if (hits.length) results.appendChild(el('div', 'fx-results-note', `${hits.length} message${hits.length > 1 ? 's' : ''} — click to open`));
     for (const h of hits) {
       const row = el('div', 'fx-hit');
       const top = el('div', 'fx-hit-top');
@@ -732,10 +733,38 @@
       row.addEventListener('click', () => openHit(h, q));
       results.appendChild(row);
     }
+    if (stepHits.length) {
+      results.appendChild(el('div', 'fx-results-note', `${stepHits.length} step${stepHits.length > 1 ? 's' : ''} where Claude did this — click to see it in Steps`));
+      for (const h of stepHits) {
+        const row = el('div', 'fx-hit fx-hit-step');
+        const top = el('div', 'fx-hit-top');
+        const srcLabel = h.source === 'antigravity' ? 'Antigravity' : 'Claude';
+        top.append(el('span', 'fx-hit-title', h.title || h.project || 'Conversation'),
+          el('span', 'fx-hit-proj', `${srcLabel}${h.project ? ' · ' + h.project : ''}`),
+          el('span', 'fx-hit-time', formatShortAgo(h.ts)));
+        const snip = el('div', 'fx-hit-snip');
+        snip.innerHTML = `<b>${h.ok === false ? 'Failed' : 'Step ' + h.n}:</b> ${highlight(h.snippet, q)}`;
+        row.append(top, snip);
+        row.addEventListener('click', () => openStepHit(h, q));
+        results.appendChild(row);
+      }
+    }
   }
 
   searchInput.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(runSearch, 350); });
   searchInput.addEventListener('keydown', (e) => { if (e.key === 'Escape') { endSearch(); e.stopPropagation(); } });
+
+  // a step hit: open the chat, then its Steps panel on that step
+  function openStepHit(h, q) {
+    let s = sessionsList.find((x) => x.id === h.id);
+    if (!s) {
+      const src = h.source || 'claude';
+      s = { id: h.id, sessionUuid: h.uuid, source: src, project: h.project || (src === 'antigravity' ? 'Antigravity' : 'Claude'), cwd: h.cwd || '', sessionTitle: h.title || h.project || '', status: 'idle', statusLabel: 'Idle', state: 'idle', fullContent: '', detail: '', mtime: h.ts };
+    }
+    endSearch();
+    showDetailView(s);
+    window.openSteps?.(s, { q, n: h.n });
+  }
 
   function openHit(h, q) {
     let s = sessionsList.find((x) => x.id === h.id);

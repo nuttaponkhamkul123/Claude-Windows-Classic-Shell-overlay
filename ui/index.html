@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="styles/theme-shelter-pip.css" />
   <link rel="stylesheet" href="styles/theme-shelter-app.css" />
   <link rel="stylesheet" href="styles/git-diff.css" />
+  <link rel="stylesheet" href="styles/steps.css" />
   <link rel="stylesheet" href="styles/theme-pip.css" />
 </head>
 <body class="theme-aero">
@@ -145,6 +146,7 @@
           <button id="tbModel" class="tb-btn" title="Choose model, then effort" hidden style="display:none">Model ▾</button>
           <button id="tbNewChat" class="tb-btn" title="Start a new conversation in this or another folder (/clear)">New chat</button>
           <button id="tbSettings" class="tb-btn" title="Theme, chime, always on top">Settings</button>
+          <button id="tbSteps" class="tb-btn" title="What Claude did in this chat, step by step">Steps</button>
           <button id="tbNotes" class="tb-btn tb-notes" title="Pinned notes (Claude pins them with the pin_note tool)">📌 Notes<span class="notes-badge"></span></button>
           <span class="tb-spacer"></span>
           <button id="btnMcp" class="tb-btn btn-mcp" title="MCP servers for this workspace">MCP ▾</button>
@@ -355,6 +357,7 @@
   <script src="logic/chat/prompt-pills.js"></script>
   <script src="logic/chat/cost-meter.js"></script>
   <script src="logic/chat/handoff.js"></script>
+  <script src="logic/chat/steps.js"></script>
   <script src="logic/chat/pip-screen.js"></script>
   <script src="logic/chat/pip-menus.js"></script>
   <script src="logic/system/pip-glyphs.js"></script>
