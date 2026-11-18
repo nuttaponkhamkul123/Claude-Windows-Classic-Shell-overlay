@@ -761,3 +761,47 @@ body.style-shelter .pip-menu-back {
   font: 400 16px/1.2 var(--pip-font); color: var(--pip); background: #1f1002; border: 2px solid var(--pip); border-radius: 0; padding: 3px 16px; cursor: pointer;
 }
 body.style-shelter .pip-menu-back:hover { background: var(--pip); color: var(--pip-ink); }
+
+/* ===================================================================
+   Round 13: CRT effect on the chat screen (body.pip-crt, Settings → "CRT screen effect").
+   Kept calm on purpose (the "not intrusive" side of the first reference): text is never blurred,
+   the band and flicker are faint, and everything moving stops with "reduce motion".
+   =================================================================== */
+#btnCrt { display: none; }
+body.style-shelter #btnCrt { display: flex; }
+body.style-shelter.pip-crt #detailView > .pip-scan {
+  opacity: 1; overflow: hidden; border-radius: 18px / 26px;
+  background:
+    radial-gradient(ellipse 120% 90% at 50% 50%, transparent 58%, rgba(0, 0, 0, 0.28) 82%, rgba(0, 0, 0, 0.62) 100%),  /* curved glass */
+    linear-gradient(135deg, rgba(255, 240, 210, 0.05) 0%, transparent 32%),                                          /* glare */
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px);                                  /* scan lines */
+}
+/* the slow refresh band rolling down the tube */
+body.style-shelter.pip-crt #detailView > .pip-scan::before {
+  content: ""; position: absolute; left: 0; right: 0; top: -25%; height: 22%;
+  background: linear-gradient(180deg, transparent, rgba(255, 170, 60, 0.05) 45%, rgba(255, 190, 90, 0.07) 50%, rgba(255, 170, 60, 0.05) 55%, transparent);
+  animation: pip-crt-band 8s linear infinite;
+}
+@keyframes pip-crt-band { from { transform: translateY(0); } to { transform: translateY(575%); } }
+/* a faint flicker of the whole picture */
+body.style-shelter.pip-crt #detailView > .pip-scan::after {
+  content: ""; position: absolute; inset: 0; background: rgba(255, 159, 28, 0.025); animation: pip-crt-flicker 3.2s steps(1) infinite;
+}
+@keyframes pip-crt-flicker { 0%, 100% { opacity: 1; } 31% { opacity: 0.4; } 32% { opacity: 1; } 67% { opacity: 0.7; } 68% { opacity: 1; } }
+/* phosphor: a little more glow on headings and keys (message text stays sharp) */
+body.style-shelter.pip-crt #detailView :is(.pip-head-title, .pip-hseg, .pip-lbl, .pip-subtab, .pip-row .pip-v) {
+  text-shadow: 0 0 4px rgba(255, 159, 28, 0.45), 0.5px 0 rgba(255, 80, 0, 0.25), -0.5px 0 rgba(255, 220, 120, 0.2);
+}
+/* power-on when a chat opens: a bright line opens into the picture */
+body.style-shelter.pip-crt #detailView.pip-crt-on { animation: pip-crt-power 420ms cubic-bezier(0.2, 0.8, 0.2, 1); transform-origin: 50% 50%; }
+@keyframes pip-crt-power {
+  0% { transform: scale(1, 0.006); filter: brightness(3) saturate(0.5); }
+  45% { transform: scale(1, 0.006); filter: brightness(2.2); }
+  70% { transform: scale(1, 1.02); filter: brightness(1.4); }
+  100% { transform: none; filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.style-shelter.pip-crt #detailView > .pip-scan::before,
+  body.style-shelter.pip-crt #detailView > .pip-scan::after,
+  body.style-shelter.pip-crt #detailView.pip-crt-on { animation: none; }
+}

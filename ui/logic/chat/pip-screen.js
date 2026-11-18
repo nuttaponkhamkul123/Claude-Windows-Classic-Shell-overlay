@@ -21,6 +21,39 @@
   // (focus mode draws its speech-bubble pointer with them)
   const scan = el('div', 'pip-scan');
   document.getElementById('detailView')?.appendChild(scan);
+
+  // CRT effect on the chat screen (Settings → "CRT screen effect", on by default; Shelter only):
+  // curved-glass vignette, a slow refresh band, a faint flicker and a power-on when a chat opens.
+  const api = window.electronAPI;
+  let crtOn = api?.settings?.crtEffect !== false;
+  const applyCrt = () => document.body.classList.toggle('pip-crt', crtOn);
+  applyCrt();
+  const restartRow = document.getElementById('btnShowAg') || document.getElementById('btnRestartApp');
+  if (restartRow) {
+    const row = el('button', 'set-row pip-crt-row');
+    row.id = 'btnCrt';
+    row.title = 'Scan lines, curved-glass edges, a slow refresh band and a soft flicker on the chat screen (Shelter style)';
+    row.append(el('span', 'set-ico', '📺'), el('span', 'set-label', 'CRT screen effect'), el('span', 'set-check'));
+    row.classList.toggle('active', crtOn);
+    row.addEventListener('click', () => {
+      crtOn = !crtOn;
+      api?.storeSet?.('crtEffect', crtOn);
+      row.classList.toggle('active', crtOn);
+      applyCrt();
+    });
+    restartRow.after(row);
+  }
+  // power-on: replay a short "tube warming up" each time a chat screen opens
+  const dv = document.getElementById('detailView');
+  if (dv) {
+    let wasActive = dv.classList.contains('active');
+    new MutationObserver(() => {
+      const now = dv.classList.contains('active');
+      if (now && !wasActive && crtOn) { dv.classList.remove('pip-crt-on'); void dv.offsetWidth; dv.classList.add('pip-crt-on'); }
+      wasActive = now;
+    }).observe(dv, { attributes: true, attributeFilter: ['class'] });
+    dv.addEventListener('animationend', (e) => { if (e.animationName === 'pip-crt-power') dv.classList.remove('pip-crt-on'); });
+  }
   const stats = el('aside', 'pip-stats');
   body.appendChild(stats);
 
