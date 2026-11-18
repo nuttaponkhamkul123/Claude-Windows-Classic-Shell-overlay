@@ -253,3 +253,48 @@ body.style-shelter :is(.toast-ico, .perm-toast .toast-icon) { background: none !
 /* 11. the resize corner: amber, above the screen and the full-screen menus, lit while dragging */
 body.style-shelter .resize-grip { color: rgba(255, 159, 28, 0.6); z-index: 3500; }
 body.style-shelter .resize-grip:hover, body.style-shelter .resize-grip.resizing { color: var(--pip); background: radial-gradient(circle at 100% 100%, rgba(255, 159, 28, 0.25), transparent 70%); }
+
+/* 12. the List view (View: List): each chat is a 3000A list line; the hovered one and the ones that need you
+       get the selected-item box (outlined sides, faint fill). Pictures in amber; status by brightness, not colour. */
+body.style-shelter .session-row {
+  background: none; color: var(--pip); border: 0; border-left: 2px solid transparent; border-right: 2px solid transparent;
+  border-radius: 0; box-shadow: none; margin: 2px 0; padding: 6px 10px;
+}
+body.style-shelter .session-row + .session-row { border-top: 0; }
+body.style-shelter .session-row *:not(svg):not(svg *) { font-family: var(--pip-font); }
+body.style-shelter .session-row:hover { background: rgba(255, 159, 28, 0.1); border-left-color: var(--pip); border-right-color: var(--pip); }
+body.style-shelter .session-row.state-attention { background: rgba(255, 159, 28, 0.08); border-left-color: var(--pip); }
+body.style-shelter .session-row.state-attention:hover { background: rgba(255, 159, 28, 0.14); border-right-color: var(--pip); }
+body.style-shelter .session-row.just-done { animation: none; box-shadow: inset 0 0 0 1px var(--pip); }
+/* picture: amber, square frame; the status mark: dim (idle) · solid (working) · bright, blinking (needs you) */
+body.style-shelter .row-orb, body.style-shelter .src-claude .row-orb, body.style-shelter .row-orb.has-robot {
+  background: rgba(255, 159, 28, 0.08) !important; border: 1px solid var(--pip-faint); border-radius: 0; box-shadow: none;
+}
+body.style-shelter .row-orb > :is(img, svg, .robot, span) { filter: grayscale(1) sepia(1) saturate(4) hue-rotate(-8deg) brightness(1.05); }
+body.style-shelter .row-orb::after { background: var(--pip-faint) !important; border: 1px solid var(--pip-bg); border-radius: 0; box-shadow: none; }
+body.style-shelter .state-running .row-orb::after { background: var(--pip) !important; animation: none; }
+body.style-shelter .state-attention .row-orb::after { background: #ffd28a !important; box-shadow: 0 0 6px var(--pip); }
+/* text */
+body.style-shelter .row-title { color: var(--pip); font-weight: 400; font-size: 14px; }
+body.style-shelter :is(.row-preview, .row-time, .row-model, .row-cost, .row-ctx) { color: var(--pip-dim); font-weight: 400; }
+body.style-shelter .row-status { color: var(--pip); font-weight: 400; }
+body.style-shelter .state-attention .row-status { color: #ffd28a; font-weight: 400; text-decoration: underline; text-underline-offset: 3px; }
+body.style-shelter .row-ctx.warning { color: var(--pip); }
+body.style-shelter .row-ctx.critical { color: #ff8f84; }
+body.style-shelter :is(.row-agent, .row-agent.claude, .row-agent.antigravity) {
+  background: none; color: var(--pip); border: 1px solid var(--pip-dim); border-radius: 0; font-weight: 400; box-shadow: none;
+}
+/* context bar: a thin amber gauge */
+body.style-shelter .row-ctxbar { background: var(--pip-faint); border-radius: 0; height: 3px; }
+body.style-shelter .row-ctxfill { background: var(--pip); border-radius: 0; }
+body.style-shelter .row-ctxbar.warning .row-ctxfill { background: #ffd28a; }
+body.style-shelter .row-ctxbar.critical .row-ctxfill { background: #ff8f84; }
+body.style-shelter .row-ctxbar.compacting .row-ctxfill { background: var(--pip); }
+body.style-shelter .row-dismiss { color: var(--pip); background: none; border: 1px solid var(--pip-dim); border-radius: 0; }
+body.style-shelter .row-dismiss:hover { background: var(--pip); color: var(--pip-ink); }
+body.style-shelter #sessionsContainer .empty-state, body.style-shelter .no-sessions { color: var(--pip-dim); font-family: var(--pip-font); }
+/* (the group box around the rows, and the robot pictures, which carry an inline colour filter) */
+body.style-shelter #listView .workspace-body { background: none; border: 0; border-left: 1px dashed var(--pip-faint); border-radius: 0; }
+body.style-shelter .row-orb img.robot-avatar { filter: grayscale(1) sepia(1) saturate(4) hue-rotate(-8deg) brightness(1.05) !important; }
+body.style-shelter .workspace-header *:not(svg) { font-family: var(--pip-font); }
+body.style-shelter .workspace-header .workspace-name { font-weight: 400; letter-spacing: 0.04em; }
