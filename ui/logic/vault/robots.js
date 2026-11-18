@@ -227,7 +227,7 @@ function puffRoomFurniture(room, events) {
   });
 }
 
-setInterval(() => {
+uiInterval(() => {
   if (!document.body.classList.contains('list-grid') || document.body.classList.contains('list-compact')) return;
   const now = Date.now();
   const drawBot = (el, s, pose) => {

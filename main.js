@@ -21,8 +21,6 @@ const COMPACT_HEIGHT = 74;
 let currentWidth = DEFAULT_WIDTH;
 let currentExpandedHeight = 520;
 
-const ANTIGRAVITY_BIN = 'C:\\Users\\nuttapon\\AppData\\Local\\Programs\\Antigravity IDE\\bin\\antigravity-ide.cmd';
-
 // Saved window {x, y, width, height}, only if it still lands on a connected screen
 function savedWindow() {
   const w = features.getSetting('window', null);

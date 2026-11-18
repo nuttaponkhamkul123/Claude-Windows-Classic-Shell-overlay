@@ -40,7 +40,7 @@
     line.title = `Workspace: ${cwd}\nClick to open in Explorer · right-click to copy the path`;
     line.style.display = '';
   }
-  setInterval(update, 400);
+  uiInterval(update, 400);
 
   line.addEventListener('click', async () => {
     const cwd = currentActiveSession?.cwd;

@@ -16,7 +16,7 @@
   btn.hidden = true;
   btn.title = 'Summarise this chat and continue in a fresh one — keeps long chats cheap';
   row.appendChild(btn);
-  setInterval(() => { // (two property writes: cheap enough to keep the button in step with chat switches)
+  uiInterval(() => { // (two property writes: cheap enough to keep the button in step with chat switches)
     const s = currentActiveSession;
     btn.hidden = !usable(s);
     btn.classList.toggle('hot', (s?.context?.used || 0) >= LONG_CHAT);

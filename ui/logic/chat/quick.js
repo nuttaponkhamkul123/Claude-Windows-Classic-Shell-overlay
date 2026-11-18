@@ -151,5 +151,5 @@
     bar.append(yes, no);
     bar.style.display = '';
   }
-  setInterval(update, 500);
+  uiInterval(update, 500);
 })();

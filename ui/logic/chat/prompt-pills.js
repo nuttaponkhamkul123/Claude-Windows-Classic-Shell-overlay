@@ -131,5 +131,5 @@
   };
 
   let shown = null;
-  setInterval(() => { const id = curId(); if (id !== shown) { shown = id; render(); } }, 400);
+  uiInterval(() => { const id = curId(); if (id !== shown) { shown = id; render(); } }, 400);
 })();

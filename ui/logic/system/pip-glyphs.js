@@ -80,5 +80,5 @@
       found.forEach(wrapText);
     });
   }
-  setInterval(scan, 400);
+  uiInterval(scan, 400);
 })();

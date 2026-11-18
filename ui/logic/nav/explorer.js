@@ -140,6 +140,6 @@
     // keep the end of the path visible when it is long
     crumbs.scrollLeft = crumbs.scrollWidth;
   }
-  setInterval(update, 300);
+  uiInterval(update, 300);
   update();
 })();

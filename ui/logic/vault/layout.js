@@ -25,16 +25,26 @@
   // ---------- saved state ----------
   const validCells = (c) => Array.isArray(c) && c.length > 0 && c.length <= 16 &&
     c.every((p) => Array.isArray(p) && Number.isInteger(p[0]) && Number.isInteger(p[1]) && p[0] >= 0 && p[0] < COLS && p[1] >= 0 && p[1] < MAX_ROWS);
+  // room keys come from saved settings: no prototype keys, and a cap so old rooms cannot pile up forever
+  const okKey = (k) => typeof k === 'string' && k && k !== '__proto__' && k !== 'constructor' && k !== 'prototype';
+  const MAX_SAVED_ROOMS = 80;
   let state = { mode: 'normal', rooms: {} };
   try {
     const s = api.settings?.vaultLayout;
     if (s && typeof s === 'object') {
       state.mode = s.mode === 'free' ? 'free' : 'normal';
-      for (const [k, v] of Object.entries(s.rooms || {})) if (validCells(v?.cells)) state.rooms[k] = { cells: v.cells.map((p) => [p[0], p[1]]) };
+      for (const [k, v] of Object.entries(s.rooms || {})) if (okKey(k) && validCells(v?.cells)) state.rooms[k] = { cells: v.cells.map((p) => [p[0], p[1]]) };
     }
   } catch (_) { /* keep the default */ }
   let saveTimer = null;
-  const save = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => api.storeSet?.('vaultLayout', state), 150); };
+  const save = () => {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      const keys = Object.keys(state.rooms);
+      if (keys.length > MAX_SAVED_ROOMS) for (const k of keys.slice(0, keys.length - MAX_SAVED_ROOMS)) delete state.rooms[k]; // oldest first
+      api.storeSet?.('vaultLayout', state);
+    }, 150);
+  };
   const redraw = () => { if (typeof renderSessionCards === 'function') renderSessionCards(true); };
   const isHidden = (k) => typeof hiddenRooms !== 'undefined' && hiddenRooms.has(k);
   // Free only applies where the Vault is on screen. Work, Pip-Boy and the List view show plain rows, not rooms:

@@ -217,5 +217,5 @@
       stats.appendChild(row);
     }
   }
-  setInterval(update, 500);
+  uiInterval(update, 500);
 })();

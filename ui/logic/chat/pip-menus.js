@@ -93,5 +93,5 @@
       p.appendChild(b); // (panels that rebuild their contents get it again on the next tick)
     });
   }
-  setInterval(tick, 200);
+  uiInterval(tick, 200);
 })();

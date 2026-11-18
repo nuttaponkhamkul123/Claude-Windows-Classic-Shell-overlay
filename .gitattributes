@@ -1,0 +1,9 @@
+# Text files are stored with LF in the repo; Windows checkouts may show CRLF.
+* text=auto
+*.png binary
+*.jpg binary
+*.ico binary
+*.otf binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
