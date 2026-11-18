@@ -44,13 +44,27 @@
     node.replaceWith(frag);
   }
 
-  // the input's hint text has a 📎 too (a placeholder can't hold a span, so swap the text and keep the original)
+  // The input's hint text has a 📎 too, and a placeholder can't hold a span. Other code rewrites the hint
+  // often (Plan mode sets it every tick), so stripping it afterwards made it flicker. Instead every write
+  // goes through this setter: code reads and writes the original text, the box shows it without emoji.
   const box = document.getElementById('replyTextarea');
+  const native = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'placeholder');
+  let raw = box ? box.placeholder : '';
+  const shown = (shelter) => (shelter ? raw.replace(EMOJI, '').replace(/·\s*,\s*/g, '· ') : raw);
   function placeholder(shelter) {
     if (!box) return;
-    if (box.dataset.ph == null) box.dataset.ph = box.placeholder;
-    const want = shelter ? box.dataset.ph.replace(EMOJI, '').replace(/·\s*,\s*/g, '· ') : box.dataset.ph;
-    if (box.placeholder !== want) box.placeholder = want;
+    const want = shown(shelter);
+    if (native.get.call(box) !== want) native.set.call(box, want);
+  }
+  if (box && native?.set) {
+    Object.defineProperty(box, 'placeholder', {
+      configurable: true,
+      get: () => raw,
+      set: (v) => { raw = String(v); placeholder(document.body.classList.contains('style-shelter')); },
+    });
+    placeholder(document.body.classList.contains('style-shelter'));
+    // switching style: update the hint at once
+    new MutationObserver(() => placeholder(document.body.classList.contains('style-shelter'))).observe(document.body, { attributes: true, attributeFilter: ['class'] });
   }
 
   function scan() {
