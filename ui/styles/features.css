@@ -1917,20 +1917,20 @@ body.list-grid.vault-free:not(.vault-focus) #listView .sessions-container {
     radial-gradient(circle at 85% 20%, rgba(0,0,0,.3) 0 2px, transparent 3px) 0 0 / 25% 88px,
     linear-gradient(160deg, #2a241f, #1f1b17);
 }
-body.vault-free .workspace-group.free-room { display: contents; }
-body.vault-free .workspace-group.free-room > .workspace-header,
-body.vault-free .workspace-group.free-room > .workspace-body { display: none; }
-body.vault-free .workspace-group.collapsed .vault-room { display: block; }
-body.vault-free .vault-room { height: auto; min-height: 88px; min-width: 0; }
-body.vault-free .vault-room[data-run="1"] .vault-ws-tag { display: none; }
-body.vault-free .vault-room[data-run="1"] .vault-plaque { max-width: 92%; }
+body.list-grid.vault-free .workspace-group.free-room { display: contents; }
+body.list-grid.vault-free .workspace-group.free-room > .workspace-header,
+body.list-grid.vault-free .workspace-group.free-room > .workspace-body { display: none; }
+body.list-grid.vault-free .workspace-group.collapsed .vault-room { display: block; }
+body.list-grid.vault-free .vault-room { height: auto; min-height: 88px; min-width: 0; }
+body.list-grid.vault-free .vault-room[data-run="1"] .vault-ws-tag { display: none; }
+body.list-grid.vault-free .vault-room[data-run="1"] .vault-plaque { max-width: 92%; }
 /* drawer of extra chats: inside the room, top right */
-body.vault-free .vault-room > .vault-drawer {
+body.list-grid.vault-free .vault-room > .vault-drawer {
   position: absolute; top: 9px; right: 4px; left: auto; max-width: 60%; z-index: 8; margin: 0; padding: 1px 4px;
   flex-wrap: nowrap; overflow: hidden; border-radius: 4px; background: rgba(8, 12, 18, .8);
 }
-body.vault-free #listView .sessions-container > .vault-hidden-note { grid-column: 1 / -1; }
-body.vault-free .fx-pinned-group:not(.free-room) { display: none; }
+body.list-grid.vault-free #listView .sessions-container > .vault-hidden-note { grid-column: 1 / -1; }
+body.list-grid.vault-free .fx-pinned-group:not(.free-room) { display: none; }
 
 /* the other blocks of a shaped room: same colour, no robots; ladders join the floors */
 .vault-annex { position: relative; min-width: 0; overflow: visible;

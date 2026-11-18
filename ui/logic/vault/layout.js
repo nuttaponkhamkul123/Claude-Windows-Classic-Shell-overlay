@@ -37,7 +37,9 @@
   const save = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => api.storeSet?.('vaultLayout', state), 150); };
   const redraw = () => { if (typeof renderSessionCards === 'function') renderSessionCards(true); };
   const isHidden = (k) => typeof hiddenRooms !== 'undefined' && hiddenRooms.has(k);
-  const free = () => state.mode === 'free';
+  // Free only applies where the Vault is on screen. Work, Pip-Boy and the List view show plain rows, not rooms:
+  // there the saved Free layout must stay out of the way (it used to hide the rows and show the room).
+  const free = () => state.mode === 'free' && document.body.classList.contains('list-grid');
 
   // ---------- geometry (cells are [col, row]) ----------
   const ck = (c, r) => c + ',' + r;
@@ -332,6 +334,12 @@
   document.addEventListener('keydown', onKey, true);
 
   if (free()) setTimeout(redraw, 0); // saved as Free: draw it that way from the start
+  // switching between the Vault and the plain list (View button, Style): draw it the right way at once
+  let hadGrid = document.body.classList.contains('list-grid');
+  new MutationObserver(() => {
+    const has = document.body.classList.contains('list-grid');
+    if (has !== hadGrid) { hadGrid = has; if (state.mode === 'free') redraw(); }
+  }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
   window.vaultLayout = { arrange, place, afterRender, setMode, enter, exit, mode: () => state.mode, editing: () => editing,
     // for tests
     _split: split, _fits: fits, _state: () => state };
