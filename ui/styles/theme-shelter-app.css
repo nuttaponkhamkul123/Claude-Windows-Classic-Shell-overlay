@@ -241,3 +241,11 @@ body.style-shelter ::-webkit-scrollbar-thumb:hover { background: var(--pip); }
 /* (wider 3000A font: the room list toolbar keys get a bit smaller so they all fit) */
 body.style-shelter #listView #listToolbar > .tb-btn { font-size: 13px; letter-spacing: -0.01em; padding: 4px 5px 3px; }
 body.style-shelter .tabs-bar > .tab-btn { font-size: 15px; }
+
+/* 10. no colour emoji in the app chrome (logic/system/pip-glyphs.js wraps them): hidden, or a plain glyph on icon-only keys */
+body.style-shelter .pip-emo { font-size: 0 !important; letter-spacing: 0; }
+body.style-shelter .pip-emo[data-g]::before { content: attr(data-g); font: 400 16px/1 var(--pip-font); color: currentColor; }
+body.style-shelter .set-ico { display: none; }
+body.style-shelter :is(.ws-ico, .fx-nc-folder-ico, .git-ico) { display: none; }
+body.style-shelter .infobar-icon { background: none !important; color: var(--pip) !important; border: 2px solid var(--pip); border-radius: 0 !important; filter: none !important; font: 400 11px/14px var(--pip-font); width: 16px; height: 16px; }
+body.style-shelter :is(.toast-ico, .perm-toast .toast-icon) { background: none !important; color: var(--pip) !important; border: 2px solid var(--pip); border-radius: 0 !important; }
