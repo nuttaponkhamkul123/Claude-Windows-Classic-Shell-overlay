@@ -318,7 +318,21 @@
   }
 
   // "N queued" beside the time on each chat in the list
+  // the mini bar shows how many messages wait; tell it when that changes
+  let lastQueueReport = '';
+  function reportQueues() {
+    const out = {};
+    for (const [id, q] of queues) if (q.length) out[id] = { n: q.length, held: q.some((it) => it.held) };
+    const json = JSON.stringify(out);
+    if (json === lastQueueReport) return;
+    lastQueueReport = json;
+    api.reportQueues?.(out);
+  }
+  // "Resume" pressed in the mini bar
+  api.onQueueResume?.(() => { queues.forEach((q) => q.forEach((it) => { it.held = false; })); renderQueue(); });
+
   function markQueuedRows() {
+    reportQueues();
     document.querySelectorAll('#sessionsContainer .session-row').forEach((row) => {
       const id = row.id.replace(/^card-/, '');
       const n = queues.get(id)?.length || 0;
@@ -776,6 +790,8 @@
   const rowAg = setRow('btnShowAg', '✦', 'Show Antigravity');
   rowAg.title = 'Include Antigravity sessions, search hits, and New chat option';
   window.isAntigravityEnabled = () => store.showAntigravity !== false;
+  const rowBar = setRow('btnMiniBar', '▭', 'Mini bar');
+  rowBar.title = 'A thin always-on-top strip with the state of every chat. Right-click it for options.';
   const rowDigest = setRow('btnDigest', '📊', "Today's summary");
   rowDigest.querySelector('.set-check').remove();
   const digestBox = el('div', 'set-digest');
@@ -787,12 +803,16 @@
   rowShortcut.querySelector('.set-check').remove();
   rowShortcut.title = 'Create an "AI Overlay HUD" shortcut on your Desktop';
   if (settingsPanelEl) {
-    (sep || restartRow)?.before(rowNotify, rowAg, rowDigest, digestBox, rowExport, rowShortcut);
+    (sep || restartRow)?.before(rowNotify, rowAg, rowBar, rowDigest, digestBox, rowExport, rowShortcut);
   }
 
   ready.then(() => {
     rowNotify.classList.toggle('active', store.notify !== false);
     rowAg.classList.toggle('active', store.showAntigravity !== false);
+    api.miniBarState?.().then((on) => rowBar.classList.toggle('active', !!on)).catch(() => {});
+  });
+  rowBar.addEventListener('click', async () => {
+    try { rowBar.classList.toggle('active', !!(await api.toggleMiniBar())); } catch (_) {}
   });
   rowNotify.addEventListener('click', () => {
     const on = store.notify === false; // toggling

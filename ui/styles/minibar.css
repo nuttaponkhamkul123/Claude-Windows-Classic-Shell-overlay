@@ -1,0 +1,84 @@
+/* Mini bar. One row, 34px high; the panel (chat list + reply box) opens under it, or above it on the bottom edge.
+   Colours come from the HUD's style: body gets mb-shelter / mb-pip / mb-work / mb-classic. */
+:root {
+  --bg: #10151c; --panel: #18202a; --line: #2e3949; --text: #dfe6ee; --dim: #8796a8;
+  --accent: #f5a524; --ok: #2dd4bf; --bad: #ef5350; --font: "Bahnschrift", "Segoe UI", sans-serif;
+}
+body.mb-pip { --bg: #1f1002; --panel: #2a1704; --line: #5a3a12; --text: #ff9f1c; --dim: #b8761b; --accent: #ff9f1c; --ok: #ff9f1c; --bad: #ff6a3d; --font: "Roboto Mono", "Cascadia Mono", Consolas, monospace; }
+body.mb-work { --bg: #16181d; --panel: #1c1f26; --line: #2c3039; --text: #e4e6eb; --dim: #8b919c; --accent: #4c8dff; --ok: #3fb950; --bad: #f85149; --font: "Segoe UI", system-ui, sans-serif; }
+body.mb-classic { --bg: #1b2433; --panel: #223049; --line: #3b4d6b; --text: #e8eefb; --dim: #93a4c3; --accent: #5aa9ff; --ok: #4cd08a; --bad: #ff6b6b; --font: "Segoe UI", system-ui, sans-serif; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); font: 12px/1 var(--font); color: var(--text); user-select: none; }
+button, input, select { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+body { display: flex; flex-direction: column; }
+.mb { flex: none; position: relative; display: flex; flex-direction: column; width: 100%; background: var(--bg); border: 1px solid var(--line); overflow: hidden; }
+.mb.line.bottom { margin-top: auto; }
+.mb.bottom { flex-direction: column-reverse; }
+body.mb-pip .mb { box-shadow: inset 0 0 0 1px var(--line); }
+body.mb-pip .mb::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px); }
+
+/* thin line while auto-hidden */
+.mb.line .mb-bar, .mb.line .mb-panel { display: none; }
+html:has(.mb.line), body:has(.mb.line) { background: transparent; }
+.mb.line { height: 6px; background: var(--accent); opacity: .55; border: 0; }
+
+.mb-bar { display: flex; align-items: center; gap: 8px; height: 32px; min-height: 32px; padding: 0 6px 0 2px; white-space: nowrap; }
+.mb-grip { -webkit-app-region: drag; width: 18px; height: 22px; flex: none; cursor: move; opacity: .6;
+  background: radial-gradient(var(--dim) 1px, transparent 1.5px) 0 0 / 6px 6px; border-radius: 3px; }
+.mb-grip:hover { opacity: 1; }
+
+.mb-dots { display: flex; gap: 4px; align-items: center; flex: none; max-width: 150px; overflow: hidden; }
+.mb-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--dim); opacity: .55; flex: none; cursor: pointer; }
+.mb-dot.run { background: var(--ok); opacity: 1; animation: mb-pulse 1.6s ease-in-out infinite; }
+.mb-dot.need { background: var(--accent); opacity: 1; box-shadow: 0 0 0 0 var(--accent); animation: mb-ping 1.1s ease-out infinite; }
+body.mb-pip .mb-dot { border-radius: 0; }
+@keyframes mb-pulse { 50% { opacity: .45; } }
+@keyframes mb-ping { 0% { box-shadow: 0 0 0 0 var(--accent); } 100% { box-shadow: 0 0 0 7px transparent; } }
+
+.mb-sum { flex: none; color: var(--dim); }
+.mb-sum b { color: var(--text); font-weight: 600; }
+.mb-sum .need { color: var(--accent); font-weight: 700; }
+
+.mb-act, .mb-perm { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1 1 auto; }
+.mb-act-text, .mb-perm-text { overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 auto; }
+.mb-act-time { color: var(--dim); flex: none; font-variant-numeric: tabular-nums; }
+.mb-perm-text { color: var(--accent); }
+.mb-queue { display: flex; align-items: center; gap: 6px; flex: none; color: var(--dim); }
+.mb-queue.held { color: var(--accent); }
+.mb-stats { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; margin-left: auto; color: var(--dim); font-variant-numeric: tabular-nums; }
+
+.mb-btn { background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; cursor: pointer; flex: none; line-height: 1.1; }
+.mb-btn:hover { border-color: var(--accent); color: var(--accent); }
+.mb-allow { border-color: var(--ok); color: var(--ok); }
+.mb-deny, .mb-stop:hover { border-color: var(--bad); color: var(--bad); }
+.mb-ico { padding: 3px 7px; }
+body.mb-pip .mb-btn { border-radius: 0; }
+
+/* the needs-you state turns the whole bar warm */
+.mb.need .mb-bar { background: color-mix(in srgb, var(--accent) 14%, transparent); animation: mb-glow 1.4s ease-in-out infinite; }
+@keyframes mb-glow { 50% { background: color-mix(in srgb, var(--accent) 6%, transparent); } }
+
+/* panel */
+.mb-panel { display: none; background: var(--panel); }
+.mb.open .mb-panel { display: block; border-top: 1px solid var(--line); }
+.mb.bottom.open .mb-panel { border-top: 0; border-bottom: 1px solid var(--line); }
+.mb-list { max-height: 248px; overflow-y: auto; padding: 4px; }
+.mb-row { display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px; border-radius: 4px; cursor: pointer; }
+.mb-row:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+body.mb-pip .mb-row:hover { outline: 1px solid var(--line); border-radius: 0; }
+.mb-row .mb-dot { cursor: inherit; }
+.mb-row-name { flex: 0 1 38%; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+.mb-row-stat { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; color: var(--dim); }
+.mb-row-q { flex: none; color: var(--accent); }
+.mb-empty { padding: 10px; color: var(--dim); }
+.mb-reply { display: flex; gap: 6px; padding: 6px; border-top: 1px solid var(--line); }
+.mb.bottom .mb-reply { border-top: 0; border-bottom: 1px solid var(--line); }
+.mb-target { max-width: 150px; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 4px; }
+.mb-input { flex: 1 1 auto; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 5px 8px; user-select: text; }
+.mb-input:focus { outline: none; border-color: var(--accent); }
+.mb-input::placeholder { color: var(--dim); }
+body.mb-pip .mb-input, body.mb-pip .mb-target { border-radius: 0; }
+.mb-note { min-height: 0; padding: 0 8px 6px; color: var(--dim); font-size: 11px; }
+.mb-note:empty { display: none; }

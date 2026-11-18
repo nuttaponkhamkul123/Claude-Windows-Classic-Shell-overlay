@@ -155,6 +155,7 @@ function startPermissionServer(ctx, state) {
         win.showInactive();
         win.webContents.send('permission-request', { id, sessionId, toolName, input, always, trustFolder });
       }
+      if (ctx.mirror) ctx.mirror('permission-request', { id, sessionId, toolName, input });
     });
   });
 
@@ -168,6 +169,7 @@ function startPermissionServer(ctx, state) {
 function sendToWin(ctx, channel, payload) {
   const win = ctx.getWin();
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
+  if (ctx.mirror) ctx.mirror(channel, payload); // the mini bar shows approvals too
 }
 
 function register(r, ctx, state) {

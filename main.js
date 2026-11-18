@@ -102,12 +102,10 @@ function createWindow() {
   });
 }
 
-function createTray() {
-  const icon = nativeImage.createEmpty();
-  tray = new Tray(icon);
-  tray.setToolTip('Multi-AI Overlay HUD (Claude & Antigravity)');
+let minibar = null; // the mini bar (main/minibar.js), created when the app is ready
 
-  const contextMenu = Menu.buildFromTemplate([
+function buildTrayMenu() {
+  return Menu.buildFromTemplate([
     {
       label: 'Reset Size & Position',
       click: () => {
@@ -137,6 +135,12 @@ function createTray() {
         }
       },
     },
+    {
+      label: 'Mini bar',
+      type: 'checkbox',
+      checked: !!(minibar && minibar.isOn()),
+      click: () => { if (minibar) minibar.toggle(); },
+    },
     { type: 'separator' },
     {
       label: 'Quit',
@@ -145,8 +149,13 @@ function createTray() {
       },
     },
   ]);
+}
 
-  tray.setContextMenu(contextMenu);
+function createTray() {
+  const icon = nativeImage.createEmpty();
+  tray = new Tray(icon);
+  tray.setToolTip('Multi-AI Overlay HUD (Claude & Antigravity)');
+  tray.setContextMenu(buildTrayMenu());
   tray.on('click', () => {
     if (!mainWindow) return;
     if (mainWindow.isVisible()) {
@@ -161,6 +170,7 @@ function createTray() {
 // keeps the handler modules free of imports from this file (no require cycle).
 const appCtx = {
   getWin: () => mainWindow,
+  mirror: (channel, payload) => { if (minibar) minibar.mirror(channel, payload); }, // approvals also go to the mini bar
   getWatcher: () => watcher,
   window: {
     isDocked: () => dockState.docked,
@@ -200,6 +210,20 @@ app.whenReady().then(() => {
   idePick.start(appCtx);
   app.on('will-quit', () => idePick.cleanup());
 
+  const showHud = () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (dockState.docked) undock();
+    mainWindow.show();
+    mainWindow.focus();
+  };
+  minibar = require('./main/minibar').create({
+    features,
+    getMainWin: () => mainWindow,
+    showHud,
+    onChange: () => { if (tray) tray.setContextMenu(buildTrayMenu()); },
+  });
+  app.on('will-quit', () => minibar.cleanup());
+
   features.register({
     app, ipcMain,
     getWin: () => mainWindow,
@@ -222,6 +246,7 @@ app.whenReady().then(() => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('sessions-sync', list);
     }
+    if (minibar) minibar.onSessions(list);
     detectFinishedSessions(list);
     features.onSync(list); // done notifications + today's digest
   });
@@ -234,6 +259,7 @@ app.whenReady().then(() => {
   });
 
   watcher.start();
+  minibar.start(); // only if it was left on last time
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -1185,6 +1211,7 @@ ipcMain.on('send-reply', async (_event, { text, image, images, files, session, c
           if (p.sessionId === sessionId || p.sessionId === startedAsId) {
             answerPermission(pid, { behavior: 'deny', message: 'Claude process ended.' });
             if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('permission-expired', { id: pid });
+            appCtx.mirror('permission-expired', { id: pid });
           }
         }
         if (watcher) watcher.check();

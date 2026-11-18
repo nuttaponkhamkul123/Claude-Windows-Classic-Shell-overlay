@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' data:; font-src 'self' file:">
+  <title>Mini bar</title>
+  <link rel="stylesheet" href="styles/minibar.css">
+</head>
+<body>
+  <div id="mb" class="mb">
+    <div class="mb-bar" id="bar">
+      <span class="mb-grip" id="grip" data-hit title="Drag to move. Near a screen edge it sticks to it."></span>
+      <span class="mb-dots" id="dots" data-hit></span>
+      <span class="mb-sum" id="sum"></span>
+      <span class="mb-act" id="act" hidden>
+        <span class="mb-act-text" id="actText"></span>
+        <span class="mb-act-time" id="actTime"></span>
+        <button class="mb-btn mb-stop" id="stop" data-hit title="Stop this chat">Stop</button>
+      </span>
+      <span class="mb-perm" id="perm" hidden>
+        <span class="mb-perm-text" id="permText"></span>
+        <button class="mb-btn mb-allow" id="allow" data-hit>Allow</button>
+        <button class="mb-btn mb-deny" id="deny" data-hit>Deny</button>
+      </span>
+      <span class="mb-queue" id="queue" hidden data-hit>
+        <span id="queueText"></span>
+        <button class="mb-btn" id="resume" data-hit hidden title="Send the kept messages now">Resume</button>
+      </span>
+      <span class="mb-stats" id="stats"></span>
+      <button class="mb-btn mb-ico" id="openHud" data-hit title="Open the HUD">Open</button>
+      <button class="mb-btn mb-ico" id="closeBar" data-hit title="Close the mini bar (bring it back from the tray menu)">&times;</button>
+    </div>
+    <div class="mb-panel" id="panel">
+      <div class="mb-list" id="list" data-hit></div>
+      <form class="mb-reply" id="reply" data-hit>
+        <select class="mb-target" id="target" title="Which chat the message goes to"></select>
+        <input class="mb-input" id="input" type="text" spellcheck="false" placeholder="Reply to the chat that is waiting…" maxlength="4000" autocomplete="off">
+        <button class="mb-btn mb-send" id="send" type="submit">Send</button>
+      </form>
+      <div class="mb-note" id="note"></div>
+    </div>
+  </div>
+  <script src="minibar.js"></script>
+</body>
+</html>
