@@ -788,36 +788,45 @@ if (resizeGrip) {
   let startWidth = 480;
   let startHeight = 74;
 
-  resizeGrip.addEventListener('mousedown', async (e) => {
+  // Pointer capture keeps the moves coming when the cursor runs ahead of the window edge (a fast drag used
+  // to lose the mouse and stall); the start size is read at once (no await, so the first moves aren't lost);
+  // at most one resize per frame.
+  let pending = null, frame = 0;
+  const flush = () => { frame = 0; if (pending) window.electronAPI.setWindowSize(pending[0], pending[1]); pending = null; };
+  resizeGrip.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
     isResizing = true;
     startX = e.screenX;
     startY = e.screenY;
-
-    const [w, h] = await window.electronAPI.getWindowSize();
-    startWidth = w;
-    startHeight = h;
-
-    const onMouseMove = (moveEvent) => {
-      if (!isResizing) return;
-      const deltaX = moveEvent.screenX - startX;
-      const deltaY = moveEvent.screenY - startY;
-      const newW = Math.max(360, Math.min(1400, startWidth + deltaX));
-      const newH = Math.max(240, Math.min(1200, startHeight + deltaY)); // never collapses
-
-      window.electronAPI.setWindowSize(newW, newH);
-    };
-
-    const onMouseUp = () => {
-      isResizing = false;
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
+    startWidth = window.outerWidth;
+    startHeight = window.outerHeight;
+    resizeGrip.setPointerCapture(e.pointerId);
+    resizeGrip.classList.add('resizing');
+    // the exact size from the main process, if it differs (e.g. display scaling)
+    window.electronAPI.getWindowSize?.().then(([w, h]) => {
+      if (!isResizing || !w || !h) return;
+      startWidth = w; startHeight = h;
+    }).catch(() => {});
   });
+  resizeGrip.addEventListener('pointermove', (e) => {
+    if (!isResizing) return;
+    const newW = Math.max(360, Math.min(1400, startWidth + (e.screenX - startX)));
+    const newH = Math.max(240, Math.min(1200, startHeight + (e.screenY - startY))); // never collapses
+    pending = [Math.round(newW), Math.round(newH)];
+    if (!frame) frame = requestAnimationFrame(flush);
+  });
+  const stopResize = (e) => {
+    if (!isResizing) return;
+    isResizing = false;
+    resizeGrip.classList.remove('resizing');
+    try { resizeGrip.releasePointerCapture(e.pointerId); } catch (_) {}
+    if (frame) { cancelAnimationFrame(frame); flush(); }
+  };
+  resizeGrip.addEventListener('pointerup', stopResize);
+  resizeGrip.addEventListener('pointercancel', stopResize);
+  resizeGrip.addEventListener('lostpointercapture', stopResize);
 }
 
 // Drag the window by the title bar (anywhere except buttons / session chips).

@@ -2004,10 +2004,15 @@ body.dock-right .mini-count { left: 6px; }
 /* Corner Resize Grip */
 .resize-grip {
   position: absolute;
-  bottom: 2px;
-  right: 2px;
-  width: 14px;
-  height: 14px;
+  bottom: 0;
+  right: 0;
+  width: 24px;              /* a bigger target than the 10px mark it shows */
+  height: 24px;
+  align-items: flex-end !important;
+  justify-content: flex-end !important;
+  padding: 0 3px 3px 0;
+  box-sizing: border-box;
+  touch-action: none;
   cursor: nwse-resize;
   -webkit-app-region: no-drag;
   display: flex;

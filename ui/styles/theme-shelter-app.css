@@ -249,3 +249,7 @@ body.style-shelter .set-ico { display: none; }
 body.style-shelter :is(.ws-ico, .fx-nc-folder-ico, .git-ico) { display: none; }
 body.style-shelter .infobar-icon { background: none !important; color: var(--pip) !important; border: 2px solid var(--pip); border-radius: 0 !important; filter: none !important; font: 400 11px/14px var(--pip-font); width: 16px; height: 16px; }
 body.style-shelter :is(.toast-ico, .perm-toast .toast-icon) { background: none !important; color: var(--pip) !important; border: 2px solid var(--pip); border-radius: 0 !important; }
+
+/* 11. the resize corner: amber, above the screen and the full-screen menus, lit while dragging */
+body.style-shelter .resize-grip { color: rgba(255, 159, 28, 0.6); z-index: 3500; }
+body.style-shelter .resize-grip:hover, body.style-shelter .resize-grip.resizing { color: var(--pip); background: radial-gradient(circle at 100% 100%, rgba(255, 159, 28, 0.25), transparent 70%); }
