@@ -17,6 +17,5 @@ api.onNotesState = (f) => { cbs.state = f; };
 api.onNotesChanged = (f) => { cbs.changed = f; };
 api.onNotesNew = (f) => { cbs.new = f; };
 api.notesCopy = (id) => { window.__notesCalls.push(['copy', id]); return Promise.resolve(true); };
-api.notesOpenFile = (id) => { window.__notesCalls.push(['open', id]); return Promise.resolve(true); };
 api.notesOpenFolder = () => { window.__notesCalls.push(['folder']); return Promise.resolve(true); };
 api.notesUnpin = (id) => { window.__notesCalls.push(['unpin', id]); notes = notes.filter((n) => n.id !== id); return Promise.resolve(true); };

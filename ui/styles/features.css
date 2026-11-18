@@ -2003,3 +2003,21 @@ body.vault-layout-edit .vault-room.sel, body.vault-layout-edit .vault-annex.sel 
 .queue-held-text { flex: 1; min-width: 140px; }
 .queue-resume { font: inherit; color: inherit; cursor: pointer; background: color-mix(in srgb, currentColor 14%, transparent); border: 1px solid color-mix(in srgb, currentColor 45%, transparent); border-radius: 3px; padding: 1px 8px; }
 .queue-resume:hover { background: color-mix(in srgb, currentColor 26%, transparent); }
+
+/* Tables in chat replies: a grid, a tinted header row, roomy cells, alternate row shading, alignment from the
+   Markdown (:--- / :---: / ---:). A wide table scrolls inside the message instead of overflowing. Colours come from
+   the text colour, so every style and theme gets a matching grid. */
+.chat-bubble .bubble-content table {
+  display: block; width: max-content; max-width: 100%; overflow-x: auto;
+  border-collapse: collapse; border-spacing: 0; margin: 0.5em 0; font-size: 0.95em;
+}
+.chat-bubble .bubble-content :is(th, td) {
+  padding: 5px 12px; text-align: left; vertical-align: top;
+  border: 1px solid color-mix(in srgb, currentColor 24%, transparent);
+  word-break: normal; overflow-wrap: normal; hyphens: none; min-width: 3.5em;
+}
+.chat-bubble .bubble-content th { font-weight: 700; background: color-mix(in srgb, currentColor 12%, transparent); white-space: nowrap; }
+.chat-bubble .bubble-content tbody tr:nth-child(even) td { background: color-mix(in srgb, currentColor 5%, transparent); }
+.chat-bubble .bubble-content :is(th, td)[align="center"] { text-align: center; }
+.chat-bubble .bubble-content :is(th, td)[align="right"] { text-align: right; font-variant-numeric: tabular-nums; }
+.chat-bubble .bubble-content table :is(code, a) { word-break: normal; }

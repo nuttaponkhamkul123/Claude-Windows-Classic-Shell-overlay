@@ -96,11 +96,6 @@ function register({ getWin }) {
     clipboard.writeText(parse(fs.readFileSync(f, 'utf8')).body.trim());
     return true;
   });
-  ipcMain.handle('notes:open-file', (_e, id) => {
-    const f = fileOf(id);
-    if (f && fs.existsSync(f)) shell.openPath(f);
-    return !!f;
-  });
   ipcMain.handle('notes:open-folder', () => { shell.openPath(NOTES_DIR); return true; });
   ipcMain.handle('notes:unpin', (_e, id) => {
     const f = fileOf(id);

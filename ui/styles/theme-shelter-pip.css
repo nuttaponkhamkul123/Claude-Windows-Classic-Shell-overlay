@@ -95,6 +95,9 @@ body.style-shelter #detailView .chat-bubble hr { border-color: var(--pip-faint);
 body.style-shelter #detailView .chat-bubble blockquote { border-left-color: var(--pip-dim); color: var(--pip-dim); }
 body.style-shelter #detailView .chat-bubble table th { color: var(--pip-hi); border-color: var(--pip-faint); }
 body.style-shelter #detailView .chat-bubble table td { border-color: var(--pip-faint); }
+body.style-shelter #detailView .chat-bubble .bubble-content :is(th, td) { border-color: var(--pip-faint); border-radius: 0; }
+body.style-shelter #detailView .chat-bubble .bubble-content th { background: rgba(255, 159, 28, .12); color: var(--pip-hi); }
+body.style-shelter #detailView .chat-bubble .bubble-content tbody tr:nth-child(even) td { background: rgba(255, 159, 28, .05); }
 
 /* ---------- working line + notices ---------- */
 body.style-shelter #detailView #activityRow.activity-row { background: rgba(255, 159, 28, 0.08); border: 1px solid var(--pip-dim); color: var(--pip); border-radius: 2px 2px 0 0; border-bottom: 0; }

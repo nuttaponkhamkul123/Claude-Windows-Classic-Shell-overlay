@@ -38,10 +38,27 @@ app.whenReady().then(async () => {
 
   // actions
   await js(`[...document.querySelectorAll('.np-acts .np-btn')].find((b) => b.textContent === 'Copy').click()`);
-  await js(`[...document.querySelectorAll('.np-acts .np-btn')].find((b) => b.textContent === 'Open').click()`);
   await wait(100);
-  const c = await calls();
-  check('Copy and Open reach the main process with the note id', c.some((x) => x[0] === 'copy' && x[1] === '20261118-090000-newest') && c.some((x) => x[0] === 'open' && x[1] === '20261118-090000-newest'));
+  check('Copy reaches the main process with the note id', (await calls()).some((x) => x[0] === 'copy' && x[1] === '20261118-090000-newest'));
+
+  // Open: the whole note, read inside the panel (no editor)
+  await js(`[...document.querySelectorAll('.np-acts .np-btn')].find((b) => b.textContent === 'Open').click()`); await wait(200);
+  check('Open reads the note in the panel, not in an editor', await js(`document.querySelector('.np-panel').classList.contains('np-reading')`) && !(await calls()).some((x) => x[0] === 'open'));
+  check('the reader shows the title and the rendered note full size', /Deploy steps/.test(await q('.np-reader-title')) && /Steps/.test(await q('.np-body-full h2')) && (await n('.np-body-full li')) === 2);
+  check('the list is hidden while reading', await js(`getComputedStyle(document.querySelector('.np-list')).display === 'none'`));
+  check('scripts in the note still do not run in the reader', (await js(`window.__pwned`)) === undefined && !(await js(`!!document.querySelector('.np-reader script, .np-reader img[onerror]')`)));
+  await js(`[...document.querySelectorAll('.np-mode')].find((b) => b.textContent === 'Markdown').click()`); await wait(100);
+  check('Markdown shows the source text', /## Steps/.test(await q('.np-source')) && /- build/.test(await q('.np-source')));
+  await js(`[...document.querySelectorAll('.np-mode')].find((b) => b.textContent === 'Preview').click()`); await wait(100);
+  check('Preview goes back to the rendered note', (await n('.np-source')) === 0 && (await n('.np-body-full li')) === 2);
+  await js(`[...document.querySelectorAll('.np-reader-bar .np-btn')].find((b) => b.textContent === 'Copy').click()`); await wait(100);
+  check('Copy in the reader copies this note', (await calls()).filter((x) => x[0] === 'copy').length === 2);
+  await esc(); await wait(150);
+  check('Esc goes back to the list, the panel stays open', !(await js(`document.querySelector('.np-panel').classList.contains('np-reading')`)) && await js(`document.body.classList.contains('np-open')`));
+  check('the list is back', (await n('.np-card')) === 3);
+  await js(`[...document.querySelectorAll('.np-acts .np-btn')].find((b) => b.textContent === 'Open').click()`); await wait(150);
+  await js(`document.querySelector('.np-reader-bar .np-btn').click()`); await wait(150);
+  check('the ‹ Notes button goes back too', !(await js(`document.querySelector('.np-panel').classList.contains('np-reading')`)));
   await js(`[...document.querySelectorAll('.np-acts .np-btn')].find((b) => b.textContent === 'Unpin').click()`);
   check('Unpin asks "Sure?" first, nothing removed yet', /Sure/.test(await js(`[...document.querySelectorAll('.np-acts .np-btn')].find((b) => /Sure/.test(b.textContent))?.textContent`)) && !(await calls()).some((x) => x[0] === 'unpin'));
   await js(`[...document.querySelectorAll('.np-acts .np-btn')].find((b) => /Sure/.test(b.textContent)).click()`); await wait(100);

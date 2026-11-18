@@ -46,6 +46,36 @@ body.np-open .np-panel { transform: none; visibility: visible; transition: trans
 .np-empty p { color: var(--np-dim); }
 .np-empty code { padding: 0 4px; border-radius: 3px; background: var(--np-panel); border: 1px solid var(--np-line); font: 12px var(--np-mono); }
 
+/* ---- reader: one note, full size, inside the panel ---- */
+body.np-open .np-panel.np-reading { width: min(760px, calc(100vw - 48px)); }
+.np-panel.np-reading > .np-bar, .np-panel.np-reading > .np-list, .np-panel.np-reading > .np-empty { display: none; }
+.np-reader { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.np-reader[hidden] { display: none; }
+.np-reader-bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--np-line); }
+.np-reader-title { flex: 1; min-width: 0; font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.np-modes { display: flex; flex: none; }
+.np-mode { border-radius: 0; }
+.np-mode:first-child { border-radius: 6px 0 0 6px; }
+.np-mode:last-child { border-radius: 0 6px 6px 0; margin-left: -1px; }
+.np-mode.on { color: var(--np-bg); background: var(--np-accent); border-color: var(--np-accent); }
+.np-reader-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 18px 0; font-size: 11.5px; color: var(--np-dim); }
+.np-reader-meta .np-when { margin-left: auto; }
+.np-reader-proj { color: var(--np-accent); font-weight: 600; }
+.np-reader-body { flex: 1; min-height: 0; overflow: auto; padding: 8px 18px 22px; }
+.np-body-full { margin: 6px 0 0; font-size: 14px; line-height: 1.6; }
+.np-body-full h1 { font-size: 20px; margin: 16px 0 8px; }
+.np-body-full h2 { font-size: 17px; margin: 14px 0 6px; }
+.np-body-full h3 { font-size: 15px; margin: 12px 0 4px; }
+.np-body-full p { margin: 8px 0; }
+.np-body-full ul, .np-body-full ol { margin: 8px 0; padding-left: 22px; }
+.np-body-full li { margin: 3px 0; }
+.np-body-full code { font-size: 12.5px; }
+.np-body-full pre { padding: 10px 12px; }
+.np-body-full blockquote { margin: 8px 0; padding: 2px 12px; border-left: 3px solid var(--np-line); color: var(--np-dim); }
+.np-body-full table { font-size: 12.5px; }
+.np-body-full th, .np-body-full td { padding: 4px 8px; }
+.np-source { margin: 8px 0 0; padding: 12px 14px; font: 12.5px/1.55 var(--np-mono); white-space: pre-wrap; word-break: break-word; background: var(--np-bg); border: 1px solid var(--np-line); border-radius: 6px; user-select: text; }
+
 /* ---- workspace groups + card decks ---- */
 .np-group { display: flex; flex-direction: column; gap: 6px; }
 .np-group-head { display: flex; align-items: center; gap: 6px; padding: 2px; cursor: pointer; font-size: 12px; font-weight: 600; user-select: none; color: var(--np-accent); }
@@ -115,6 +145,9 @@ body.style-shelter .np-head { border-bottom: 2px solid var(--pip); }
 body.style-shelter .np-title { font-weight: 400; letter-spacing: .1em; text-transform: uppercase; }
 body.style-shelter .np-btn { color: var(--pip); background: none; border-color: var(--pip-dim); border-radius: 0; }
 body.style-shelter .np-btn:hover { background: var(--pip); color: var(--pip-ink); border-color: var(--pip); }
+body.style-shelter .np-mode.on { color: var(--pip-ink); background: var(--pip); border-color: var(--pip); }
+body.style-shelter :is(.np-mode, .np-source) { border-radius: 0; }
+body.style-shelter .np-body-full blockquote { border-left-color: var(--pip-dim); }
 body.style-shelter .np-btn.danger { background: none; color: #ff8f84; border-color: #ff8f84; }
 body.style-shelter .np-btn.danger:hover { background: #ff8f84; color: var(--pip-ink); }
 body.style-shelter .np-filter { border-radius: 0; background: rgba(0, 0, 0, .25); }

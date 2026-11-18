@@ -61,7 +61,23 @@
     p.append('Ask Claude in any chat: ', mk('i', null, '"pin this as a note"'), '.', document.createElement('br'), 'It saves Markdown here with the ', mk('code', null, 'pin_note'), ' tool.');
     return p;
   })());
-  panel.append(head, bar, list, empty);
+  // reader: one note, full size, in the panel
+  const reader = mk('div', 'np-reader');
+  reader.hidden = true;
+  const rbar = mk('div', 'np-reader-bar');
+  const rBack = mk('button', 'np-btn', '‹ Notes');
+  rBack.title = 'Back to all notes (Esc)';
+  const rTitle = mk('div', 'np-reader-title');
+  const rModes = mk('div', 'np-modes');
+  const rPreview = mk('button', 'np-btn np-mode on', 'Preview');
+  const rSource = mk('button', 'np-btn np-mode', 'Markdown');
+  rModes.append(rPreview, rSource);
+  const rCopy = mk('button', 'np-btn', 'Copy');
+  rbar.append(rBack, rTitle, rModes, rCopy);
+  const rMeta = mk('div', 'np-reader-meta');
+  const rBody = mk('div', 'np-reader-body');
+  reader.append(rbar, rMeta, rBody);
+  panel.append(head, bar, list, empty, reader);
   document.body.append(backdrop, panel);
 
   // ---- state ----
@@ -110,7 +126,7 @@
       acts.appendChild(b);
     };
     btn('Copy', 'Copy the Markdown', async (b) => { if (await api.notesCopy(n.id)) { b.textContent = 'Copied'; setTimeout(() => { b.textContent = 'Copy'; }, 1200); } });
-    btn('Open', 'Open the .md file in your editor', () => api.notesOpenFile(n.id));
+    btn('Open', 'Read the whole note here', () => openReader(n.id));
     let armed = false;
     btn('Unpin', 'Remove from the panel (the file is kept in .unpinned)', async (b) => {
       if (!armed) { armed = true; b.textContent = 'Sure?'; b.classList.add('danger'); setTimeout(() => { armed = false; b.textContent = 'Unpin'; b.classList.remove('danger'); }, 2500); return; }
@@ -186,13 +202,52 @@
     list.scrollTop = keepTop;
   }
 
+  // ---- reader ----
+  let reading = null;     // id of the note being read
+  let readMode = 'preview';
+  function drawReader() {
+    const n = notes.find((x) => x.id === reading);
+    if (!n) { closeReader(); return; }
+    rTitle.textContent = n.title;
+    rTitle.title = n.cwd || n.title;
+    rMeta.textContent = '';
+    if (n.project) rMeta.appendChild(mk('span', 'np-reader-proj', n.project));
+    for (const t of n.tags) rMeta.appendChild(mk('span', 'np-tag', '#' + t));
+    rMeta.appendChild(mk('span', 'np-when', ago(n.pinned)));
+    rPreview.classList.toggle('on', readMode === 'preview');
+    rSource.classList.toggle('on', readMode === 'source');
+    const keep = rBody.scrollTop;
+    rBody.textContent = '';
+    if (readMode === 'source') rBody.appendChild(mk('pre', 'np-source', n.body));
+    else { const b = mk('div', 'np-body np-body-full'); b.appendChild(renderMd(n.body)); rBody.appendChild(b); }
+    rBody.scrollTop = keep;
+  }
+  function openReader(id) {
+    reading = id;
+    panel.classList.add('np-reading');
+    reader.hidden = false;
+    rBody.scrollTop = 0;
+    drawReader();
+  }
+  function closeReader() {
+    reading = null;
+    panel.classList.remove('np-reading');
+    reader.hidden = true;
+    draw();
+  }
+  rBack.addEventListener('click', closeReader);
+  rPreview.addEventListener('click', () => { readMode = 'preview'; drawReader(); });
+  rSource.addEventListener('click', () => { readMode = 'source'; drawReader(); });
+  rCopy.addEventListener('click', async () => { if (reading && await api.notesCopy(reading)) { rCopy.textContent = 'Copied'; setTimeout(() => { rCopy.textContent = 'Copy'; }, 1200); } });
+
   async function load() {
     try { notes = (await api.notesList()) || []; } catch (_) { notes = []; }
-    draw();
+    if (reading) drawReader(); else draw();
   }
 
   // ---- open / close ----
   function setOpen(on) {
+    if (!on && reading) { reading = null; panel.classList.remove('np-reading'); reader.hidden = true; }
     document.body.classList.toggle('np-open', on);
     window.paintNotesButtons?.();
     if (on) { load(); setTimeout(() => (filter.hidden ? panel : filter).focus?.(), 60); }
@@ -200,6 +255,7 @@
   async function openNotes(focusId) {
     setOpen(true);
     if (!focusId) return;
+    if (reading) closeReader();
     flashId = focusId;
     open.add(focusId);
     await load();
@@ -217,7 +273,10 @@
   btnFolder.addEventListener('click', () => api.notesOpenFolder());
   filter.addEventListener('input', draw);
   filter.addEventListener('keydown', (e) => { if (e.key === 'Escape' && filter.value) { e.stopPropagation(); filter.value = ''; draw(); } });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen() && !(e.target === filter && filter.value)) setOpen(false); }, true);
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !isOpen() || (e.target === filter && filter.value)) return;
+    if (reading) closeReader(); else setOpen(false); // Esc: out of the reader first, then close
+  }, true);
   api.onNotesChanged(() => { if (isOpen()) load(); });
   api.onNotesNew(({ id }) => openNotes(id)); // Claude pinned something: show it
   uiInterval(() => { if (isOpen() && notes.length) draw(); }, 60000); // "x min ago"

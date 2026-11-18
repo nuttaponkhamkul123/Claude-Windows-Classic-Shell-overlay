@@ -75,7 +75,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Pinned notes (the panel is in this page; main/notes.js reads the folder)
   notesList: () => ipcRenderer.invoke('notes:list'),
   notesCopy: (id) => ipcRenderer.invoke('notes:copy', id),
-  notesOpenFile: (id) => ipcRenderer.invoke('notes:open-file', id),
   notesOpenFolder: () => ipcRenderer.invoke('notes:open-folder'),
   notesUnpin: (id) => ipcRenderer.invoke('notes:unpin', id),
   notesState: () => ipcRenderer.invoke('notes:state'),
