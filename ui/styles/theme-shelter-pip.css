@@ -695,3 +695,69 @@ body.style-shelter.vault-focus #detailView { padding: 8px 10px 4px; }
   body.style-shelter #detailView .pip-head-title { font-size: 15px; letter-spacing: 0.08em; }
   body.style-shelter #detailView .pip-row, body.style-shelter #detailView .pip-row.pct, body.style-shelter #detailView .pip-row.warn { font-size: 13.5px; line-height: 22px; }
 }
+
+/* ===================================================================
+   Round 11: full-screen menus. In Shelter, Settings, the toolbar dropdowns (Skills, Remote, New chat,
+   Model / Effort, MCP), Usage, the Ctrl+K finder and the outfit panel open over the whole window as a
+   Pip-Boy screen: a top line with the title set into it, a bottom line, big list rows, "‹ Back" at the bottom.
+   (Right-click menus, the "/" autocomplete and approval pop-ups stay small: they belong next to what you point at.)
+   =================================================================== */
+.pip-menu-back { display: none; }
+body.style-shelter :is(#detailView .convo-toolbar > .mcp-panel, #usagePanel, .sk-overlay .sk-dialog, .finder-panel, .dress-panel) {
+  position: fixed !important; inset: 6px !important; left: 6px !important; right: 6px !important; top: 6px !important; bottom: 6px !important;
+  width: auto !important; height: auto !important; max-width: none !important; max-height: none !important; transform: none !important;
+  z-index: 3000; margin: 0; border: 0 !important; border-radius: 0 !important; box-shadow: 0 0 0 100vmax rgba(10, 6, 0, 0.55) !important;
+  padding: 34px 20px 60px !important; overflow: auto; color: var(--pip);
+  background:
+    linear-gradient(var(--pip), var(--pip)) left 10px top 18px / calc(100% - 20px) 2px no-repeat,
+    linear-gradient(var(--pip), var(--pip)) left 10px top 18px / 2px 12px no-repeat,
+    linear-gradient(var(--pip), var(--pip)) right 10px top 18px / 2px 12px no-repeat,
+    linear-gradient(var(--pip), var(--pip)) left 10px bottom 22px / calc(100% - 20px) 2px no-repeat,
+    linear-gradient(var(--pip), var(--pip)) left 10px bottom 22px / 2px 30px no-repeat,
+    linear-gradient(var(--pip), var(--pip)) right 10px bottom 22px / 2px 30px no-repeat,
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.12) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 50% 45%, #2b1a07 0%, #1f1002 60%, #110800 100%) !important;
+}
+body.style-shelter .sk-overlay { background: rgba(10, 6, 0, 0.55) !important; }
+body.style-shelter .sk-overlay .sk-dialog { display: flex; flex-direction: column; }
+/* the title, set into the top line */
+body.style-shelter :is(#detailView .convo-toolbar > .mcp-panel, #usagePanel) > .mcp-panel-head,
+body.style-shelter .sk-overlay .sk-dialog > .sk-head,
+body.style-shelter .dress-panel > .dress-head {
+  position: absolute; top: 6px; left: 26px; right: auto; max-width: calc(100% - 60px); display: flex; gap: 12px; align-items: center;
+  padding: 0 10px; margin: 0; background: #241505 !important; border: 0 !important;
+  font: 400 18px/26px var(--pip-font) !important; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pip) !important;
+}
+body.style-shelter .sk-overlay .sk-dialog > .sk-head .sk-title { font: inherit !important; letter-spacing: inherit; }
+body.style-shelter .sk-overlay .sk-dialog > .sk-head .sk-x {
+  position: fixed; top: 10px; right: 26px; background: #1f1002; color: var(--pip); border: 2px solid var(--pip); border-radius: 0; font-size: 14px; padding: 0 8px;
+}
+body.style-shelter .sk-overlay .sk-dialog > .sk-head .sk-x:hover { background: var(--pip); color: var(--pip-ink); }
+/* body and footer of dialogs */
+body.style-shelter .sk-overlay .sk-dialog > :not(.sk-head) { flex: none; }
+body.style-shelter .sk-overlay .sk-dialog .settings-dialog-body { flex: 1 1 auto; overflow: auto; }
+body.style-shelter .sk-overlay .sk-dialog .settings-footer {
+  position: fixed; left: 26px; right: 26px; bottom: 10px; background: none !important; border: 0 !important; padding: 0; display: flex; justify-content: center; gap: 10px;
+}
+body.style-shelter .sk-overlay .sk-dialog .settings-footer .sk-btn { background: #1f1002 !important; color: var(--pip) !important; border: 2px solid var(--pip) !important; }
+body.style-shelter .sk-overlay .sk-dialog .settings-footer .sk-btn:hover { background: var(--pip) !important; color: var(--pip-ink) !important; }
+/* big, readable rows; the hovered or chosen one is boxed (3000A selection) */
+body.style-shelter :is(#detailView .convo-toolbar > .mcp-panel, #usagePanel, .sk-dialog, .finder-panel) :is(.set-row, .fx-skill-row, .mcp-row, .finder-row, .fx-menu-item) {
+  font-size: 16px; padding: 7px 12px; border: 2px solid transparent; background: none;
+}
+body.style-shelter :is(#detailView .convo-toolbar > .mcp-panel, #usagePanel, .sk-dialog, .finder-panel) :is(.set-row, .fx-skill-row, .mcp-row, .finder-row.on, .fx-menu-item):hover,
+body.style-shelter :is(#detailView .convo-toolbar > .mcp-panel, .finder-panel) :is(.fx-skill-row.selected, .finder-row.on) {
+  background: rgba(255, 159, 28, 0.1) !important; border-left-color: var(--pip); border-right-color: var(--pip); border-top-color: transparent; border-bottom-color: transparent;
+}
+body.style-shelter :is(#detailView .convo-toolbar > .mcp-panel, .finder-panel) :is(.fx-skill-row:hover, .finder-row.on) * { color: var(--pip) !important; }
+body.style-shelter :is(#detailView .convo-toolbar > .mcp-panel, #usagePanel, .sk-dialog, .finder-panel) :is(.fx-skill-name, .mcp-name, .set-label, .finder-title) { font-size: 16px; }
+body.style-shelter :is(#detailView .convo-toolbar > .mcp-panel, #usagePanel, .sk-dialog, .finder-panel) :is(.fx-skill-desc, .mcp-status, .finder-sub) { font-size: 13px; }
+body.style-shelter #detailView .convo-toolbar > .mcp-panel :is(.fx-skill-list, .mcp-list) { max-height: none !important; overflow: visible; }
+body.style-shelter .settings-card { background: none !important; border: 0 !important; }
+body.style-shelter .finder-panel .finder-input { font-size: 18px; height: 42px; margin-bottom: 8px; border: 2px solid var(--pip) !important; }
+/* "‹ Back" on the bottom line (menus with no close button of their own; pip-menus.js adds it) */
+body.style-shelter .pip-menu-back {
+  display: block; position: fixed; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 3001;
+  font: 400 16px/1.2 var(--pip-font); color: var(--pip); background: #1f1002; border: 2px solid var(--pip); border-radius: 0; padding: 3px 16px; cursor: pointer;
+}
+body.style-shelter .pip-menu-back:hover { background: var(--pip); color: var(--pip-ink); }
