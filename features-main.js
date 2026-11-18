@@ -825,7 +825,16 @@ function register(c) {
 
   ipcMain.handle('store-get-all', () => store);
   ipcMain.on('store-get-sync', (e) => { e.returnValue = store; }); // preload hands this to the page at load, so the theme needs no flash
-  ipcMain.on('store-set', (_e, { key, value }) => setSetting(key, value));
+  ipcMain.on('store-set', (_e, msg) => {
+    const { key, value } = msg || {};
+    // The page may only write plain settings: no odd keys, no prototype keys, nothing huge.
+    if (typeof key !== 'string' || !/^[A-Za-z0-9_.-]{1,80}$/.test(key)) return;
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') return;
+    let size = 0;
+    try { size = JSON.stringify(value === undefined ? null : value).length; } catch (_) { return; }
+    if (size > 5 * 1024 * 1024) return;
+    setSetting(key, value);
+  });
 
   ipcMain.handle('search-transcripts', (_e, q) => searchTranscripts(q).catch(() => []));
   ipcMain.handle('open-file', (_e, p) => openFile(p));
