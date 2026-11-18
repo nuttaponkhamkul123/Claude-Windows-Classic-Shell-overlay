@@ -23,6 +23,7 @@
   <link rel="stylesheet" href="styles/git-diff.css" />
   <link rel="stylesheet" href="styles/steps.css" />
   <link rel="stylesheet" href="styles/notes.css" />
+  <link rel="stylesheet" href="styles/chat-cards.css" />
   <link rel="stylesheet" href="styles/theme-pip.css" />
 </head>
 <body class="theme-aero">
@@ -147,6 +148,7 @@
           <button id="tbModel" class="tb-btn" title="Choose model, then effort" hidden style="display:none">Model ▾</button>
           <button id="tbNewChat" class="tb-btn" title="Start a new conversation in this or another folder (/clear)">New chat</button>
           <button id="tbSettings" class="tb-btn" title="Theme, chime, always on top">Settings</button>
+          <button id="tbCards" class="tb-btn" title="Show each of your questions as a card; click a card to open its answer">Cards</button>
           <button id="tbSteps" class="tb-btn" title="What Claude did in this chat, step by step">Steps</button>
           <button id="tbNotes" class="tb-btn tb-notes" title="Pinned notes (Claude pins them with the pin_note tool)">📌 Notes<span class="notes-badge"></span></button>
           <span class="tb-spacer"></span>
@@ -359,6 +361,7 @@
   <script src="logic/chat/cost-meter.js"></script>
   <script src="logic/chat/handoff.js"></script>
   <script src="logic/chat/steps.js"></script>
+  <script src="logic/chat/cards.js"></script>
   <script src="logic/chat/notes-panel.js"></script>
   <script src="logic/chat/pip-screen.js"></script>
   <script src="logic/chat/pip-menus.js"></script>
