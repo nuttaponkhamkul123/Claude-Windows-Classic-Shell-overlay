@@ -53,6 +53,13 @@
       wasActive = now;
     }).observe(dv, { attributes: true, attributeFilter: ['class'] });
     dv.addEventListener('animationend', (e) => { if (e.animationName === 'pip-crt-power') dv.classList.remove('pip-crt-on'); });
+    // a narrow chat panel (a chat open beside the Vault in a small window): the CSS switches to a tighter layout
+    // (two rows of tabs, a wrapping input toolbar, no model box on the top line)
+    const NARROW = 430;
+    new ResizeObserver(() => {
+      const narrow = dv.clientWidth > 0 && dv.clientWidth < NARROW;
+      if (dv.classList.contains('pip-narrow') !== narrow) dv.classList.toggle('pip-narrow', narrow);
+    }).observe(dv);
   }
   const stats = el('aside', 'pip-stats');
   body.appendChild(stats);

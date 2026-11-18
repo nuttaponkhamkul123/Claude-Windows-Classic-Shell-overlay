@@ -889,3 +889,28 @@ body.style-shelter #detailView .queue-clear, body.style-shelter #detailView .que
 body.style-shelter #detailView .queue-clear:hover { background: var(--pip); color: var(--pip-ink); border-color: var(--pip); }
 body.style-shelter #detailView .queue-x:hover { color: #ff8f84; border-color: #ff8f84; }
 body.style-shelter .row-queue { border-radius: 0; color: var(--pip); border-color: var(--pip-dim); font-family: var(--pip-font); }
+
+/* ===================================================================
+   Narrow chat panel (under 430px: a chat open beside the Vault in a small window): pip-screen.js sets
+   .pip-narrow on #detailView. Nothing fits in one row there, so: the model box leaves the top line (the model is
+   in the input's toolbar), the tabs take two rows under a plain line, and the input toolbar wraps.
+   =================================================================== */
+body.style-shelter #detailView.pip-narrow { padding: 6px 6px 4px; }
+body.style-shelter #detailView.pip-narrow .pip-head { gap: 4px; }
+body.style-shelter #detailView.pip-narrow .pip-head > .pip-hbox:nth-child(2) { display: none; }
+body.style-shelter #detailView.pip-narrow .pip-hbox-first { flex: 1.8 1 0; }
+body.style-shelter #detailView.pip-narrow .pip-hseg { font-size: 12px; letter-spacing: 0; }
+body.style-shelter #detailView.pip-narrow .pip-head-title { font-size: 14px; letter-spacing: 0.04em; }
+/* the bottom tabs: two rows, a plain line above them */
+body.style-shelter #detailView.pip-narrow .convo-toolbar {
+  height: auto; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px 4px; margin: 8px 2px 4px; padding: 6px 2px 0;
+  background: none; border-top: 2px solid var(--pip);
+}
+body.style-shelter #detailView.pip-narrow .convo-toolbar::before,
+body.style-shelter #detailView.pip-narrow .convo-toolbar::after { display: none; }
+body.style-shelter #detailView.pip-narrow .convo-toolbar > .tb-btn:not(.xb-close):not(.tb-max):not(.wk-back) .pip-lbl { font-size: 13px; letter-spacing: 0; }
+/* the input toolbar wraps; Send stays at the right edge */
+body.style-shelter #detailView.pip-narrow .reply-toolbar { flex-wrap: wrap; row-gap: 2px; }
+body.style-shelter #detailView.pip-narrow .reply-toolbar > .tb-spacer { display: none; }
+body.style-shelter #detailView.pip-narrow .reply-toolbar .btn-send { margin-left: auto; }
+body.style-shelter #detailView.pip-narrow .reply-toolbar .rt-model { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
