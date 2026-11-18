@@ -15,6 +15,10 @@
     document.body.classList.toggle('np-dark', dark);
     document.body.classList.toggle('np-light', !dark);
     document.body.classList.toggle('np-shelter', shelter);
+    // no colour emoji in the Pip-Boy look (the labels are plain words and glyphs there)
+    const t = document.querySelector('.np-title'), f = $('npFolder');
+    if (t) t.textContent = shelter ? 'Pinned notes' : '📌 Pinned notes';
+    if (f) f.textContent = shelter ? '▤' : '📂';
   }
   const st = api.settings.uiStyle;
   applyTheme(st === 'classic' ? (api.settings.theme || 'aero') : st === 'work' ? 'dark' : 'shelter');
@@ -83,13 +87,15 @@
     }
 
     const acts = el('div', 'np-acts');
+    // no colour emoji in the Pip-Boy look: the labels are plain words there
+    const plain = (s) => (document.body.classList.contains('np-shelter') ? s.replace(/^\p{Extended_Pictographic}️?\s*/u, '') : s);
     const btn = (label, title, fn) => {
-      const bt = el('button', 'np-btn', label);
+      const bt = el('button', 'np-btn', plain(label));
       bt.title = title;
       bt.addEventListener('click', (e) => { e.stopPropagation(); fn(bt); });
       acts.appendChild(bt);
     };
-    btn('📋 Copy', 'Copy the Markdown', async (bt) => { if (await api.copy(n.id)) { bt.textContent = '✓ Copied'; setTimeout(() => (bt.textContent = '📋 Copy'), 1200); } });
+    btn('📋 Copy', 'Copy the Markdown', async (bt) => { if (await api.copy(n.id)) { bt.textContent = '✓ Copied'; setTimeout(() => (bt.textContent = plain('📋 Copy')), 1200); } });
     btn('📝 Open', 'Open the .md file in your editor', () => api.openFile(n.id));
     let armed = false;
     btn('Unpin', 'Remove from the panel (the file is kept in .unpinned)', async (bt) => {
