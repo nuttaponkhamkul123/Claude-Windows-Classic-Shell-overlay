@@ -420,6 +420,8 @@
       if (vaultRoom) group.append(vaultRoom);
       group.append(body);
       sessionsContainer.prepend(group);
+      window.vaultLayout?.place(group, '📌 Pinned');
+      window.vaultLayout?.afterRender();
     }
     // hidden / pinned marks + cost on each card
     sessionsContainer.querySelectorAll('.session-row').forEach((row) => {

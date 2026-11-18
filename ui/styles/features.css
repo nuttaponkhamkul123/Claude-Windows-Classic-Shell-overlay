@@ -1894,3 +1894,79 @@ body.style-work .handoff-btn.hot, body.theme-vista .handoff-btn.hot { color: #e3
 .ho-note:disabled { opacity: .6; }
 .ho-actions { align-items: center; margin-top: 4px; }
 .ho-spacer { flex: 1; }
+
+/* ---- IDE pickers in the HUD (logic/system/ide-pick.js): built on the Ctrl+K finder ---- */
+.ide-pick { z-index: 10080; }
+.ide-pick-panel { border-color: #f5a524 !important; box-shadow: 0 0 0 1px rgba(245, 165, 36, .35), 0 14px 40px rgba(0, 0, 0, .6) !important; }
+.ide-pick-head { display: flex; align-items: baseline; gap: 8px; padding: 8px 12px 4px; min-width: 0; }
+.ide-pick-src { flex: none; padding: 0 7px; border-radius: 9px; font: 600 10px "Bahnschrift", "Segoe UI", sans-serif; letter-spacing: .06em; text-transform: uppercase; color: #241600; background: #f5a524; }
+.ide-pick-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 12.5px "Segoe UI", sans-serif; }
+.ide-pick-prompt { padding: 0 12px 6px; font-size: 12px; color: #b3c0cf; white-space: pre-wrap; }
+.ide-pick-prompt[hidden] { display: none; }
+.ide-pick-error { padding: 5px 12px; font-size: 11.5px; color: #ffb4b0; background: rgba(239, 83, 80, .12); border-bottom: 1px solid rgba(239, 83, 80, .4); }
+.ide-pick-error[hidden] { display: none; }
+.ide-pick-list[hidden] { display: none; }
+.ide-pick-desc { font-weight: 400; color: #8796a8; }
+
+/* ===== Vault "Free" layout (logic/vault/layout.js): shaped rooms on a 4-column grid ===== */
+body.list-grid.vault-free:not(.vault-focus) #listView .sessions-container {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: 88px; position: relative; align-content: start;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,.05) 0 2px, transparent 3px) 0 0 / 25% 88px,
+    radial-gradient(circle at 70% 60%, rgba(0,0,0,.35) 0 3px, transparent 4px) 0 0 / 25% 88px,
+    radial-gradient(circle at 85% 20%, rgba(0,0,0,.3) 0 2px, transparent 3px) 0 0 / 25% 88px,
+    linear-gradient(160deg, #2a241f, #1f1b17);
+}
+body.vault-free .workspace-group.free-room { display: contents; }
+body.vault-free .workspace-group.free-room > .workspace-header,
+body.vault-free .workspace-group.free-room > .workspace-body { display: none; }
+body.vault-free .workspace-group.collapsed .vault-room { display: block; }
+body.vault-free .vault-room { height: auto; min-height: 88px; min-width: 0; }
+body.vault-free .vault-room[data-run="1"] .vault-ws-tag { display: none; }
+body.vault-free .vault-room[data-run="1"] .vault-plaque { max-width: 92%; }
+/* drawer of extra chats: inside the room, top right */
+body.vault-free .vault-room > .vault-drawer {
+  position: absolute; top: 9px; right: 4px; left: auto; max-width: 60%; z-index: 8; margin: 0; padding: 1px 4px;
+  flex-wrap: nowrap; overflow: hidden; border-radius: 4px; background: rgba(8, 12, 18, .8);
+}
+body.vault-free #listView .sessions-container > .vault-hidden-note { grid-column: 1 / -1; }
+body.vault-free .fx-pinned-group:not(.free-room) { display: none; }
+
+/* the other blocks of a shaped room: same colour, no robots; ladders join the floors */
+.vault-annex { position: relative; min-width: 0; overflow: visible;
+  background: repeating-linear-gradient(90deg, transparent 0 38px, rgba(0,0,0,.22) 38px 40px), linear-gradient(180deg, #171e2b 0%, #232d3f 80%, #131822 100%); }
+.vault-annex::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 10%, var(--vault-tint, rgba(255,255,255,.06)), transparent 75%); pointer-events: none; }
+.vault-annex.wt { border-top: 7px solid #3a4558; }
+.vault-annex.wl { border-left: 3px solid var(--vault-accent, #94a3b8); }
+.vault-annex.wr { border-right: 2px solid #3a4558; }
+.vault-annex .va-floor { position: absolute; left: 0; right: 0; bottom: 0; height: 8px;
+  background: linear-gradient(180deg, rgba(255,255,255,.1) 0, transparent 2px), repeating-linear-gradient(90deg, #3b4454 0 14px, #2a313e 14px 28px); }
+.vault-annex.deck .va-floor::after { content: ""; position: absolute; top: 0; bottom: 0; width: 26px; left: calc(50% - 13px); background: #0b0f15; box-shadow: inset 0 2px 3px rgba(0,0,0,.8); }
+.vault-annex .va-ladder { position: absolute; z-index: 2; width: 18px; left: calc(50% - 9px); top: -10px; bottom: 6px;
+  background: linear-gradient(#8a96a6, #8a96a6) 0 0 / 2px 100% no-repeat, linear-gradient(#8a96a6, #8a96a6) 100% 0 / 2px 100% no-repeat,
+    repeating-linear-gradient(180deg, transparent 0 7px, #6b7686 7px 9px) 2px 0 / 14px 100% no-repeat; }
+.vault-annex.room-forge   { --vault-accent: #f59e0b; --vault-tint: rgba(245, 158, 11, 0.16); }
+.vault-annex.room-lab     { --vault-accent: #06b6d4; --vault-tint: rgba(6, 182, 212, 0.16); }
+.vault-annex.room-library { --vault-accent: #eab308; --vault-tint: rgba(234, 179, 8, 0.14); }
+.vault-annex.room-recon   { --vault-accent: #10b981; --vault-tint: rgba(16, 185, 129, 0.16); }
+.vault-annex.room-comms   { --vault-accent: #8b5cf6; --vault-tint: rgba(139, 92, 246, 0.16); }
+.vault-annex.room-command { --vault-accent: #3b82f6; --vault-tint: rgba(59, 130, 246, 0.15); }
+.vault-annex.room-lounge  { --vault-accent: rgba(148, 163, 184, 0.55); --vault-tint: rgba(148, 163, 184, 0.08); }
+
+/* edit mode */
+body.vault-layout-edit #listView .sessions-container::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 15;
+  background: linear-gradient(90deg, rgba(245,165,36,.25) 1px, transparent 1px) 0 0 / 25% 88px, linear-gradient(180deg, rgba(245,165,36,.25) 1px, transparent 1px) 0 0 / 25% 88px; }
+body.vault-layout-edit .vault-room, body.vault-layout-edit .vault-annex { cursor: grab; }
+body.vault-layout-edit .vault-room *, body.vault-layout-edit .vault-annex * { pointer-events: none; }
+body.vault-layout-edit .vault-room.sel, body.vault-layout-edit .vault-annex.sel { box-shadow: inset 0 0 0 2px #f5a524; }
+.vault-ghost { z-index: 20; pointer-events: none; border: 2px dashed #2dd4bf; background: rgba(45, 212, 191, .16); }
+.vault-ghost.bad { border-color: #ef5350; background: rgba(239, 83, 80, .18); }
+.vault-layout-bar { padding: 6px 8px; background: #161d26; border-bottom: 1px solid #070a0e; color: #dfe6ee; font: 12px "Segoe UI", sans-serif; }
+.vault-layout-bar .vl-row { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.vault-layout-bar .vl-label { font: 600 11px "Bahnschrift", "Segoe UI", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #f5a524; margin-right: 4px; }
+.vl-shape, .vl-btn { cursor: pointer; border: 1px solid #2e3949; background: #11171f; color: #b8c4d2; border-radius: 4px; padding: 3px 5px; font: 600 11px "Bahnschrift", "Segoe UI", sans-serif; }
+.vl-shape:hover, .vl-btn:hover { border-color: #f5a524; color: #fff; }
+.vl-btn.primary { background: #f5a524; color: #241600; border-color: #c27a08; }
+.vl-mini { display: grid; gap: 1px; } .vl-mini i { background: #8796a8; display: block; }
+.vl-hint { margin-top: 4px; color: #8796a8; font-size: 11px; }
+.vl-status { min-height: 15px; margin-top: 2px; font-size: 11.5px; color: #2dd4bf; } .vl-status.bad { color: #ffb4b0; }

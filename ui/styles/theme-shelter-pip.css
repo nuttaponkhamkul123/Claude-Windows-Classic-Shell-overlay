@@ -1,0 +1,697 @@
+/* ===================================================================
+   Shelter chat screen: green-phosphor terminal look (an original take on the
+   "wrist computer" style: green on near-black, selected line = solid bar,
+   tab-style keys). Applies to the open chat only (#detailView), not the rooms.
+   Deliberately calm: a faint static scan texture and a soft glow, no flicker,
+   no blur, no ghosting, so long text stays easy to read.
+   Loaded after theme-shelter.css.
+   =================================================================== */
+body.style-shelter #detailView {
+  --pip: #ff9f1c;          /* main phosphor */
+  --pip-hi: #ff9f1c;       /* emphasis */
+  --pip-dim: #b8761b;      /* secondary text, borders */
+  --pip-faint: #5a3a12;    /* hairlines */
+  --pip-bg: #1f1002;       /* screen */
+  --pip-bg-2: #2a1806;     /* raised panel */
+  --pip-ink: #1f1002;      /* text on a solid green bar */
+  /* re-point the Shelter colours so everything that uses them turns green */
+  --sh-amber: var(--pip);
+  --sh-teal: var(--pip);
+  --sh-text: var(--pip);
+  --sh-dim: var(--pip-dim);
+  --sh-line: var(--pip-faint);
+  --sh-inset: var(--pip-bg);
+  --sh-font: "Bahnschrift", "Segoe UI", sans-serif;
+  --sh-mono: "Cascadia Mono", Consolas, monospace;
+  color: var(--pip);
+  text-shadow: 0 0.3px 1px #b86e0a;
+}
+body.style-shelter #detailView ::selection { background: var(--pip); color: var(--pip-ink); text-shadow: none; }
+
+/* ---------- top: name strip ---------- */
+body.style-shelter #detailView .convo-contact { background: var(--pip-bg-2); border: 1px solid var(--pip-faint); border-radius: 3px; }
+body.style-shelter #detailView .convo-name { color: var(--pip-hi); letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; }
+body.style-shelter #detailView .convo-status { color: var(--pip); }
+body.style-shelter #detailView .convo-personal { color: var(--pip-dim); }
+body.style-shelter #detailView .dp-frame { border-radius: 4px; border: 1px solid var(--pip-dim); background: var(--pip-bg); box-shadow: none; }
+body.style-shelter #detailView .dp-frame.state-running,
+body.style-shelter #detailView .dp-frame.state-attention { border-color: var(--pip); box-shadow: 0 0 6px rgba(255, 159, 28, 0.45); }
+body.style-shelter #detailView .git-box { background: var(--pip-bg); border: 1px solid var(--pip-faint); border-radius: 3px; box-shadow: none; }
+body.style-shelter #detailView .git-branch { color: var(--pip); }
+body.style-shelter #detailView .git-tag { color: var(--pip-dim); background: var(--pip-bg-2); border-color: var(--pip-faint); }
+body.style-shelter #detailView .git-ahead, body.style-shelter #detailView .git-behind,
+body.style-shelter #detailView .git-dirty, body.style-shelter #detailView .git-clean { color: var(--pip-hi); }
+body.style-shelter #detailView .git-faint { color: var(--pip-dim); }
+body.style-shelter #detailView .convo-contact .ctx-track { background: var(--pip-faint); border-radius: 0; }
+body.style-shelter #detailView .convo-contact .ctx-label { color: var(--pip-dim); }
+
+/* ---------- toolbar keys → flat tabs with an underline; the current one is a solid bar ---------- */
+body.style-shelter #detailView .convo-toolbar { background: transparent; border-bottom: 1px solid var(--pip-dim); box-shadow: none; padding: 5px 4px 0; gap: 2px; }
+body.style-shelter #detailView .convo-toolbar > .tb-btn,
+body.style-shelter #detailView .convo-toolbar > .tb-btn:first-child,
+body.style-shelter #detailView .convo-toolbar > .tb-btn:has(+ .tb-spacer),
+body.style-shelter #detailView .convo-toolbar > .btn-mcp,
+body.style-shelter #detailView .tb-btn {
+  background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; box-shadow: none; clip-path: none;
+  margin: 0; padding: 4px 8px 3px; color: var(--pip-dim); text-shadow: 0 0 3px rgba(255, 159, 28, 0.2);
+  font-weight: 700; letter-spacing: 0.09em;
+}
+body.style-shelter #detailView .tb-btn::after { display: none; }
+body.style-shelter #detailView .tb-btn:hover:not(:disabled) { color: var(--pip-hi); background: none; border-bottom-color: var(--pip-dim); text-shadow: 0 0 4px rgba(255, 159, 28, 0.4); }
+body.style-shelter #detailView .tb-btn.open,
+body.style-shelter #detailView .tb-btn:active {
+  background: var(--pip); color: var(--pip-ink); text-shadow: none; margin: 0; border-bottom: 2px solid var(--pip); box-shadow: none;
+}
+body.style-shelter #detailView .tb-btn:disabled { color: var(--pip-faint); }
+
+/* ---------- transcript: a screen, assistant lines plain, your lines = the selected bar ---------- */
+body.style-shelter #detailView .chat-stream {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 159, 28, 0.035) 0 1px, transparent 1px 3px),  /* faint, static scan lines */
+    var(--pip-bg);
+  border: 1px solid var(--pip-dim); border-radius: 3px; box-shadow: inset 0 0 18px rgba(255, 159, 28, 0.06);
+}
+body.style-shelter #detailView .chat-bubble { border-radius: 2px; }
+body.style-shelter #detailView .chat-bubble.assistant,
+body.style-shelter #detailView .chat-bubble.assistant.claude {
+  background: transparent; color: var(--pip); border: 0; border-left: 2px solid var(--pip-dim); box-shadow: none;
+}
+body.style-shelter #detailView .chat-bubble.user {
+  background: var(--pip); color: var(--pip-ink); border: 0; text-shadow: none;
+}
+body.style-shelter #detailView .chat-bubble.user a { color: var(--pip-ink); text-decoration: underline; }
+body.style-shelter #detailView .bubble-meta .meta-name,
+body.style-shelter #detailView .chat-bubble.user .bubble-meta .meta-name { color: var(--pip-hi); letter-spacing: 0.1em; }
+body.style-shelter #detailView .chat-bubble.user .bubble-meta .meta-name,
+body.style-shelter #detailView .chat-bubble.user .bubble-meta .meta-time { color: var(--pip-ink); opacity: 0.75; }
+body.style-shelter #detailView .bubble-meta .meta-time { color: var(--pip-dim); }
+body.style-shelter #detailView .chat-bubble a { color: var(--pip-hi); }
+body.style-shelter #detailView .chat-bubble strong, body.style-shelter #detailView .chat-bubble h1,
+body.style-shelter #detailView .chat-bubble h2, body.style-shelter #detailView .chat-bubble h3 { color: var(--pip-hi); }
+body.style-shelter #detailView .chat-bubble :not(pre) > code { background: var(--pip-bg-2); color: var(--pip-hi); border: 1px solid var(--pip-faint); }
+body.style-shelter #detailView .chat-bubble.user :not(pre) > code { background: var(--pip-ink); color: var(--pip); border-color: var(--pip-ink); }
+body.style-shelter #detailView .chat-bubble pre { background: var(--pip-bg-2); border: 1px solid var(--pip-faint); border-radius: 2px; }
+body.style-shelter #detailView .chat-bubble hr { border-color: var(--pip-faint); }
+body.style-shelter #detailView .chat-bubble blockquote { border-left-color: var(--pip-dim); color: var(--pip-dim); }
+body.style-shelter #detailView .chat-bubble table th { color: var(--pip-hi); border-color: var(--pip-faint); }
+body.style-shelter #detailView .chat-bubble table td { border-color: var(--pip-faint); }
+
+/* ---------- working line + notices ---------- */
+body.style-shelter #detailView #activityRow.activity-row { background: rgba(255, 159, 28, 0.08); border: 1px solid var(--pip-dim); color: var(--pip); border-radius: 2px 2px 0 0; border-bottom: 0; }
+body.style-shelter #detailView .activity-target { background: var(--pip-bg); color: var(--pip-hi); border-color: var(--pip-faint); }
+body.style-shelter #detailView .activity-meta { color: var(--pip-dim); }
+body.style-shelter #detailView .convo-infobar { background: rgba(255, 159, 28, 0.1); border-color: var(--pip-dim); color: var(--pip-hi); border-radius: 2px; }
+
+/* ---------- input ---------- */
+body.style-shelter #detailView .reply-box { background: var(--pip-bg); border: 1px solid var(--pip-dim); border-top: 2px solid var(--pip); border-radius: 2px; box-shadow: none; }
+body.style-shelter #detailView .reply-box:focus-within { border-color: var(--pip); box-shadow: 0 0 8px rgba(255, 159, 28, 0.3); }
+body.style-shelter #detailView .reply-textarea { color: var(--pip-hi); caret-color: var(--pip); text-shadow: none; }
+body.style-shelter #detailView .reply-textarea::placeholder { color: var(--pip-dim); }
+body.style-shelter #detailView .reply-toolbar { background: var(--pip-bg-2); border-top: 1px solid var(--pip-faint); border-radius: 0; }
+body.style-shelter #detailView .rt-btn,
+body.style-shelter #detailView .reply-toolbar .rt-btn.rt-text { color: var(--pip-dim); border-radius: 0; background: none; border-color: transparent; text-shadow: none; }
+body.style-shelter #detailView .rt-btn:hover,
+body.style-shelter #detailView .reply-toolbar .rt-btn.rt-text:hover { color: var(--pip-ink); background: var(--pip); border-color: var(--pip); }
+body.style-shelter #detailView .btn-action.primary,
+body.style-shelter #detailView .btn-send {
+  background: var(--pip); color: var(--pip-ink); border: 1px solid var(--pip); border-bottom-width: 1px; border-radius: 0;
+  clip-path: none; box-shadow: none; text-shadow: none; letter-spacing: 0.1em;
+}
+body.style-shelter #detailView .btn-action.primary:hover,
+body.style-shelter #detailView .btn-send:hover { background: var(--pip-hi); filter: none; }
+
+/* ---------- the cost chip and hand-off button added in the chat header ---------- */
+body.style-shelter #detailView .cost-chip { color: var(--pip-dim); border-color: var(--pip-faint); background: none; }
+body.style-shelter #detailView .handoff-btn { color: var(--pip-dim); border-color: var(--pip-faint); background: none; }
+body.style-shelter #detailView .handoff-btn:hover, body.style-shelter #detailView .handoff-btn.hot { color: var(--pip-ink); background: var(--pip); border-color: var(--pip); }
+
+/* ---------- scrollbars ---------- */
+body.style-shelter #detailView ::-webkit-scrollbar-track { background: var(--pip-bg); }
+body.style-shelter #detailView ::-webkit-scrollbar-thumb { background: var(--pip-dim); border: 2px solid var(--pip-bg); border-radius: 0; }
+body.style-shelter #detailView ::-webkit-scrollbar-thumb:hover { background: var(--pip); }
+
+/* ---------- context gauge + "Edited N files" card ---------- */
+body.style-shelter #detailView .convo-contact .ctx-track { background: var(--pip-bg); box-shadow: 0 0 0 1px var(--pip-faint); }
+body.style-shelter #detailView .convo-contact .ctx-fill { background: var(--pip); box-shadow: none; }
+body.style-shelter #detailView .convo-contact .ctx-fill.warning { background: var(--pip-hi); }
+body.style-shelter #detailView .convo-contact .ctx-fill.critical { background: #ff6b5e; }
+body.style-shelter #detailView .edit-list { background: var(--pip-bg-2); border: 1px solid var(--pip-faint); border-radius: 2px; box-shadow: none; color: var(--pip); }
+body.style-shelter #detailView .edit-head { background: none; color: var(--pip-hi); border-bottom: 1px solid var(--pip-faint); }
+body.style-shelter #detailView .edit-add { color: var(--pip-hi); }
+body.style-shelter #detailView .edit-del { color: #ff8f84; }
+body.style-shelter #detailView .edit-row { border-top-color: var(--pip-faint); background: none; }
+body.style-shelter #detailView .edit-row:hover, body.style-shelter #detailView .edit-row.open { background: var(--pip); }
+body.style-shelter #detailView .edit-row:hover :is(.edit-name, .edit-dir, .edit-add, .edit-del),
+body.style-shelter #detailView .edit-row.open :is(.edit-name, .edit-dir, .edit-add, .edit-del) { color: var(--pip-ink); text-shadow: none; }
+body.style-shelter #detailView .edit-name { color: var(--pip); }
+body.style-shelter #detailView .edit-dir { color: var(--pip-dim); }
+body.style-shelter #detailView .edit-open { background: none; color: var(--pip); border: 1px solid var(--pip-dim); border-radius: 0; text-shadow: none; }
+body.style-shelter #detailView .edit-open:hover { background: var(--pip); color: var(--pip-ink); }
+body.style-shelter #detailView .edit-diff { background: var(--pip-bg); border-top: 1px solid var(--pip-faint); }
+
+/* ===================================================================
+   Screen layout (logic/chat/pip-screen.js): tabs · filter tabs · list + readout panel · status bar
+   =================================================================== */
+.pip-subtabs, .pip-stats, .pip-status { display: none; }
+.pip-body { display: contents; }
+body.style-shelter #detailView {
+  --pip-font: "Bahnschrift Condensed", "Bahnschrift", "Segoe UI", sans-serif;
+  font-family: var(--pip-font);
+  background: var(--pip-bg);
+  border-radius: 14px; box-shadow: inset 0 0 36px rgba(255, 159, 28, 0.09), inset 0 0 0 1px var(--pip-faint);
+}
+body.style-shelter #detailView :is(.chat-bubble, .reply-textarea, .convo-toolbar, .reply-toolbar, .pip-row, .pip-seg, .pip-subtab) { font-family: var(--pip-font); }
+body.style-shelter #detailView .chat-bubble { font-size: 14px; }
+/* the name strip moves into the readout panel */
+body.style-shelter #detailView .convo-contact { display: none; }
+body.style-shelter #detailView .pip-body { display: flex; gap: 8px; flex: 1 1 auto; min-height: 0; }
+body.style-shelter #detailView .pip-body > .chat-stream { flex: 1 1 auto; min-width: 0; }
+
+/* tab line: ends turn down like the screen's frame */
+body.style-shelter #detailView .convo-toolbar { position: relative; border-bottom: 2px solid var(--pip); padding: 5px 10px 0; }
+body.style-shelter #detailView .convo-toolbar::before,
+body.style-shelter #detailView .convo-toolbar::after { content: ""; position: absolute; bottom: -2px; width: 2px; height: 9px; background: var(--pip); }
+body.style-shelter #detailView .convo-toolbar::before { left: 0; }
+body.style-shelter #detailView .convo-toolbar::after { right: 0; }
+body.style-shelter #detailView .convo-toolbar .tb-btn { font-size: 14px; letter-spacing: 0.06em; color: var(--pip); font-weight: 700; padding: 2px 10px 3px; }
+/* the current / open tab: corner brackets */
+body.style-shelter #detailView .convo-toolbar .tb-btn.open,
+body.style-shelter #detailView .convo-toolbar .tb-btn:active {
+  background: none; color: var(--pip-hi); border: 0; border-left: 2px solid var(--pip); border-right: 2px solid var(--pip);
+  border-bottom: 0; margin-bottom: -2px; padding-bottom: 5px; text-shadow: 0 0 5px rgba(255, 159, 28, 0.5);
+}
+
+/* filter tabs */
+body.style-shelter #detailView .pip-subtabs { display: flex; justify-content: center; gap: 22px; padding: 6px 0 4px; }
+body.style-shelter #detailView .pip-subtab {
+  background: none; border: 0; cursor: pointer; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--pip-dim); opacity: 0.6; padding: 0 2px;
+}
+body.style-shelter #detailView .pip-subtab:hover { opacity: 1; color: var(--pip); }
+body.style-shelter #detailView .pip-subtab.on { color: var(--pip-hi); opacity: 1; text-shadow: 0 0 5px rgba(255, 159, 28, 0.5); }
+body.style-shelter #detailView .chat-stream[data-pip-filter="you"] .chat-bubble.assistant,
+body.style-shelter #detailView .chat-stream[data-pip-filter="claude"] .chat-bubble.user { display: none; }
+
+/* the transcript as a list: your lines are the highlighted bar across the list */
+body.style-shelter #detailView .chat-stream { border: 0; background: transparent; box-shadow: none; padding: 4px 4px 4px 10px; gap: 6px; }
+body.style-shelter #detailView .chat-bubble.user { align-self: stretch; max-width: none; margin: 0; padding: 3px 8px; }
+body.style-shelter #detailView .chat-bubble.assistant { padding-left: 10px; }
+
+/* readout panel */
+body.style-shelter #detailView .pip-stats {
+  display: flex; flex-direction: column; gap: 3px; flex: 0 0 clamp(138px, 35%, 220px); min-height: 0; overflow-y: auto; padding-top: 2px;
+}
+body.style-shelter #detailView .pip-picture {
+  flex: none; height: 96px; display: flex; align-items: center; justify-content: center; margin-bottom: 4px;
+  filter: grayscale(1) sepia(1) saturate(4) hue-rotate(-8deg) brightness(1.15); opacity: 0.92;
+}
+body.style-shelter #detailView .pip-picture svg { height: 92px; width: auto; }
+body.style-shelter #detailView .pip-row {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 1px 7px;
+  background: rgba(255, 159, 28, 0.2); color: var(--pip-hi); font-size: 14px; letter-spacing: 0.03em; text-transform: uppercase; line-height: 1.45;
+}
+body.style-shelter #detailView .pip-row .pip-v { font-weight: 600; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.style-shelter #detailView .pip-row .pip-k { flex: none; }
+body.style-shelter #detailView .pip-row.pct { background: linear-gradient(90deg, rgba(255, 159, 28, 0.55) var(--p), rgba(255, 159, 28, 0.18) var(--p)); }
+body.style-shelter #detailView .pip-row.warn { background: linear-gradient(90deg, rgba(166, 255, 198, 0.7) var(--p), rgba(166, 255, 198, 0.2) var(--p)); }
+body.style-shelter #detailView .pip-row.pct .pip-k, body.style-shelter #detailView .pip-row.pct .pip-v { text-shadow: 0 0 2px #000; }
+body.style-shelter #detailView .pip-row.link { cursor: pointer; }
+body.style-shelter #detailView .pip-row.link:hover, body.style-shelter #detailView .pip-row.hot { background: var(--pip); color: var(--pip-ink); text-shadow: none; }
+body.vault-focus .pip-stats { display: none !important; }
+
+/* status bar: separate lit boxes along the bottom */
+body.style-shelter #detailView .pip-status { display: flex; gap: 6px; margin-top: 6px; }
+body.style-shelter #detailView .pip-seg {
+  background: rgba(255, 159, 28, 0.2); color: var(--pip-hi); padding: 2px 9px; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap;
+}
+body.style-shelter #detailView .pip-seg.wide { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+body.style-shelter #detailView .pip-seg:empty { display: none; }
+
+/* fit the narrow window: smaller tab labels, readout values may wrap */
+body.style-shelter #detailView .convo-toolbar .tb-btn { font-size: 12.5px; letter-spacing: 0.03em; padding: 2px 6px 3px; flex: 0 1 auto; min-width: 0; overflow: visible; }
+body.style-shelter #detailView .pip-row { font-size: 13px; letter-spacing: 0; }
+body.style-shelter #detailView .pip-row .pip-v { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.25; align-self: center; }
+
+/* ===================================================================
+   Round 2: no working line above the input, no bottom bar, tabs like the reference
+   =================================================================== */
+body.style-shelter #detailView #activityRow { display: none !important; }   /* its Stop button is a row in the readout panel */
+body.style-shelter #detailView .pip-status { display: none !important; }
+body.style-shelter #detailView .reply-box { border-radius: 2px !important; border-top: 2px solid var(--pip) !important; }
+
+.tb-btn.pip-current { display: none; }
+/* tab line: LT-style round key · tabs spread across · RT-style round key; the current tab has corner brackets */
+body.style-shelter #detailView .convo-toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 0; padding: 6px 4px 0 4px;
+  border-bottom: 2px solid var(--pip); background: none;
+}
+body.style-shelter #detailView .convo-toolbar > .tb-spacer { display: none; }
+body.style-shelter #detailView .convo-toolbar::before,
+body.style-shelter #detailView .convo-toolbar::after { display: none; }
+body.style-shelter #detailView .convo-toolbar > .tb-btn {
+  position: relative; flex: 0 1 auto; min-width: 0; overflow: visible; clip-path: none; margin: 0;
+  font-size: 0; line-height: 1; color: var(--pip); background: none; border: 0; border-radius: 0; box-shadow: none; text-shadow: none;
+  padding: 3px 7px 8px; cursor: pointer;
+}
+body.style-shelter #detailView .convo-toolbar > .tb-btn[hidden],
+body.style-shelter #detailView .convo-toolbar > .tb-btn[style*="display: none"] { display: none; }
+body.style-shelter #detailView .convo-toolbar > .tb-btn .pip-lbl {
+  display: inline-block; font: 700 15px/1 var(--pip-font); font-stretch: 75%; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--pip-hi); text-shadow: 0 0 4px rgba(255, 159, 28, 0.3);
+}
+body.style-shelter #detailView .convo-toolbar > .tb-btn > :not(.pip-lbl) { display: none; }
+body.style-shelter #detailView .convo-toolbar > .tb-btn:hover .pip-lbl { color: #fff; }
+body.style-shelter #detailView .convo-toolbar > .tb-btn:hover { background: none; }
+/* the current tab (and an open dropdown): ┌ LABEL ┐ with the corners dropping to the line */
+body.style-shelter #detailView .convo-toolbar > .tb-btn.pip-current,
+body.style-shelter #detailView .convo-toolbar > .tb-btn.open { display: inline-block; background: none; color: var(--pip-hi); margin: 0; border: 0; box-shadow: none; }
+body.style-shelter #detailView .convo-toolbar > .tb-btn.pip-current::before,
+body.style-shelter #detailView .convo-toolbar > .tb-btn.open::before,
+body.style-shelter #detailView .convo-toolbar > .tb-btn.pip-current::after,
+body.style-shelter #detailView .convo-toolbar > .tb-btn.open::after {
+  display: block !important; content: ""; position: absolute; top: 1px; bottom: -2px; width: 7px; height: auto; left: auto; right: auto;
+  background: none; box-shadow: none; opacity: 1; transform: none; animation: none; border: 2px solid var(--pip);
+}
+body.style-shelter #detailView .convo-toolbar > .tb-btn.pip-current::before,
+body.style-shelter #detailView .convo-toolbar > .tb-btn.open::before { left: 0; border-right: 0; border-bottom: 0; }
+body.style-shelter #detailView .convo-toolbar > .tb-btn.pip-current::after,
+body.style-shelter #detailView .convo-toolbar > .tb-btn.open::after { right: 0; border-left: 0; border-bottom: 0; }
+/* the two end keys: small round-cornered badges, like the shoulder-button icons */
+body.style-shelter #detailView .convo-toolbar > .tb-btn.xb-close,
+body.style-shelter #detailView .convo-toolbar > .tb-btn.tb-max {
+  display: inline-flex; align-items: center; justify-content: center; padding: 0 6px; height: 19px; margin-bottom: 7px;
+  border: 1.5px solid var(--pip); border-radius: 6px; background: none;
+}
+body.style-shelter #detailView .convo-toolbar > .tb-btn.xb-close .pip-lbl,
+body.style-shelter #detailView .convo-toolbar > .tb-btn.tb-max .pip-lbl { font-size: 13px; font-weight: 700; }
+body.style-shelter #detailView .convo-toolbar > .tb-btn.xb-close:hover,
+body.style-shelter #detailView .convo-toolbar > .tb-btn.tb-max:hover { background: var(--pip); }
+body.style-shelter #detailView .convo-toolbar > .tb-btn.xb-close:hover .pip-lbl,
+body.style-shelter #detailView .convo-toolbar > .tb-btn.tb-max:hover .pip-lbl { color: var(--pip-ink); text-shadow: none; }
+/* dropdown panels still hang from the line */
+body.style-shelter #detailView .convo-toolbar > .mcp-panel { text-transform: none; font-family: var(--pip-font); }
+body.style-shelter #detailView .convo-toolbar > .tb-btn:not(.xb-close):not(.tb-max):not(.wk-back):not([hidden]):not([style*="display: none"]) {
+  display: inline-flex; align-items: flex-start; height: 27px; box-sizing: border-box;
+}
+body.style-shelter #detailView .convo-toolbar > .wk-back { display: none; }
+
+/* ===================================================================
+   Round 3: follows https://aviralmehrotra.github.io/Fallout4-Pip-Boy/inv.html
+   (colours #ff9f1c on #1f1002, Monofonto, scan lines, the raised tab, list + stat rows).
+   The font file is not in git (personal-use licence): put monofonto.otf in ui/fonts/ or install
+   "Monofonto"; without it the condensed system font is used.
+   =================================================================== */
+@font-face { font-family: "PipBoy"; src: local("Monofonto"), local("Monofonto Rg"), url("../fonts/monofonto.otf"); }
+body.style-shelter #detailView { --pip-font: "PipBoy", "Bahnschrift Condensed", "Bahnschrift", "Segoe UI", sans-serif; box-shadow: inset 0 0 0 1px var(--pip-faint); }
+body.style-shelter #detailView :is(.chat-bubble, .reply-textarea, .convo-toolbar, .reply-toolbar, .pip-row, .pip-seg, .pip-subtab, .reply-box, .edit-list, .activity-verb) { font-family: var(--pip-font); }
+body.style-shelter #detailView .reply-textarea { font-size: 15px; }
+/* scan lines over the whole screen (same as the reference: faint, still) */
+body.style-shelter:not(.vault-focus) #detailView { position: relative; }   /* (focus mode already positions the panel itself) */
+body.style-shelter #detailView::after {
+  content: ""; position: absolute; inset: 0; z-index: 900; pointer-events: none; border-radius: inherit; opacity: 0.3;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.4) 1px, transparent 1px, transparent 2px);
+}
+
+/* top tabs: big plain labels; the line's ends turn down; the current tab is a raised box the line passes under */
+body.style-shelter #detailView .convo-toolbar { margin: 6px 4px 0; padding: 4px 0 0; }
+body.style-shelter #detailView .convo-toolbar::before,
+body.style-shelter #detailView .convo-toolbar::after {
+  display: block; content: ""; position: absolute; bottom: -9px; width: 2px; height: 7px; background: var(--pip); top: auto;
+}
+body.style-shelter #detailView .convo-toolbar::before { left: 0; right: auto; }
+body.style-shelter #detailView .convo-toolbar::after { right: 0; left: auto; }
+body.style-shelter #detailView .convo-toolbar > .tb-btn .pip-lbl {
+  font: 400 18px/1 var(--pip-font); font-stretch: normal; letter-spacing: 0; color: var(--pip); text-shadow: 0 0.3px 1px #b86e0a;
+  position: relative; z-index: 2; padding: 0 3px;
+}
+body.style-shelter #detailView .convo-toolbar > .tb-btn { padding: 3px 9px 8px; }
+body.style-shelter #detailView .convo-toolbar > .tb-btn:hover .pip-lbl { color: var(--pip); text-shadow: 0 0 6px var(--pip); }
+body.style-shelter #detailView .convo-toolbar > .tb-btn.pip-current::after,
+body.style-shelter #detailView .convo-toolbar > .tb-btn.open::after { display: none !important; }
+body.style-shelter #detailView .convo-toolbar > .tb-btn.pip-current::before,
+body.style-shelter #detailView .convo-toolbar > .tb-btn.open::before {
+  display: block !important; content: ""; position: absolute; left: 0; right: 0; top: 46%; bottom: -2px; width: auto; height: auto;
+  border: 2px solid var(--pip); border-bottom: 0; background: var(--pip-bg); z-index: 1; opacity: 1; transform: none;
+}
+body.style-shelter #detailView .convo-toolbar > .tb-btn.xb-close .pip-lbl,
+body.style-shelter #detailView .convo-toolbar > .tb-btn.tb-max .pip-lbl { font-size: 15px; padding: 0; }
+
+/* filter tabs: left, the current one bright, the others half-lit */
+body.style-shelter #detailView .pip-subtabs { justify-content: flex-start; gap: 6px; padding: 14px 6px 8px 14px; }
+body.style-shelter #detailView .pip-subtab { font: 400 20px/1 var(--pip-font); letter-spacing: 0; padding: 4px 12px; opacity: 0.5; color: var(--pip); text-shadow: 0 0.3px 1px #b86e0a; }
+body.style-shelter #detailView .pip-subtab.on { opacity: 1; text-shadow: 0 0.3px 1px #b86e0a; }
+body.style-shelter #detailView .pip-subtab:hover { opacity: 1; }
+
+/* the list and the readout rows */
+body.style-shelter #detailView .chat-bubble { font-size: 16px; line-height: 1.35; }
+body.style-shelter #detailView .chat-bubble.user { border-radius: 2px; padding: 4px 10px; }
+body.style-shelter #detailView .chat-bubble.user .bubble-content,
+body.style-shelter #detailView .chat-bubble.user { color: var(--pip-ink); }
+body.style-shelter #detailView .chat-bubble.assistant { border-left: 0; padding-left: 25px; position: relative; }
+body.style-shelter #detailView .chat-bubble.assistant::before {   /* the little square of the selected line */
+  content: ""; position: absolute; left: 10px; top: 9px; width: 9px; height: 9px; background: var(--pip);
+}
+body.style-shelter #detailView .pip-stats { gap: 4px; }
+body.style-shelter #detailView .pip-row { background: rgba(255, 159, 28, 0.15); font-size: 16px; line-height: 28px; padding: 0 10px; letter-spacing: 0; text-transform: none; }
+body.style-shelter #detailView .pip-row .pip-v { font-weight: 400; line-height: 1.2; }
+body.style-shelter #detailView .pip-row.pct { background: linear-gradient(90deg, rgba(255, 159, 28, 0.45) var(--p), rgba(255, 159, 28, 0.15) var(--p)); }
+body.style-shelter #detailView .pip-row.link:hover, body.style-shelter #detailView .pip-row.hot { background: var(--pip); color: var(--pip-ink); }
+body.style-shelter #detailView .reply-toolbar .btn-send { font-family: var(--pip-font); font-size: 15px; }
+body.style-shelter #detailView .convo-toolbar > .tb-btn.pip-current .pip-lbl,
+body.style-shelter #detailView .convo-toolbar > .tb-btn.open .pip-lbl { background: var(--pip-bg); }
+body.style-shelter #detailView .pip-row { font-size: 15px; line-height: 26px; padding: 0 8px; }
+
+/* ---------- pieces that were still light: the pinned "You said" bar and question cards ---------- */
+body.style-shelter #detailView .pinned-prompt { background: var(--pip-bg-2); border: 1px solid var(--pip-dim); border-radius: 2px; box-shadow: none; color: var(--pip); text-shadow: none; }
+body.style-shelter #detailView .pinned-prompt:hover { background: var(--pip); }
+body.style-shelter #detailView .pinned-prompt:hover :is(.pp-label, .pp-text, .pp-images) { color: var(--pip-ink); }
+body.style-shelter #detailView .pinned-prompt .pp-label { color: var(--pip-hi); font-weight: 400; }
+body.style-shelter #detailView .pinned-prompt .pp-text, body.style-shelter #detailView .pinned-prompt .pp-images { color: var(--pip); }
+body.style-shelter #detailView .ask-card { background: var(--pip-bg-2); border: 1px solid var(--pip-dim); border-radius: 2px; box-shadow: none; color: var(--pip); }
+body.style-shelter #detailView .ask-head { background: rgba(255, 159, 28, 0.15); border-bottom: 1px solid var(--pip-faint); color: var(--pip-hi); }
+body.style-shelter #detailView .ask-q, body.style-shelter #detailView .ask-title, body.style-shelter #detailView .ask-status { color: var(--pip-hi); font-weight: 400; }
+body.style-shelter #detailView .ask-tag { background: none; color: var(--pip); border: 1px solid var(--pip-dim); border-radius: 0; }
+body.style-shelter #detailView .ask-opt { background: none; color: var(--pip); border: 1px solid var(--pip-dim); border-radius: 0; box-shadow: none; text-shadow: none; font-family: var(--pip-font); }
+body.style-shelter #detailView .ask-opt-desc { color: var(--pip-dim); }
+body.style-shelter #detailView .ask-opt:hover, body.style-shelter #detailView .ask-opt.picked { background: var(--pip); color: var(--pip-ink); border-color: var(--pip); }
+body.style-shelter #detailView .ask-opt:hover .ask-opt-desc, body.style-shelter #detailView .ask-opt.picked .ask-opt-desc { color: var(--pip-ink); }
+body.style-shelter #detailView .ask-opt.picked::before { color: var(--pip-ink); }
+body.style-shelter #detailView .ask-card :is(input, textarea) { background: var(--pip-bg); color: var(--pip); border: 1px solid var(--pip-dim); border-radius: 0; font-family: var(--pip-font); }
+
+/* ---------- status bar under the input: context · cost · what it is doing · Stop · model ---------- */
+body.style-shelter #detailView .pip-status { display: flex !important; gap: 6px; margin: 0 0 4px; align-items: stretch; }
+body.style-shelter #detailView .pip-seg {
+  background: rgba(255, 159, 28, 0.15); color: var(--pip); padding: 2px 10px; font: 400 15px/22px var(--pip-font); letter-spacing: 0;
+  text-transform: none; white-space: nowrap; border: 0; border-radius: 0; text-shadow: 0 0.3px 1px #b86e0a;
+}
+body.style-shelter #detailView .pip-seg.wide { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+body.style-shelter #detailView .pip-seg:empty { display: none; }
+/* loading: a pulsing square in front of the text (no robot) */
+body.style-shelter #detailView .pip-seg.busy::before {
+  content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 9px; background: var(--pip); animation: pip-pulse 1s steps(2, jump-none) infinite;
+}
+@keyframes pip-pulse { 0% { opacity: 1; } 100% { opacity: 0.15; } }
+@media (prefers-reduced-motion: reduce) { body.style-shelter #detailView .pip-seg.busy::before { animation: none; } }
+body.style-shelter #detailView .pip-stop { cursor: pointer; background: var(--pip); color: var(--pip-ink); text-shadow: none; }
+body.style-shelter #detailView .pip-stop[hidden] { display: none; }
+body.style-shelter #detailView .pip-stop:hover { background: #fff; }
+
+/* ===================================================================
+   Round 4: the whole chat in the screen font, and the input in the same green
+   =================================================================== */
+body.style-shelter #detailView *:not(svg):not(svg *) { font-family: var(--pip-font); }
+body.style-shelter #detailView .bubble-meta { font-size: 12px; }
+body.style-shelter #detailView .bubble-meta .meta-name { letter-spacing: 0.04em; font-weight: 400; }
+body.style-shelter #detailView .chat-bubble :is(strong, b, h1, h2, h3, h4) { font-weight: 400; text-shadow: 0 0 5px rgba(255, 159, 28, 0.45); }
+body.style-shelter #detailView .chat-bubble :is(code, pre, pre *) { font-size: 14px; }
+
+/* the input: one green frame (no amber edge when the working line was showing), dark inside, a solid block for a cursor */
+body.style-shelter #detailView .reply-box,
+body.style-shelter #detailView .reply-section:has(> #activityRow) .reply-box {
+  background: var(--pip-bg) !important; border: 1px solid var(--pip-dim) !important; border-top: 2px solid var(--pip) !important;
+  border-radius: 2px !important; box-shadow: none !important;
+}
+body.style-shelter #detailView .reply-box:focus-within { border-color: var(--pip) !important; box-shadow: 0 0 8px rgba(255, 159, 28, 0.25) !important; }
+body.style-shelter #detailView .reply-textarea { font-size: 16px; line-height: 1.35; color: var(--pip); caret-color: var(--pip); text-shadow: 0 0.3px 1px #b86e0a; padding: 8px 10px; }
+body.style-shelter #detailView .reply-textarea::placeholder { color: var(--pip-dim); opacity: 1; }
+body.style-shelter #detailView .reply-textarea::selection { background: var(--pip); color: var(--pip-ink); }
+body.style-shelter #detailView .reply-toolbar { background: rgba(255, 159, 28, 0.08); border-top: 1px solid var(--pip-faint); padding: 3px 6px; gap: 2px; align-items: center; }
+/* icons are drawn in the screen green, like the reference's pictures */
+body.style-shelter #detailView .reply-toolbar .rt-btn:not(.rt-text) {
+  font-size: 15px; color: var(--pip); border: 1px solid transparent; border-radius: 0; background: none;
+  filter: grayscale(1) sepia(1) saturate(6) hue-rotate(-8deg) brightness(1.05);
+}
+body.style-shelter #detailView .reply-toolbar .rt-btn:not(.rt-text):hover { background: var(--pip); filter: grayscale(1) brightness(0.15); }
+body.style-shelter #detailView .reply-toolbar .rt-btn.rt-text,
+body.style-shelter #detailView .reply-toolbar .rt-model { font-size: 14px; color: var(--pip); background: none; border: 1px solid transparent; letter-spacing: 0; }
+body.style-shelter #detailView .reply-toolbar .rt-btn.rt-text:hover { background: var(--pip); color: var(--pip-ink); }
+body.style-shelter #detailView .reply-toolbar .rt-plan img, body.style-shelter #detailView .reply-toolbar .rt-plan svg { filter: grayscale(1) sepia(1) saturate(6) hue-rotate(-8deg); }
+body.style-shelter #detailView .reply-toolbar .reply-status-msg { color: var(--pip-dim); font-size: 13px; }
+body.style-shelter #detailView .reply-toolbar .btn-send { background: var(--pip); color: var(--pip-ink); border: 0; border-radius: 0; box-shadow: none; text-shadow: none; padding: 2px 14px; font-size: 16px; letter-spacing: 0.05em; clip-path: none; }
+body.style-shelter #detailView .reply-toolbar .btn-send:hover { background: #fff; }
+/* the strips that sit on top of the input */
+body.style-shelter #detailView :is(.attach-tray, .reply-options) { background: rgba(255, 159, 28, 0.08); border: 1px solid var(--pip-faint); border-radius: 0; color: var(--pip); }
+body.style-shelter #detailView .slash-menu { background: var(--pip-bg); border: 1px solid var(--pip-dim); border-radius: 0; color: var(--pip); }
+body.style-shelter #detailView .slash-menu :is(.slash-item, [class*="slash-"]):hover, body.style-shelter #detailView .slash-menu .on { background: var(--pip); color: var(--pip-ink); }
+body.style-shelter #detailView :is(.chat-stream, .reply-box, .pip-stats) *:not(svg):not(svg *) { font-weight: 400; }
+/* (focus mode used to shrink "Plan" to an icon; here the text stays, so no second icon) */
+body.style-shelter.vault-focus #detailView .reply-toolbar .rt-plan::before { display: none; }
+body.style-shelter.vault-focus #detailView .reply-toolbar .rt-plan { padding: 1px 6px; }
+
+/* ===================================================================
+   Round 5: easier to read. Message text: no glow, a softer green, more space between lines and letters;
+   scan lines much fainter. (Tabs, panel and bars keep the bright green.)
+   =================================================================== */
+body.style-shelter #detailView { --pip-read: #ffc46b; }
+body.style-shelter #detailView::after { opacity: 0.12; }
+body.style-shelter #detailView .chat-bubble .bubble-content,
+body.style-shelter #detailView .chat-bubble .bubble-content * { text-shadow: none; }
+body.style-shelter #detailView .chat-bubble.assistant .bubble-content { color: var(--pip-read); }
+body.style-shelter #detailView .chat-bubble { font-size: 16.5px; line-height: 1.6; letter-spacing: 0.02em; }
+body.style-shelter #detailView .chat-bubble .bubble-content :is(p, ul, ol, pre, blockquote, table) { margin: 0 0 0.6em; }
+body.style-shelter #detailView .chat-bubble .bubble-content > :last-child { margin-bottom: 0; }
+body.style-shelter #detailView .chat-bubble .bubble-content li + li { margin-top: 0.2em; }
+body.style-shelter #detailView .chat-bubble .bubble-content :is(strong, b, h1, h2, h3, h4) { color: var(--pip); text-shadow: none; }
+body.style-shelter #detailView .chat-bubble .bubble-content a { color: var(--pip); text-decoration: underline; text-underline-offset: 2px; }
+body.style-shelter #detailView .chat-bubble .bubble-content :is(code, pre, pre *) { font-size: 14.5px; color: var(--pip); }
+body.style-shelter #detailView .chat-bubble .bubble-content pre { padding: 8px 10px; line-height: 1.45; }
+body.style-shelter #detailView .chat-bubble.user .bubble-content { color: var(--pip-ink); }
+body.style-shelter #detailView .chat-stream { gap: 12px; }
+body.style-shelter #detailView .reply-textarea { color: var(--pip-read); text-shadow: none; letter-spacing: 0.02em; }
+/* lists: keep the bullets and numbers inside the text column (round 5's margin reset pushed them out to the left) */
+body.style-shelter #detailView .chat-bubble .bubble-content :is(ul, ol) { margin-left: 0; padding-left: 1.6em; }
+body.style-shelter #detailView .chat-bubble .bubble-content ol { padding-left: 2.2em; }
+body.style-shelter #detailView .chat-bubble .bubble-content li::marker { color: var(--pip); }
+/* no vertical line beside Claude's messages: the small square already marks them */
+body.style-shelter #detailView .chat-bubble.assistant.claude,
+body.style-shelter #detailView .chat-bubble.assistant { border-left: 0; }
+/* Quick reply (Yes / No, options): green keys instead of light grey buttons */
+body.style-shelter #detailView .quick-replies { background: none; border: 0; color: var(--pip-dim); }
+body.style-shelter #detailView .quick-replies .qr-lead { color: var(--pip-dim); font-size: 13px; }
+body.style-shelter #detailView .quick-replies .qr-btn {
+  background: none; color: var(--pip); border: 1px solid var(--pip-dim); border-radius: 0; box-shadow: none; text-shadow: none; font-size: 14px; padding: 2px 10px;
+}
+body.style-shelter #detailView .quick-replies .qr-btn.primary { background: rgba(255, 159, 28, 0.15); border-color: var(--pip); }
+body.style-shelter #detailView .quick-replies .qr-btn:hover { background: var(--pip); color: var(--pip-ink); border-color: var(--pip); }
+
+/* ===================================================================
+   Round 6: the screen sits in a Pip-Boy bezel (khaki metal frame, dark screen edge).
+   Scan lines moved to their own layer (.pip-scan, added by pip-screen.js) so that in the
+   Vault side panel the speech-bubble pointer (::before / ::after) works again, in bezel colour.
+   =================================================================== */
+.pip-scan { display: none; }
+body.style-shelter #detailView::after { content: none; }
+body.style-shelter #detailView > .pip-scan {
+  display: block; position: absolute; inset: 0; z-index: 900; pointer-events: none; border-radius: 10px; opacity: 0.12;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.4) 1px, transparent 1px, transparent 2px);
+}
+body.style-shelter #detailView {
+  --pip-bezel: #5c5840; --pip-bezel-hi: #7f7857; --pip-bezel-dark: #2b291d;
+  border: 6px solid var(--pip-bezel); border-radius: 16px;
+  box-shadow:
+    inset 0 0 0 2px #15170f,                 /* the screen's dark edge */
+    inset 0 0 22px rgba(0, 0, 0, 0.5),       /* the glass curves away at the corners */
+    0 0 0 1px var(--pip-bezel-dark),          /* outer edge of the metal */
+    inset 0 1px 0 0 rgba(0, 0, 0, 0),
+    0 8px 22px rgba(0, 0, 0, 0.5);
+  background-clip: padding-box;
+}
+/* a lighter top edge on the metal, like light falling on it */
+body.style-shelter #detailView { border-top-color: var(--pip-bezel-hi); border-bottom-color: #4a4733; }
+/* Vault side panel: same bezel; the pointer to the robot is a solid bezel-coloured tab */
+body.style-shelter.vault-focus #detailView { --focus-bg: var(--pip-bezel); --focus-border: var(--pip-bezel); }
+body.style-shelter.vault-focus #detailView::before {
+  left: -18px; border-right-color: var(--pip-bezel);
+}
+body.style-shelter.vault-focus #detailView::after {
+  content: ""; display: block; position: absolute; inset: auto; top: calc(var(--focus-tail, 120px) - 6px - 11px); left: -16px;
+  width: 0; height: 0; background: none; opacity: 1; z-index: auto; border-radius: 0;
+  border-style: solid; border-color: transparent; border-width: 11px 12px 11px 0; border-right-color: var(--pip-bezel);
+}
+/* the bezel takes 12px of width: a bit less padding between tabs so the labels don't touch */
+body.style-shelter #detailView .convo-toolbar > .tb-btn { padding-left: 6px; padding-right: 6px; }
+body.style-shelter #detailView .convo-toolbar > .tb-btn .pip-lbl { font-size: 17px; }
+
+/* Round 7: no frame at all around the chat screen (the khaki bezel and the thin edge line are gone).
+   In the Vault side panel a soft shadow still separates it from the rooms; the pointer is screen-coloured. */
+body.style-shelter #detailView { border: 0; box-shadow: none; }
+body.style-shelter.vault-focus #detailView { box-shadow: -10px 0 26px rgba(0, 0, 0, 0.45); --focus-bg: var(--pip-bg); --focus-border: var(--pip-bg); }
+body.style-shelter.vault-focus #detailView::before { left: -12px; border-right-color: var(--pip-bg); }
+body.style-shelter.vault-focus #detailView::after { left: -12px; border-right-color: var(--pip-bg); }
+
+/* ===================================================================
+   Round 9: the chat header is back as a slim strip under the tabs:
+   agent name (click to rename) · session title · folder on the left, the git card on the right.
+   The pictures, status, context meter and cost row stay hidden (they are in the panel and the bar).
+   =================================================================== */
+body.style-shelter #detailView .convo-contact {
+  display: grid !important; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 1px; align-items: center;
+  margin: 8px 4px 0; padding: 6px 10px; background: rgba(255, 159, 28, 0.08); border: 0; border-left: 3px solid var(--pip); border-radius: 0;
+}
+body.style-shelter #detailView .convo-contact > * { grid-column: 1; min-width: 0; }
+body.style-shelter #detailView .convo-contact > :is(#dpAgent, #dpUser, #convoContext, .cost-row) { display: none !important; }
+body.style-shelter #detailView .convo-contact #convoStatus { display: none; }
+body.style-shelter #detailView .convo-contact > .convo-name-row { grid-row: 1; }
+body.style-shelter #detailView .convo-contact > #convoPersonal { grid-row: 2; }
+body.style-shelter #detailView .convo-contact > .convo-workspace { grid-row: 3; }
+body.style-shelter #detailView .convo-contact #convoName {
+  font: 400 13px var(--pip-font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--pip-dim); cursor: text;
+}
+body.style-shelter #detailView .convo-contact #convoName:hover { color: var(--pip); text-decoration: underline; text-underline-offset: 2px; }
+body.style-shelter #detailView .convo-contact #convoName input {
+  font: 400 14px var(--pip-font); color: var(--pip); background: #160b01; border: 1px solid var(--pip); border-radius: 0; padding: 1px 4px; outline: none;
+}
+body.style-shelter #detailView .convo-contact #convoPersonal {
+  font: 400 18px/1.25 var(--pip-font); color: var(--pip); text-shadow: var(--pip-glow, 0 0.3px 1px #b86e0a);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+body.style-shelter #detailView .convo-contact .convo-workspace { font: 400 13px var(--pip-font); color: var(--pip-dim); cursor: pointer; }
+body.style-shelter #detailView .convo-contact .convo-workspace :is(.ws-name, .ws-path) { font-family: var(--pip-font); color: var(--pip-dim); background: none; border: 0; }
+body.style-shelter #detailView .convo-contact .convo-workspace .ws-ico { filter: grayscale(1) sepia(1) saturate(6) hue-rotate(-8deg); }
+body.style-shelter #detailView .convo-contact .convo-workspace:hover :is(.ws-name, .ws-path) { color: var(--pip); }
+/* the git card: a lit box on the right; click opens the changes panel */
+body.style-shelter #detailView .convo-contact > .git-box {
+  grid-column: 2; grid-row: 1 / span 3; align-self: center; position: static; width: auto; max-width: 220px;
+  background: rgba(255, 159, 28, 0.12); border: 1px solid var(--pip-dim); border-radius: 0; box-shadow: none; cursor: pointer;
+  padding: 4px 9px; font-family: var(--pip-font);
+}
+body.style-shelter #detailView .convo-contact > .git-box * { font-family: var(--pip-font); text-shadow: none; }
+body.style-shelter #detailView .convo-contact > .git-box :is(.git-branch, .git-dirty, .git-clean, .git-ahead, .git-behind) { color: var(--pip); }
+body.style-shelter #detailView .convo-contact > .git-box :is(.git-ico, .git-user, .git-faint, .git-tag) { color: var(--pip-dim); background: none; border-color: var(--pip-faint); }
+body.style-shelter #detailView .convo-contact > .git-box:hover { background: var(--pip); border-color: var(--pip); }
+body.style-shelter #detailView .convo-contact > .git-box:hover * { color: var(--pip-ink) !important; }
+/* (no corner marks or top highlight on the strip and the git card) */
+body.style-shelter #detailView :is(.convo-contact, .convo-contact > .git-box)::before,
+body.style-shelter #detailView :is(.convo-contact, .convo-contact > .git-box)::after { display: none; }
+body.style-shelter #detailView .convo-contact { box-shadow: none; }
+body.style-shelter #detailView .convo-contact > .git-box { font-size: 13px; }
+
+/* ===================================================================
+   Round 10: the Pip-Boy 3000A look (pip-boy.com/3000a/simulator): amber on dark brown, Roboto Mono,
+   a vignette; title set into the top line with stat boxes; selected lines as outlined boxes;
+   the toolbar as tabs sitting on a line at the bottom, the current one boxed.
+   =================================================================== */
+body.style-shelter { --pip-font: "Roboto Mono", "Cascadia Mono", Consolas, monospace; }
+body.style-shelter #detailView {
+  --pip-font: "Roboto Mono", "Cascadia Mono", Consolas, monospace;
+  --pip-read: #ffc46b;
+  background: radial-gradient(ellipse at 50% 45%, #2b1a07 0%, #1f1002 60%, #110800 100%);
+  padding: 8px 10px 6px; gap: 6px;
+}
+body.style-shelter #detailView > .pip-scan { opacity: 0.18; }
+
+/* ---- top line: [ TITLE ]──── value ┐ ─── value ┐ ─── value ┐ ─── value ┐ ---- */
+.pip-head { display: none; }
+body.style-shelter #detailView > .pip-head { display: flex; gap: 6px; order: 0; flex: none; margin: 6px 2px 2px; }
+body.style-shelter #detailView .pip-hbox {
+  position: relative; flex: 1 1 0; min-width: 0; display: flex; justify-content: flex-end; align-items: flex-start;
+  border-top: 2px solid var(--pip); padding: 6px 8px 0 6px; height: 34px; box-sizing: border-box;
+}
+body.style-shelter #detailView .pip-hbox::before,
+body.style-shelter #detailView .pip-hbox::after { content: ""; position: absolute; top: -2px; width: 2px; height: 14px; background: var(--pip); }
+body.style-shelter #detailView .pip-hbox::before { left: 0; }
+body.style-shelter #detailView .pip-hbox::after { right: 0; }
+body.style-shelter #detailView .pip-hbox-first { flex: 1.5 1 0; }
+body.style-shelter #detailView .pip-head-title {
+  position: absolute; left: 14px; top: -0.85em; max-width: calc(100% - 28px); padding: 0 8px;
+  background: #241505; color: var(--pip); font: 400 17px/1.4 var(--pip-font); letter-spacing: 0.12em; text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: var(--pip-glow, 0 0.3px 1px #b86e0a);
+}
+body.style-shelter #detailView .pip-hseg {
+  font: 400 14px/1.2 var(--pip-font); color: var(--pip); text-shadow: 0 0.3px 1px #b86e0a; letter-spacing: 0.03em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: none; border: 0; padding: 0; margin-top: 4px;
+}
+body.style-shelter #detailView .pip-hgit { cursor: pointer; margin-top: 14px; }
+body.style-shelter #detailView .pip-hgit:hover { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+
+/* the name strip: one quiet line (agent name, click to rename · folder); the title and git moved to the top line */
+body.style-shelter #detailView .convo-body { order: 1; }
+body.style-shelter #detailView .convo-contact {
+  display: flex !important; align-items: baseline; gap: 12px; margin: 0 2px; padding: 0 4px; background: none; border: 0;
+}
+body.style-shelter #detailView .convo-contact > :is(#convoPersonal, .git-box) { display: none !important; }
+body.style-shelter #detailView .convo-contact .convo-workspace { margin: 0; }
+
+/* filter tabs: plain words, the current one boxed */
+body.style-shelter #detailView .pip-subtabs { padding: 6px 4px 6px 4px; gap: 10px; }
+body.style-shelter #detailView .pip-subtab { font: 400 16px/1 var(--pip-font); text-transform: none; padding: 4px 10px; border: 2px solid transparent; opacity: 0.75; }
+body.style-shelter #detailView .pip-subtab.on { opacity: 1; border-color: var(--pip); background: rgba(255, 159, 28, 0.1); }
+
+/* the list: Claude plain; your lines as the selected box (outlined sides, faint fill), not a solid bar */
+body.style-shelter #detailView .chat-bubble { font-size: 15.5px; letter-spacing: 0; }
+body.style-shelter #detailView .chat-bubble.user {
+  background: rgba(255, 159, 28, 0.1); color: var(--pip); border: 0; border-left: 2px solid var(--pip); border-right: 2px solid var(--pip); padding: 6px 12px;
+}
+body.style-shelter #detailView .chat-bubble.user .bubble-content,
+body.style-shelter #detailView .chat-bubble.user .bubble-meta :is(.meta-name, .meta-time) { color: var(--pip); opacity: 1; }
+body.style-shelter #detailView .chat-bubble.user a { color: var(--pip); }
+body.style-shelter #detailView .chat-bubble.user :not(pre) > code { background: rgba(255, 159, 28, 0.15); color: var(--pip); border-color: var(--pip-faint); }
+body.style-shelter #detailView .chat-bubble.assistant::before { display: none; }
+body.style-shelter #detailView .chat-bubble.assistant { padding-left: 14px; }
+
+/* readout panel: right-aligned plain lines (like "(4) Stimpak / Limbs"), the picture above */
+body.style-shelter #detailView .pip-row,
+body.style-shelter #detailView .pip-row.pct,
+body.style-shelter #detailView .pip-row.warn { background: none; justify-content: flex-end; gap: 10px; font: 400 15px/26px var(--pip-font); padding: 0 4px; }
+body.style-shelter #detailView .pip-row .pip-k { color: var(--pip-dim); }
+body.style-shelter #detailView .pip-row .pip-v { color: var(--pip); text-align: right; }
+body.style-shelter #detailView .pip-row.warn .pip-v { text-decoration: underline; text-underline-offset: 3px; }
+body.style-shelter #detailView .pip-row.link { cursor: pointer; }
+body.style-shelter #detailView .pip-row.link:hover,
+body.style-shelter #detailView .pip-row.hot { background: none; color: var(--pip); box-shadow: inset -2px 0 0 var(--pip), inset 2px 0 0 var(--pip); }
+body.style-shelter #detailView .pip-row.link:hover *, body.style-shelter #detailView .pip-row.hot * { color: var(--pip); }
+
+/* status bar above the input + the input: amber outlines, no solid blocks */
+body.style-shelter #detailView .pip-seg { font: 400 14px/22px var(--pip-font); background: rgba(255, 159, 28, 0.1); }
+body.style-shelter #detailView .pip-stop { background: none; color: var(--pip); border: 2px solid var(--pip); }
+body.style-shelter #detailView .pip-stop:hover { background: var(--pip); color: var(--pip-ink); }
+body.style-shelter #detailView .reply-box { border: 2px solid var(--pip) !important; border-radius: 0 !important; background: rgba(0, 0, 0, 0.25) !important; }
+body.style-shelter #detailView .reply-toolbar { background: none; border-top: 1px solid var(--pip-faint); }
+body.style-shelter #detailView .reply-toolbar .btn-send { background: none; color: var(--pip); border: 2px solid var(--pip); }
+body.style-shelter #detailView .reply-toolbar .btn-send:hover { background: var(--pip); color: var(--pip-ink); }
+
+/* ---- bottom line: └── Chat ── Skills ── New chat ── Settings ── Notes ── Remote ── MCP ──┘ ---- */
+body.style-shelter #detailView .convo-toolbar {
+  order: 2; flex: none; position: relative; display: flex; justify-content: space-between; align-items: center;
+  margin: 18px 2px 14px; padding: 0 14px; height: 2px; border: 0; border-bottom: 0; background: var(--pip); box-shadow: none;
+}
+body.style-shelter #detailView .convo-toolbar::before,
+body.style-shelter #detailView .convo-toolbar::after {
+  display: block; content: ""; position: absolute; bottom: 0; top: auto; width: 2px; height: 30px; background: var(--pip);
+}
+body.style-shelter #detailView .convo-toolbar::before { left: 0; }
+body.style-shelter #detailView .convo-toolbar::after { right: 0; }
+body.style-shelter #detailView .convo-toolbar > .tb-btn:not(.xb-close):not(.tb-max):not(.wk-back):not([hidden]):not([style*="display: none"]) {
+  display: inline-flex; align-items: center; height: auto; padding: 3px 8px; margin: 0; background: #1e1002; border: 2px solid transparent;
+}
+body.style-shelter #detailView .convo-toolbar > .tb-btn .pip-lbl {
+  font: 400 16px/1.2 var(--pip-font); letter-spacing: 0.02em; text-transform: none; color: var(--pip); background: none; padding: 0;
+}
+body.style-shelter #detailView .convo-toolbar > .tb-btn:hover .pip-lbl { color: #fff; text-shadow: none; }
+body.style-shelter #detailView .convo-toolbar > .tb-btn.pip-current,
+body.style-shelter #detailView .convo-toolbar > .tb-btn.open { border-color: var(--pip) !important; background: #2b1a07 !important; }
+body.style-shelter #detailView .convo-toolbar > .tb-btn.pip-current::before, body.style-shelter #detailView .convo-toolbar > .tb-btn.open::before,
+body.style-shelter #detailView .convo-toolbar > .tb-btn.pip-current::after, body.style-shelter #detailView .convo-toolbar > .tb-btn.open::after { display: none !important; }
+body.style-shelter #detailView .convo-toolbar > .tb-btn :is(.pip-lbl) { background: none !important; }
+/* the ‹ and ⛶ keys sit on the line at the two ends */
+body.style-shelter #detailView .convo-toolbar > .tb-btn:is(.xb-close, .tb-max) {
+  height: 22px; margin: 0; padding: 0 6px; background: #1e1002; border: 2px solid var(--pip); border-radius: 0;
+}
+/* its dropdowns now open upward from the bottom line */
+body.style-shelter #detailView .convo-toolbar > .mcp-panel { top: auto !important; bottom: calc(100% + 18px) !important; }
+
+/* Vault side panel: same layout */
+body.style-shelter.vault-focus #detailView { padding: 8px 10px 4px; }
+
+/* narrow window (the normal 480px HUD): smaller labels so the bottom tabs and the top boxes fit */
+@media (max-width: 640px) {
+  body.style-shelter #detailView .convo-toolbar { padding: 0 8px; }
+  body.style-shelter #detailView .convo-toolbar > .tb-btn:not(.xb-close):not(.tb-max):not(.wk-back):not([hidden]):not([style*="display: none"]) { padding: 2px 3px; }
+  body.style-shelter #detailView .convo-toolbar > .tb-btn .pip-lbl { font-size: 12.5px; letter-spacing: -0.02em; }
+  body.style-shelter #detailView .convo-toolbar > .tb-btn:is(.xb-close, .tb-max) { padding: 0 3px; }
+  body.style-shelter #detailView .pip-hseg { font-size: 12px; letter-spacing: 0; }
+  body.style-shelter #detailView .pip-head { gap: 4px; }
+  body.style-shelter #detailView .pip-hbox { padding: 6px 5px 0 4px; }
+  body.style-shelter #detailView .pip-head-title { font-size: 15px; letter-spacing: 0.08em; }
+  body.style-shelter #detailView .pip-row, body.style-shelter #detailView .pip-row.pct, body.style-shelter #detailView .pip-row.warn { font-size: 13.5px; line-height: 22px; }
+}

@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Shelter chat screen: UI components</title>
+<!-- The app's real stylesheets, in the same order as ui/index.html, so this page always shows what the app shows. -->
+<link rel="stylesheet" href="../../ui/styles/style.css">
+<link rel="stylesheet" href="../../ui/styles/theme-aero.css">
+<link rel="stylesheet" href="../../ui/styles/features.css">
+<link rel="stylesheet" href="../../ui/styles/theme-vista-dark.css">
+<link rel="stylesheet" href="../../ui/styles/theme-msn.css">
+<link rel="stylesheet" href="../../ui/styles/skill-install.css">
+<link rel="stylesheet" href="../../ui/styles/list-grid.css">
+<link rel="stylesheet" href="../../ui/styles/theme-shelter.css">
+<link rel="stylesheet" href="../../ui/styles/theme-shelter-pip.css">
+<link rel="stylesheet" href="../../ui/styles/theme-shelter-app.css">
+<link rel="stylesheet" href="../../ui/styles/theme-work.css">
+<link rel="stylesheet" href="../../ui/styles/git-diff.css">
+<style>
+  /* page chrome only (not part of the app) */
+  html, body { height: auto; overflow: auto; }
+  body { display: block; padding: 24px 32px 60px; background: #0d0700; color: #f2d7b0; font: 13px/1.5 "Segoe UI", sans-serif; }
+  h1 { margin: 0 0 4px; font: 400 26px "Roboto Mono", "Cascadia Mono", Consolas, monospace; color: #ff9f1c; letter-spacing: .04em; }
+  .intro { max-width: 900px; color: #c9a679; margin-bottom: 18px; }
+  .intro code { color: #ff9f1c; }
+  section { margin: 26px 0 0; }
+  section > h2 { margin: 0 0 4px; font: 400 18px "Roboto Mono", "Cascadia Mono", Consolas, monospace; color: #ff9f1c; letter-spacing: .05em; }
+  section > p { margin: 0 0 10px; color: #c9a679; max-width: 900px; }
+  .row { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+  .cap { font-size: 11px; color: #a8865c; margin: 0 0 4px; text-transform: uppercase; letter-spacing: .08em; }
+  /* each example is a small copy of the chat panel (the theme's rules are scoped to #detailView) */
+  .demo { display: flex !important; flex-direction: column; gap: 6px; padding: 8px 10px 10px; width: 480px; position: relative; }
+  .demo.wide { width: 760px; }
+  .demo.full { height: 640px; }
+  .demo .convo-main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+  .demo .chat-stream { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+  .demo .pinned-prompt { position: static; display: flex; gap: 6px; padding: 3px 8px; cursor: pointer; }
+</style>
+</head>
+<!-- NOTE: the id "detailView" repeats on purpose: the theme's CSS is scoped to it, and nothing here runs app code. -->
+<body class="style-shelter">
+  <h1>Shelter chat screen (Pip-Boy 3000A) · UI components</h1>
+  <div class="intro">
+    Review page for the amber Pip-Boy 3000A look (based on pip-boy.com/3000a/simulator). It uses the app's real CSS (<code>ui/styles/theme-shelter-pip.css</code> and the rest),
+    so it shows what the app shows. The markup copies what <code>ui/index.html</code> and <code>ui/logic/chat/pip-screen.js</code> build.
+    The font is Roboto Mono if installed, else Cascadia Mono. Hover isn't shown; each section says what hover does.
+  </div>
+
+  <!-- ===================================================== 1 -->
+  <section>
+    <h2>1 · Full screen</h2>
+    <p>The whole chat as it is now: the session title set into the top line with stat boxes (git · model · context · cost), filter tabs, list on the left, readout panel on the right, the status bar above the input, and the tabs on the bottom line.</p>
+    <div id="detailView" class="view-panel active demo wide full">
+      <div class="pip-scan"></div>
+      <div class="pip-head"><span class="pip-hbox pip-hbox-first"><span class="pip-head-title">Flow</span><button class="pip-hseg pip-hgit">master · 6 changed · 1 new</button></span><span class="pip-hbox"><span class="pip-hseg">Opus 5.5</span></span><span class="pip-hbox"><span class="pip-hseg">80K / 200K</span></span><span class="pip-hbox"><span class="pip-hseg">$0.84</span></span></div>
+      <div class="detail-header convo-toolbar">
+        <button class="tb-btn xb-close"><span class="pip-lbl">‹</span></button>
+        <button class="tb-btn pip-current"><span class="pip-lbl">Chat</span></button>
+        <button class="tb-btn"><span class="pip-lbl">Skills</span></button>
+        <button class="tb-btn"><span class="pip-lbl">New chat</span></button>
+        <button class="tb-btn"><span class="pip-lbl">Settings</span></button>
+        <button class="tb-btn"><span class="pip-lbl">Notes</span></button>
+        <button class="tb-btn"><span class="pip-lbl">Remote</span></button>
+        <button class="tb-btn"><span class="pip-lbl">MCP</span></button>
+        <button class="tb-btn tb-max"><span class="pip-lbl">⛶</span></button>
+      </div>
+      <div class="convo-main">
+        <div class="pip-subtabs"><button class="pip-subtab on">All</button><button class="pip-subtab">You</button><button class="pip-subtab">Claude</button></div>
+        <div class="pip-body">
+          <div class="chat-stream">
+            <div class="chat-bubble user"><div class="bubble-meta"><span class="meta-name">You</span> <span class="meta-time">· 2m ago</span></div><div class="bubble-content">fix the login bug</div></div>
+            <div class="chat-bubble assistant claude"><div class="bubble-meta"><span class="meta-name">Claude</span> <span class="meta-time">· 1m ago</span></div>
+              <div class="bubble-content"><p>Fixed — the token check compared the wrong field. Run <code>npm test</code> to confirm.</p></div>
+              <div class="edit-list"><div class="edit-head"><span class="edit-title">📝 Edited 2 files</span><span class="edit-add">+32</span> <span class="edit-del">−3</span></div>
+                <div class="edit-row"><span class="edit-name">auth.js</span><span class="edit-dir">ovly-claude/src</span><span class="edit-stats"><span class="edit-add">+12</span> <span class="edit-del">−3</span></span><button class="edit-open">Open</button></div>
+                <div class="edit-row"><span class="edit-name">auth.test.js</span><span class="edit-dir">ovly-claude/test</span><span class="edit-stats"><span class="edit-add">+20</span> <span class="edit-del">−0</span></span><button class="edit-open">Open</button></div>
+              </div>
+            </div>
+          </div>
+          <aside class="pip-stats">
+            <div class="pip-picture robot"></div>
+            <div class="pip-row"><span class="pip-k">Status</span><b class="pip-v">Running Bash</b></div>
+            <div class="pip-row"><span class="pip-k">Model</span><b class="pip-v">Opus 5.5</b></div>
+            <div class="pip-row pct" style="--p:40%"><span class="pip-k">Context</span><b class="pip-v">80K / 200K</b></div>
+            <div class="pip-row"><span class="pip-k">Cost</span><b class="pip-v">$0.84</b></div>
+            <div class="pip-row"><span class="pip-k">Today</span><b class="pip-v">1.2M</b></div>
+            <div class="pip-row"><span class="pip-k">Branch</span><b class="pip-v">master</b></div>
+            <div class="pip-row link"><span class="pip-k">Changes</span><b class="pip-v">6 changed · 1 new</b></div>
+            <div class="pip-row link"><span class="pip-k">Hand off</span><b class="pip-v">↗</b></div>
+          </aside>
+        </div>
+        <div class="reply-section">
+          <div class="pip-status"><span class="pip-seg wide busy">Running a command · 0:35 · npm test</span><button class="pip-seg pip-stop">■ Stop</button></div>
+          <div class="reply-box">
+            <textarea class="reply-textarea" rows="2" placeholder="Type a message… ( / for commands · 📎, drop or Ctrl+V to attach files)"></textarea>
+            <div class="reply-toolbar">
+              <button class="rt-btn">📎</button><button class="rt-btn rt-slash">/</button><button class="rt-btn rt-snip">✂</button>
+              <button class="rt-btn rt-text rt-plan">📝 Plan</button><button class="rt-btn rt-text rt-usage">Usage ▴</button>
+              <span class="model-chip rt-model">Opus 5.5 ▾</span><span class="tb-spacer"></span>
+              <button class="btn-action primary btn-send">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== 2 -->
+  <section>
+    <h2>2 · Top tabs</h2>
+    <p>The current tab (CHAT) is a raised box the line passes under. A tab with its dropdown open looks the same. The line's ends turn down. ‹ (back) and ⛶ (maximize) are round keys. Hover: the label glows; the round keys fill green.</p>
+    <div class="row">
+      <div><div class="cap">current tab: Chat</div>
+        <div id="detailView" class="view-panel active demo"><div class="detail-header convo-toolbar">
+          <button class="tb-btn xb-close"><span class="pip-lbl">‹</span></button><button class="tb-btn pip-current"><span class="pip-lbl">Chat</span></button>
+          <button class="tb-btn"><span class="pip-lbl">Skills</span></button><button class="tb-btn"><span class="pip-lbl">Notes</span></button>
+          <button class="tb-btn"><span class="pip-lbl">MCP</span></button><button class="tb-btn tb-max"><span class="pip-lbl">⛶</span></button></div></div></div>
+      <div><div class="cap">Skills dropdown open</div>
+        <div id="detailView" class="view-panel active demo"><div class="detail-header convo-toolbar">
+          <button class="tb-btn xb-close"><span class="pip-lbl">‹</span></button><button class="tb-btn"><span class="pip-lbl">Chat</span></button>
+          <button class="tb-btn open"><span class="pip-lbl">Skills</span></button><button class="tb-btn"><span class="pip-lbl">Notes</span></button>
+          <button class="tb-btn"><span class="pip-lbl">MCP</span></button><button class="tb-btn tb-max"><span class="pip-lbl">⛶</span></button></div></div></div>
+    </div>
+  </section>
+
+  <!-- ===================================================== 3 -->
+  <section>
+    <h2>3 · Filter tabs</h2>
+    <p>Show all messages, only yours, or only Claude's. The current one is bright; the others are half-lit. Hover: full brightness.</p>
+    <div class="row">
+      <div><div class="cap">All</div><div id="detailView" class="view-panel active demo"><div class="pip-subtabs"><button class="pip-subtab on">All</button><button class="pip-subtab">You</button><button class="pip-subtab">Claude</button></div></div></div>
+      <div><div class="cap">Claude</div><div id="detailView" class="view-panel active demo"><div class="pip-subtabs"><button class="pip-subtab">All</button><button class="pip-subtab">You</button><button class="pip-subtab on">Claude</button></div></div></div>
+    </div>
+  </section>
+
+  <!-- ===================================================== 4 -->
+  <section>
+    <h2>4 · List lines</h2>
+    <p>Claude's lines start with the small square; your lines are the solid bar. Code, lists, notes and the edited-files card sit in the same list. Hover on an edited file row: solid bar.</p>
+    <div id="detailView" class="view-panel active demo wide"><div class="chat-stream" style="max-height:none">
+      <div class="chat-bubble user"><div class="bubble-meta"><span class="meta-name">You</span> <span class="meta-time">· now</span></div><div class="bubble-content">a long message of yours wraps onto more lines and stays one solid highlighted bar across the list, like the selected row on the reference screen</div></div>
+      <div class="chat-bubble assistant claude"><div class="bubble-meta"><span class="meta-name">Claude</span> <span class="meta-time">· now</span></div>
+        <div class="bubble-content"><p><strong>Done.</strong> Here is what changed:</p><ul><li>the token check uses <code>user.id</code></li><li>a test covers the old bug</li></ul><ol><li>the full chat screen</li><li>top tabs</li><li>filter tabs</li></ol>
+          <pre><code>const ok = token.sub === user.id;</code></pre><p>Details in <a href="#">auth.js</a>.</p></div></div>
+      <div class="chat-note">This chat is now 150K tokens long. A new chat would be cheaper.</div>
+    </div></div>
+  </section>
+
+  <!-- ===================================================== 5 -->
+  <section>
+    <h2>5 · Readout panel (right side)</h2>
+    <p>The agent robot in screen green, then the rows. <b>pct</b> = gauge (context); <b>warn</b> = past 150K tokens; <b>link</b> = clickable (Changes opens the git panel, Hand off opens the dialog); <b>hot</b> = Hand off when the chat is long. Hover on a link row: solid bar.</p>
+    <div class="row">
+      <div id="detailView" class="view-panel active demo" style="width:240px"><aside class="pip-stats" style="flex:none">
+        <div class="pip-picture robot"></div>
+        <div class="pip-row"><span class="pip-k">Status</span><b class="pip-v">Idle</b></div>
+        <div class="pip-row pct" style="--p:40%"><span class="pip-k">Context</span><b class="pip-v">80K / 200K</b></div>
+        <div class="pip-row link"><span class="pip-k">Changes</span><b class="pip-v">6 changed</b></div>
+      </aside></div>
+      <div id="detailView" class="view-panel active demo" style="width:240px"><aside class="pip-stats" style="flex:none">
+        <div class="pip-row pct warn" style="--p:86%"><span class="pip-k">Context</span><b class="pip-v">172K / 200K</b></div>
+        <div class="pip-row link hot"><span class="pip-k">Hand off</span><b class="pip-v">↗</b></div>
+      </aside></div>
+    </div>
+  </section>
+
+  <!-- ===================================================== 6 -->
+  <section>
+    <h2>6 · Status bar (above the input)</h2>
+    <p>What Claude is doing (context and cost are in the top line). While it works: a pulsing square, the step, elapsed time, the target, and a Stop key. Long text is cut with "…". Hover on Stop: white.</p>
+    <div class="row">
+      <div><div class="cap">idle</div><div id="detailView" class="view-panel active demo"><div class="pip-status"><span class="pip-seg wide">Idle</span></div></div></div>
+      <div><div class="cap">working</div><div id="detailView" class="view-panel active demo"><div class="pip-status"><span class="pip-seg wide busy">Running a command · 0:35 · npm test</span><button class="pip-seg pip-stop">■ Stop</button></div></div></div>
+      <div><div class="cap">working, wide panel</div><div id="detailView" class="view-panel active demo wide"><div class="pip-status"><span class="pip-seg wide busy">Editing a file · 1:12 · ui/logic/chat/pip-screen.js</span><button class="pip-seg pip-stop">■ Stop</button></div></div></div>
+    </div>
+  </section>
+
+  <!-- ===================================================== 7 -->
+  <section>
+    <h2>7 · Input</h2>
+    <p>Green frame with a bright top line, green text and cursor, green icons, a solid Send bar. Focus: the whole frame lights up. Hover on toolbar keys: solid bar.</p>
+    <div class="row">
+      <div><div class="cap">empty</div><div id="detailView" class="view-panel active demo"><div class="reply-section"><div class="reply-box">
+        <textarea class="reply-textarea" rows="2" placeholder="Type a message… ( / for commands · 📎, drop or Ctrl+V to attach files)"></textarea>
+        <div class="reply-toolbar"><button class="rt-btn">📎</button><button class="rt-btn rt-slash">/</button><button class="rt-btn rt-snip">✂</button><button class="rt-btn rt-text rt-plan">📝 Plan</button><button class="rt-btn rt-text rt-usage">Usage ▴</button><span class="model-chip rt-model">Opus 5.5 ▾</span><span class="tb-spacer"></span><button class="btn-action primary btn-send">Send</button></div>
+      </div></div></div></div>
+      <div><div class="cap">with text (click inside to see focus)</div><div id="detailView" class="view-panel active demo"><div class="reply-section"><div class="reply-box">
+        <textarea class="reply-textarea" rows="2">move the cost bar above the chat input</textarea>
+        <div class="reply-toolbar"><button class="rt-btn">📎</button><button class="rt-btn rt-slash">/</button><button class="rt-btn rt-snip">✂</button><button class="rt-btn rt-text rt-plan">📝 Plan</button><button class="rt-btn rt-text rt-usage">Usage ▴</button><span class="model-chip rt-model">Opus 5.5 ▾</span><span class="tb-spacer"></span><button class="btn-action primary btn-send">Send</button></div>
+      </div></div></div></div>
+    </div>
+  </section>
+
+  <!-- ===================================================== 8 -->
+  <section>
+    <h2>8 · Other pieces</h2>
+    <p>The pinned "You said:" bar (your last message, when it scrolls out of view), the info bar, and a question card. Hover on the pinned bar or an option: solid bar.</p>
+    <div class="row">
+      <div id="detailView" class="view-panel active demo">
+        <div class="convo-infobar" style="display:flex"><span class="infobar-icon">i</span><span class="infobar-text">Claude is waiting for your reply.</span></div>
+        <div class="pinned-prompt"><span class="pp-label">You said:</span><span class="pp-text">did you remove the loading process on the box under the chatbox?</span><span class="pp-images"></span></div>
+      </div>
+      <div id="detailView" class="view-panel active demo">
+        <div class="ask-card">
+          <div class="ask-head"><span class="ask-ico">❓</span> <span class="ask-title">Claude has a question for you</span></div>
+          <div class="ask-block"><span class="ask-tag">Status text</span><div class="ask-q">Hide the status text inside the input's toolbar?</div>
+            <div class="ask-opts"><button class="ask-opt picked">Hide only progress messages <span class="ask-opt-desc">keep warnings</span></button><button class="ask-opt">Hide it completely</button><button class="ask-opt">Leave it</button></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+<script>
+  // robot-runner.js needs the HUD's colour helper (same as docs/design/room-shapes.html)
+  function shiftHexHue(hex, deg) {
+    const n = parseInt(hex.slice(1), 16); let r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let h = 0, s = 0; const l = (mx + mn) / 2;
+    if (mx !== mn) { const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn);
+      h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; }
+    h = (h + deg + 360) % 360;
+    const f = (p, q, t) => { t = (t + 1) % 1; return t < 1/6 ? p + (q - p) * 6 * t : t < 1/2 ? q : t < 2/3 ? p + (q - p) * (2/3 - t) * 6 : p; };
+    const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q, k = h / 360;
+    return '#' + [f(p, q, k + 1/3), f(p, q, k), f(p, q, k - 1/3)].map((v) => Math.round(v * 255).toString(16).padStart(2, '0')).join('');
+  }
+</script>
+<script src="../../ui/lib/robot-runner.js"></script>
+<script>
+  // the readout panel's picture: the agent robot, tinted green by the theme's CSS
+  document.querySelectorAll('.pip-picture.robot').forEach((el) => {
+    if (typeof buildRunnerSvg === 'function') el.innerHTML = buildRunnerSvg(300, null, 'stand');
+  });
+</script>
+</body>
+</html>

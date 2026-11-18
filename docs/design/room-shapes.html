@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vault room shapes — interactive mock</title>
+<style>
+  :root { --bg: #0d1218; --line: #2e3949; --text: #dfe6ee; --dim: #8796a8; --amber: #f5a524; --teal: #2dd4bf; --red: #ef5350;
+          --cw: 116px; --rh: 88px; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 26px 34px 60px; background: var(--bg); color: var(--text); font: 13px/1.5 "Segoe UI", sans-serif; }
+  h1 { margin: 0 0 4px; font: 600 22px "Bahnschrift", "Segoe UI", sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--amber); }
+  h2 { margin: 30px 0 6px; font: 600 15px "Bahnschrift", "Segoe UI", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--teal); }
+  .sub { color: var(--dim); max-width: 900px; }
+  .wrap { display: flex; gap: 28px; align-items: flex-start; margin-top: 16px; flex-wrap: wrap; }
+
+  /* ---------- controls ---------- */
+  .controls { width: 290px; display: flex; flex-direction: column; gap: 12px; }
+  .group { background: linear-gradient(180deg, #1d2530, #161d26); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .group h3 { margin: 0 0 8px; font: 600 11px "Bahnschrift", sans-serif; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+  .seg { display: flex; }
+  .key { flex: 1; cursor: pointer; padding: 5px 8px 3px; font: 600 11px "Bahnschrift", sans-serif; letter-spacing: .07em; text-transform: uppercase;
+    color: #b8c4d2; background: linear-gradient(180deg, #313c4b, #1f2732); border: 1px solid #0a0e13; border-bottom: 3px solid #06090c; margin-left: -1px; }
+  .key:first-child { border-radius: 3px 0 0 3px; margin-left: 0; } .key:last-child { border-radius: 0 3px 3px 0; }
+  .key:hover { color: #fff; }
+  .key.on { color: var(--amber); border-bottom-width: 1px; margin-top: 2px; background: linear-gradient(180deg, #161c25, #1d2530); text-shadow: 0 0 8px rgba(245,165,36,.6); }
+  .key:disabled { opacity: .4; cursor: default; }
+  .palette { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .shape { cursor: pointer; padding: 6px 4px 4px; border-radius: 5px; border: 1px solid #2e3949; background: #11171f; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .shape:hover { border-color: var(--amber); }
+  .shape.on { border-color: var(--amber); background: rgba(245,165,36,.12); }
+  .shape svg { width: 44px; height: 30px; }
+  .shape span { font-size: 9.5px; color: var(--dim); }
+  .hint { font-size: 11.5px; color: #b3c0cf; }
+  .hint kbd { font: 10px Consolas, monospace; padding: 0 4px; border-radius: 3px; background: #0a0e13; border: 1px solid #2e3949; color: #7fe3d2; }
+  .status { min-height: 18px; font-size: 11.5px; color: var(--teal); }
+  .status.bad { color: #ffb4b0; }
+  .disabled-note { font-size: 11px; color: var(--dim); }
+
+  /* ---------- the board (one HUD-width Vault) ---------- */
+  .hud { padding: 10px; border-radius: 10px; border: 2px solid #3a4658; background: #10151c; box-shadow: 0 12px 32px rgba(0,0,0,.6); }
+  .hud-bar { display: flex; justify-content: space-between; align-items: center; padding: 0 2px 8px; font: 600 11px "Bahnschrift", sans-serif; letter-spacing: .08em; color: var(--dim); text-transform: uppercase; }
+  .board { position: relative; width: calc(var(--cw) * 4); user-select: none; }
+  .zoom .board { zoom: 1.35; }
+
+  /* rock (not dug out) */
+  .rock { position: absolute; width: var(--cw); height: var(--rh);
+    background: radial-gradient(circle at 20% 30%, rgba(255,255,255,.05) 0 2px, transparent 3px), radial-gradient(circle at 70% 60%, rgba(0,0,0,.35) 0 3px, transparent 4px),
+      radial-gradient(circle at 45% 80%, rgba(255,255,255,.04) 0 1.5px, transparent 2.5px), radial-gradient(circle at 85% 20%, rgba(0,0,0,.3) 0 2px, transparent 3px),
+      linear-gradient(160deg, #2a241f, #1f1b17); }
+  .build .rock { box-shadow: inset 0 0 0 1px rgba(245,165,36,.12); cursor: crosshair; }
+  .build .rock.can-dig:hover { background-color: #3a2f22; box-shadow: inset 0 0 0 2px var(--amber); }
+
+  /* a dug-out block of a room */
+  .cell { position: absolute; width: var(--cw); height: var(--rh); overflow: visible;
+    background: repeating-linear-gradient(90deg, transparent 0 38px, rgba(0,0,0,.22) 38px 40px), linear-gradient(180deg, #171e2b 0%, #232d3f 80%, #131822 100%); }
+  .cell::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 10%, var(--tint), transparent 75%); pointer-events: none; }
+  /* walls only on edges that face rock or another room */
+  .cell.wt { border-top: 7px solid #3a4558; } .cell.wb { border-bottom: 0; }
+  .cell.wl { border-left: 3px solid var(--accent); } .cell.wr { border-right: 2px solid #3a4558; }
+  .cell .floor { position: absolute; left: 0; right: 0; bottom: 0; height: 8px; background: linear-gradient(180deg, rgba(255,255,255,.1) 0, transparent 2px), repeating-linear-gradient(90deg, #3b4454 0 14px, #2a313e 14px 15px); z-index: 1; }
+  /* a deck over the room's lower floor: same floor, with a hatch where the ladder comes up */
+  .cell .floor.deck::after { content: ""; position: absolute; top: 0; bottom: 0; width: 26px; left: calc(50% - 13px); background: #0b0f15; box-shadow: inset 0 2px 3px rgba(0,0,0,.8); }
+  .cell .ladder { position: absolute; z-index: 2; width: 18px; left: calc(50% - 9px); top: -10px; bottom: 6px;
+    background: linear-gradient(#8a96a6, #8a96a6) 0 0 / 2px 100% no-repeat, linear-gradient(#8a96a6, #8a96a6) 100% 0 / 2px 100% no-repeat,
+      repeating-linear-gradient(180deg, transparent 0 7px, #6b7686 7px 9px) 2px 0 / 14px 100% no-repeat; }
+  .cell .plate { position: absolute; left: 6px; top: 4px; z-index: 6; padding: 1px 7px; border-radius: 4px; white-space: nowrap;
+    font: 600 10px "Bahnschrift", sans-serif; letter-spacing: .06em; background: #0b1015; border: 1px solid #344155; }
+  .cell .plate i { font-style: normal; color: var(--accent); margin-left: 5px; font-size: 9px; }
+  .cell .furn { position: absolute; bottom: 6px; width: 54px; height: 47px; transform: translateX(-50%); opacity: .9; filter: brightness(.9); z-index: 1; }
+  /* Build mode: room outline + selection */
+  .build .cell { cursor: grab; }
+  .build .cell.sel { box-shadow: inset 0 0 0 2px var(--amber); }
+  .build .cell.sel.dragging { opacity: .55; }
+  .ghost { position: absolute; width: var(--cw); height: var(--rh); z-index: 20; pointer-events: none; border: 2px dashed var(--teal); background: rgba(45,212,191,.16); }
+  .ghost.bad { border-color: var(--red); background: rgba(239,83,80,.18); }
+  .gridlines { position: absolute; inset: 0; pointer-events: none; z-index: 15; display: none;
+    background: linear-gradient(90deg, rgba(245,165,36,.25) 1px, transparent 1px) 0 0 / var(--cw) var(--rh), linear-gradient(180deg, rgba(245,165,36,.25) 1px, transparent 1px) 0 0 / var(--cw) var(--rh); }
+  .build .gridlines { display: block; }
+
+  /* robots */
+  .bot { position: absolute; width: 30px; height: 37px; z-index: 5; transform: translateX(-50%); pointer-events: none; }
+  .bot .b { display: block; width: 100%; height: 100%; }
+  .bot.climb .b { animation: climb .35s ease-in-out infinite alternate; }
+  @keyframes climb { from { transform: translateX(-1px) rotate(-3deg); } to { transform: translateX(1px) rotate(3deg); } }
+  .bot .r-leg, .bot .r-shin, .bot .r-arm { transform-box: fill-box; }
+
+  table { border-collapse: collapse; margin-top: 8px; font-size: 12px; max-width: 980px; }
+  td, th { padding: 5px 14px 5px 0; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--dim); font-weight: 600; }
+  code { color: #7fe3d2; background: #0a0e13; border: 1px solid #222c39; border-radius: 3px; padding: 0 4px; font-size: 11px; }
+</style>
+</head>
+<body>
+  <h1>Vault room shapes</h1>
+  <div class="sub">The Vault becomes a dig site: a grid 4 blocks wide, as tall as needed. Each workspace's room is a set of connected blocks dug out of the rock — a bar (today's look), a box, an L, a reversed L, a T… <b>Normal</b> keeps every room a full-width rectangle; <b>Free</b> lets you shape and place them. Try it: switch to Free, turn on Build mode, pick a shape, drag rooms, <kbd>R</kbd> to rotate, click rock next to the selected room to dig, right-click a block to fill it back in.</div>
+
+  <div class="wrap">
+    <div class="controls">
+      <div class="group">
+        <h3>Layout</h3>
+        <div class="seg"><button class="key on" data-mode="normal">▤ Normal</button><button class="key" data-mode="free">▦ Free</button></div>
+        <div class="disabled-note" style="margin-top:6px">Normal = every room full width, stacked. Free = your shapes. Switching keeps both.</div>
+      </div>
+      <div class="group">
+        <h3>Build mode</h3>
+        <div class="seg"><button class="key" id="build">🔨 Build</button><button class="key" id="zoom">🔍 Zoom</button><button class="key" id="reset">↺ Reset</button></div>
+        <div class="status" id="status"></div>
+      </div>
+      <div class="group" id="palGroup">
+        <h3>New room shape (Free + Build)</h3>
+        <div class="palette" id="palette"></div>
+        <div class="hint" style="margin-top:8px">
+          Click a shape, then click the grid to place it. <kbd>R</kbd> rotates · <kbd>F</kbd> flips (L ↔ reversed L) · <kbd>Esc</kbd> cancels<br>
+          Selected room: drag to move · <kbd>R</kbd> / <kbd>F</kbd> · click rock beside it to dig · right-click its block to fill · <kbd>Del</kbd> to remove it
+        </div>
+      </div>
+    </div>
+
+    <div class="hud" id="hud">
+      <div class="hud-bar"><span>Vault · <span id="modeLbl">Normal</span></span><span id="countLbl"></span></div>
+      <div class="board" id="board"></div>
+    </div>
+  </div>
+
+  <h2>How it would work in the app</h2>
+  <table>
+    <tr><th>What</th><th>How</th></tr>
+    <tr><td>Grid</td><td>4 columns × as many rows as needed. One block = ¼ of the HUD width × one room height (about 116 × 88 px): room for 2 robots and 1 piece of furniture.</td></tr>
+    <tr><td>Normal / Free</td><td>A switch in Build mode and in Settings. Normal: full-width rooms, stacked (today). Free: each room keeps its shape and spot. Your Free layout is saved even while you're in Normal.</td></tr>
+    <tr><td>Shapes</td><td>Bar 4, bar 2, block, box, L, reversed L, T, step — or paint any connected shape block by block.</td></tr>
+    <tr><td>Rules</td><td>Rooms can't overlap and must stay in one piece. Red ghost = not allowed. Removing a block that would split the room is refused.</td></tr>
+    <tr><td>Inside a room</td><td>No wall between a room's own blocks. Blocks side by side share one floor; stacked blocks are two floors joined by a ladder through a hatch. Robots walk each floor and climb the ladders.</td></tr>
+    <tr><td>Robots per room</td><td>About 2 per block; the rest go to the drawer under the room, as now.</td></tr>
+    <tr><td>New workspace</td><td>Gets a bar-2 room in the first free spot (Free mode).</td></tr>
+    <tr><td>Furniture / window</td><td>Each block can hold furniture; the existing Builder mode moves pieces between a room's blocks; the window goes on any block's back wall.</td></tr>
+    <tr><td>Saved</td><td><code>vaultLayout</code> setting: <code>{ mode, rooms: { workspaceKey: [[col,row]…] } }</code>.</td></tr>
+  </table>
+
+<script>
+  // robot-runner.js needs the HUD's colour helper
+  function shiftHexHue(hex, deg) {
+    const n = parseInt(hex.slice(1), 16); let r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let h = 0, s = 0; const l = (mx + mn) / 2;
+    if (mx !== mn) { const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn);
+      h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; }
+    h = (h + deg + 360) % 360;
+    const f = (p, q, t) => { t = (t + 1) % 1; return t < 1/6 ? p + (q - p) * 6 * t : t < 1/2 ? q : t < 2/3 ? p + (q - p) * (2/3 - t) * 6 : p; };
+    const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q, k = h / 360;
+    return '#' + [f(p, q, k + 1/3), f(p, q, k), f(p, q, k - 1/3)].map((v) => Math.round(v * 255).toString(16).padStart(2, '0')).join('');
+  }
+</script>
+<script src="../../ui/lib/robot-runner.js"></script>
+<script src="../../ui/logic/vault/rooms.js"></script>
+<script src="../../ui/logic/vault/furniture-art.js"></script>
+<script>
+  const COLS = 4, ROWS = 7;
+  const CW = 116, RH = 88;
+  const board = document.getElementById('board');
+  const status = (msg, bad) => { const s = document.getElementById('status'); s.textContent = msg || ''; s.classList.toggle('bad', !!bad); };
+
+  // ---------- shapes (cells relative to the top-left) ----------
+  const SHAPES = {
+    bar4:  { name: 'Bar 4', cells: [[0,0],[1,0],[2,0],[3,0]] },
+    bar2:  { name: 'Bar 2', cells: [[0,0],[1,0]] },
+    block: { name: 'Block', cells: [[0,0]] },
+    box:   { name: 'Box', cells: [[0,0],[1,0],[0,1],[1,1]] },
+    L:     { name: 'L', cells: [[0,0],[0,1],[1,1],[2,1]] },
+    revL:  { name: 'Rev. L', cells: [[2,0],[0,1],[1,1],[2,1]] },
+    T:     { name: 'T', cells: [[0,0],[1,0],[2,0],[1,1]] },
+    step:  { name: 'Step', cells: [[0,0],[1,0],[1,1],[2,1]] },
+  };
+  const TYPES = [['CODING LAB', '#06b6d4', 'rgba(6,182,212,.16)'], ['MCP & WEB', '#8b5cf6', 'rgba(139,92,246,.16)'], ['CONTEXT ARCHIVE', '#eab308', 'rgba(234,179,8,.14)'],
+    ['TOOL FORGE', '#f59e0b', 'rgba(245,158,11,.16)'], ['SEARCH & RAG', '#10b981', 'rgba(16,185,129,.16)'], ['PLANNER CORE', '#3b82f6', 'rgba(59,130,246,.15)']];
+  const FURN = ['diffDesk', 'promptTerm', 'ctxTank', 'vectorPods', 'mcpDock', 'whiteboard', 'gpuRack', 'coffeeBar', 'bookshelf', 'arcade', 'bunk', 'plantWall'];
+
+  const START = () => [
+    { key: 'hq', name: 'HEADQUARTER', t: 0, cells: [[0,0],[1,0],[2,0],[0,1]], bots: 3 },
+    { key: 'infra', name: 'INFRA', t: 3, cells: [[3,0]], bots: 1 },
+    { key: 'shop', name: 'SHOP API', t: 1, cells: [[2,1],[3,1],[2,2],[3,2]], bots: 3 },
+    { key: 'docs', name: 'DOCS', t: 2, cells: [[0,3],[1,3],[2,3],[2,4]], bots: 3 },
+    { key: 'lab', name: 'LAB', t: 4, cells: [[0,5],[1,5],[2,5],[1,4]], bots: 2 },
+  ];
+  let rooms = START();
+  let mode = 'normal', build = false, sel = null, placing = null, ghostAt = null, drag = null;
+  let newN = 1;
+
+  // ---------- geometry ----------
+  const keyOf = (c, r) => c + ',' + r;
+  function layoutCells(room, idx) {
+    if (mode === 'free') return room.cells;
+    return [[0, idx], [1, idx], [2, idx], [3, idx]]; // normal: full-width bar, stacked
+  }
+  function owner() {
+    const m = new Map();
+    rooms.forEach((rm, i) => layoutCells(rm, i).forEach(([c, r]) => m.set(keyOf(c, r), rm)));
+    return m;
+  }
+  const rowsUsed = () => Math.max(ROWS, ...rooms.flatMap((rm, i) => layoutCells(rm, i).map(([, r]) => r + 1)));
+  function connected(cells) {
+    if (!cells.length) return false;
+    const set = new Set(cells.map(([c, r]) => keyOf(c, r))), seen = new Set([keyOf(...cells[0])]), q = [cells[0]];
+    while (q.length) { const [c, r] = q.pop(); for (const [dc, dr] of [[1,0],[-1,0],[0,1],[0,-1]]) { const k = keyOf(c + dc, r + dr); if (set.has(k) && !seen.has(k)) { seen.add(k); q.push([c + dc, r + dr]); } } }
+    return seen.size === set.size;
+  }
+  function fits(cells, except) {
+    const own = owner();
+    return cells.every(([c, r]) => c >= 0 && c < COLS && r >= 0 && r < ROWS + 3 && (!own.has(keyOf(c, r)) || own.get(keyOf(c, r)) === except)) && connected(cells);
+  }
+  const norm = (cells) => { const mc = Math.min(...cells.map((x) => x[0])), mr = Math.min(...cells.map((x) => x[1])); return cells.map(([c, r]) => [c - mc, r - mr]); };
+  const rotate = (cells) => norm(cells.map(([c, r]) => [-r, c]));         // 90° clockwise
+  const flip = (cells) => norm(cells.map(([c, r]) => [-c, r]));           // L ↔ reversed L
+  const at = (cells, c0, r0) => cells.map(([c, r]) => [c + c0, r + r0]);
+  const topLeft = (cells) => [Math.min(...cells.map((x) => x[0])), Math.min(...cells.filter((x) => x[1] === Math.min(...cells.map((y) => y[1]))).map((x) => x[0])), Math.min(...cells.map((x) => x[1]))];
+
+  // ---------- draw ----------
+  function draw() {
+    board.innerHTML = '';
+    const own = owner();
+    const rows = rowsUsed();
+    board.style.height = rows * RH + 'px';
+    document.getElementById('modeLbl').textContent = mode === 'free' ? 'Free' : 'Normal';
+    document.getElementById('countLbl').textContent = `${rooms.length} rooms`;
+    for (let r = 0; r < rows; r++) for (let c = 0; c < COLS; c++) {
+      const rm = own.get(keyOf(c, r));
+      const x = c * CW, y = r * RH;
+      if (!rm) {
+        const k = document.createElement('div');
+        k.className = 'rock';
+        k.style.left = x + 'px'; k.style.top = y + 'px';
+        if (build && mode === 'free' && sel && [[1,0],[-1,0],[0,1],[0,-1]].some(([dc, dr]) => own.get(keyOf(c + dc, r + dr)) === sel)) k.classList.add('can-dig');
+        k.dataset.c = c; k.dataset.r = r;
+        board.appendChild(k);
+        continue;
+      }
+      const same = (dc, dr) => own.get(keyOf(c + dc, r + dr)) === rm;
+      const cell = document.createElement('div');
+      const [, , ] = [];
+      cell.className = 'cell' + (same(0, -1) ? '' : ' wt') + (same(-1, 0) ? '' : ' wl') + (same(1, 0) ? '' : ' wr') + (rm === sel ? ' sel' : '');
+      cell.style.left = x + 'px'; cell.style.top = y + 'px';
+      cell.style.setProperty('--accent', TYPES[rm.t][1]); cell.style.setProperty('--tint', TYPES[rm.t][2]);
+      cell.dataset.c = c; cell.dataset.r = r; cell.dataset.room = rm.key;
+      const floor = document.createElement('div');
+      floor.className = 'floor' + (same(0, 1) ? ' deck' : '');
+      cell.appendChild(floor);
+      if (same(0, -1)) { const l = document.createElement('div'); l.className = 'ladder'; cell.appendChild(l); }  // ladder up to the floor above
+      // one piece of furniture per block, off-centre so it clears the ladder
+      const fk = FURN[(rooms.indexOf(rm) * 5 + c * 3 + r * 7) % FURN.length];
+      const fx = ((c * 7 + r * 3) % 2 ? 0.27 : 0.73) * CW;
+      cell.insertAdjacentHTML('beforeend', `<svg class="furn" style="left:${fx}px" viewBox="0 0 64 56">${furnitureArt(fk, (c + r) % 2)}</svg>`);
+      const tl = topLeft(layoutCells(rm, rooms.indexOf(rm)));
+      if (c === tl[1] && r === tl[2]) cell.insertAdjacentHTML('beforeend', `<span class="plate">${rm.name}<i>${TYPES[rm.t][0]}</i></span>`);
+      board.appendChild(cell);
+    }
+    const gl = document.createElement('div'); gl.className = 'gridlines'; board.appendChild(gl);
+    drawGhost();
+    placeBots();
+  }
+
+  function drawGhost() {
+    board.querySelectorAll('.ghost').forEach((g) => g.remove());
+    const g = placing ? { cells: placing.cells } : drag && drag.moved ? { cells: drag.cells } : null;
+    if (!g || !ghostAt) return;
+    const cells = at(g.cells, ghostAt[0], ghostAt[1]);
+    const ok = fits(cells, drag ? drag.room : null);
+    for (const [c, r] of cells) {
+      const d = document.createElement('div');
+      d.className = 'ghost' + (ok ? '' : ' bad');
+      d.style.left = c * CW + 'px'; d.style.top = r * RH + 'px';
+      board.appendChild(d);
+    }
+    status(ok ? (placing ? 'Click to place' : 'Let go to move it here') : 'Can\'t go here: overlaps a room or the edge', !ok);
+  }
+
+  // ---------- robots: walk each floor, climb ladders between floors ----------
+  let bots = [];
+  function segmentsOf(rm, idx) {
+    const cells = layoutCells(rm, idx), set = new Set(cells.map(([c, r]) => keyOf(c, r)));
+    const segs = [];
+    for (const r of [...new Set(cells.map((x) => x[1]))]) {
+      const cs = cells.filter((x) => x[1] === r).map((x) => x[0]).sort((a, b) => a - b);
+      let start = cs[0];
+      for (let i = 1; i <= cs.length; i++) if (i === cs.length || cs[i] !== cs[i - 1] + 1) { segs.push({ r, c0: start, c1: cs[i - 1] }); start = cs[i]; }
+    }
+    const ladders = cells.filter(([c, r]) => set.has(keyOf(c, r - 1))).map(([c, r]) => ({ c, upper: r - 1, lower: r }));
+    return { segs, ladders };
+  }
+  function placeBots() {
+    // keep robots across redraws when their room still exists
+    const keep = bots.filter((b) => rooms.includes(b.room));
+    bots = [];
+    rooms.forEach((rm, idx) => {
+      const { segs } = segmentsOf(rm, idx);
+      const mine = keep.filter((b) => b.room === rm);
+      for (let i = 0; i < rm.bots; i++) {
+        let b = mine[i];
+        const seg = segs[i % segs.length];
+        if (!b) b = { room: rm, hue: (rooms.indexOf(rm) * 70 + i * 45) % 360, face: 1, pose: '', el: null };
+        if (!b.seg || !segs.some((s) => s.r === b.r && b.x >= s.c0 * CW && b.x <= (s.c1 + 1) * CW)) {
+          b.r = seg.r; b.x = (seg.c0 + 0.3 + (i * 0.37) % (seg.c1 - seg.c0 + 0.4)) * CW; b.y = null; b.plan = null; b.wait = 400 + i * 500;
+        }
+        b.seg = true;
+        b.el = document.createElement('div');
+        b.el.className = 'bot';
+        b.el.innerHTML = '<span class="b"></span>';
+        board.appendChild(b.el);
+        b.pose = '';
+        bots.push(b);
+      }
+    });
+  }
+  function setPose(b, pose, face) {
+    if (b.pose !== pose && window.buildRunnerSvg) { b.el.querySelector('.b').innerHTML = buildRunnerSvg(b.hue, null, pose === 'climb' ? 'stand' : pose); b.pose = pose; }
+    b.el.classList.toggle('climb', pose === 'climb');
+    b.el.querySelector('.b').style.transform = `scaleX(${face})`;
+  }
+  let last = performance.now();
+  function tick(now) {
+    const dt = Math.min(60, now - last); last = now;
+    const floorY = (r) => r * RH + RH - 8 - 37;
+    for (const b of bots) {
+      const idx = rooms.indexOf(b.room); if (idx < 0) continue;
+      const { segs, ladders } = segmentsOf(b.room, idx);
+      if (b.y == null) b.y = floorY(b.r);
+      if (!b.plan) {
+        if ((b.wait -= dt) > 0) { setPose(b, 'stand', b.face); }
+        else {
+          const seg = segs.find((s) => s.r === b.r && b.x >= s.c0 * CW - 2 && b.x <= (s.c1 + 1) * CW + 2) || segs[0];
+          const here = ladders.filter((l) => (l.upper === b.r || l.lower === b.r) && l.c >= seg.c0 && l.c <= seg.c1);
+          if (here.length && Math.random() < 0.5) {
+            const l = here[Math.floor(Math.random() * here.length)];
+            b.plan = [{ x: (l.c + 0.5) * CW }, { climbTo: l.upper === b.r ? l.lower : l.upper }];
+          } else {
+            b.plan = [{ x: (seg.c0 + 0.15 + Math.random() * (seg.c1 - seg.c0 + 0.7)) * CW }];
+          }
+        }
+      }
+      if (b.plan) {
+        const step = b.plan[0];
+        if (step.x != null) {
+          const d = step.x - b.x, v = 0.026 * dt; // ~26 px/s, like the Vault
+          if (Math.abs(d) <= v) { b.x = step.x; b.plan.shift(); }
+          else { b.x += Math.sign(d) * v; b.face = Math.sign(d); setPose(b, 'walk', b.face); }
+        } else if (step.climbTo != null) {
+          const ty = floorY(step.climbTo), d = ty - b.y, v = 0.03 * dt;
+          if (Math.abs(d) <= v) { b.y = ty; b.r = step.climbTo; b.plan.shift(); }
+          else { b.y += Math.sign(d) * v; setPose(b, 'climb', 1); }
+        }
+        if (!b.plan.length) { b.plan = null; b.wait = 1200 + Math.random() * 2600; }
+      }
+      b.el.style.left = b.x + 'px'; b.el.style.top = b.y + 'px';
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  // ---------- controls ----------
+  const pal = document.getElementById('palette');
+  pal.innerHTML = Object.entries(SHAPES).map(([k, s]) => `<div class="shape" data-shape="${k}" title="${s.name}"><svg viewBox="0 0 4 2">${s.cells.map(([c, r]) => `<rect x="${c + .08}" y="${r + .08}" width=".84" height=".84" rx=".1" fill="#2dd4bf" opacity=".85"/>`).join('')}</svg><span>${s.name}</span></div>`).join('');
+  pal.addEventListener('click', (e) => {
+    const s = e.target.closest('.shape'); if (!s) return;
+    if (mode !== 'free' || !build) { status('Switch to Free and turn on Build first', true); return; }
+    placing = placing && placing.key === s.dataset.shape ? null : { key: s.dataset.shape, cells: SHAPES[s.dataset.shape].cells.map((x) => x.slice()) };
+    pal.querySelectorAll('.shape').forEach((x) => x.classList.toggle('on', placing && x === s));
+    sel = null; draw(); status(placing ? 'Move over the grid · R rotate · F flip · click to place' : '');
+  });
+  document.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => {
+    mode = b.dataset.mode;
+    document.querySelectorAll('[data-mode]').forEach((x) => x.classList.toggle('on', x === b));
+    placing = null; sel = null; pal.querySelectorAll('.shape').forEach((x) => x.classList.remove('on'));
+    draw(); status(mode === 'free' ? 'Free: rooms keep their shape. Turn on Build to change them.' : 'Normal: every room full width.');
+  }));
+  document.getElementById('build').addEventListener('click', (e) => {
+    build = !build; e.currentTarget.classList.toggle('on', build);
+    document.getElementById('hud').classList.toggle('build', build);
+    if (!build) { placing = null; sel = null; pal.querySelectorAll('.shape').forEach((x) => x.classList.remove('on')); }
+    draw(); status(build ? (mode === 'free' ? 'Build: pick a shape, or click a room to select it' : 'Build in Normal mode only reorders — switch to Free to shape rooms') : '');
+  });
+  document.getElementById('zoom').addEventListener('click', (e) => { e.currentTarget.classList.toggle('on'); document.getElementById('hud').classList.toggle('zoom'); });
+  document.getElementById('reset').addEventListener('click', () => { rooms = START(); bots = []; sel = null; placing = null; draw(); status('Reset'); });
+
+  const cellAt = (e) => {
+    const r = board.getBoundingClientRect(), z = document.getElementById('hud').classList.contains('zoom') ? 1.35 : 1;
+    return [Math.floor((e.clientX - r.left) / z / CW), Math.floor((e.clientY - r.top) / z / RH)];
+  };
+  board.addEventListener('mousemove', (e) => {
+    if (!build || mode !== 'free') return;
+    const [c, r] = cellAt(e);
+    if (placing) { ghostAt = [c, r]; drawGhost(); }
+    if (drag) {
+      if (!drag.moved && (c !== drag.c || r !== drag.r)) drag.moved = true;
+      if (drag.moved) { ghostAt = [drag.c0 + c - drag.c, drag.r0 + r - drag.r]; drawGhost(); }
+    }
+  });
+  board.addEventListener('mousedown', (e) => {
+    if (!build || mode !== 'free' || e.button !== 0) return;
+    const [c, r] = cellAt(e);
+    if (placing) {
+      const cells = at(placing.cells, c, r);
+      if (!fits(cells)) { status('Can\'t go here: overlaps a room or the edge', true); return; }
+      const rm = { key: 'new' + newN, name: 'NEW ROOM ' + newN++, t: (rooms.length + 2) % TYPES.length, cells, bots: Math.min(3, cells.length) };
+      rooms.push(rm); sel = rm; placing = null; pal.querySelectorAll('.shape').forEach((x) => x.classList.remove('on'));
+      draw(); status('Placed. Drag to move · R rotate · F flip · Del remove'); return;
+    }
+    const cell = e.target.closest('.cell');
+    if (cell) {
+      const rm = rooms.find((x) => x.key === cell.dataset.room);
+      sel = rm;
+      const [c0, , r0] = [Math.min(...rm.cells.map((x) => x[0])), 0, Math.min(...rm.cells.map((x) => x[1]))];
+      drag = { room: rm, c, r, c0, r0, cells: norm(rm.cells), moved: false };
+      draw(); status('Drag to move · R rotate · F flip · click rock beside it to dig · right-click a block to fill · Del remove');
+      return;
+    }
+    const rock = e.target.closest('.rock');
+    if (rock && sel && rock.classList.contains('can-dig')) {
+      sel.cells.push([+rock.dataset.c, +rock.dataset.r]); sel.bots = Math.min(sel.bots + 1, sel.cells.length * 2);
+      draw(); status('Dug out a block'); return;
+    }
+    sel = null; draw(); status('');
+  });
+  window.addEventListener('mouseup', () => {
+    if (!drag) return;
+    const d = drag; drag = null;
+    if (d.moved && ghostAt) {
+      const cells = at(d.cells, ghostAt[0], ghostAt[1]);
+      if (fits(cells, d.room)) { d.room.cells = cells; status('Moved'); } else status('Can\'t go there — put back', true);
+    }
+    ghostAt = null; draw();
+  });
+  board.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (!build || mode !== 'free') return;
+    const cell = e.target.closest('.cell'); if (!cell) return;
+    const rm = rooms.find((x) => x.key === cell.dataset.room);
+    const left = rm.cells.filter(([c, r]) => !(c === +cell.dataset.c && r === +cell.dataset.r));
+    if (!left.length) { status('A room needs at least one block (Del removes the room)', true); return; }
+    if (!connected(left)) { status('That would split the room in two', true); return; }
+    rm.cells = left; rm.bots = Math.min(rm.bots, left.length * 2); sel = rm; draw(); status('Filled the block back in');
+  });
+  window.addEventListener('keydown', (e) => {
+    if (!build || mode !== 'free') return;
+    const k = e.key.toLowerCase();
+    if (k === 'escape') { placing = null; sel = null; pal.querySelectorAll('.shape').forEach((x) => x.classList.remove('on')); draw(); status(''); return; }
+    if (k !== 'r' && k !== 'f' && k !== 'delete') return;
+    if (placing) { placing.cells = k === 'r' ? rotate(placing.cells) : flip(placing.cells); drawGhost(); return; }
+    if (!sel) return;
+    if (k === 'delete') { rooms = rooms.filter((x) => x !== sel); sel = null; draw(); status('Room removed (in the app: its chats go back to the auto layout)'); return; }
+    const c0 = Math.min(...sel.cells.map((x) => x[0])), r0 = Math.min(...sel.cells.map((x) => x[1]));
+    const cells = at(k === 'r' ? rotate(sel.cells) : flip(sel.cells), c0, r0);
+    if (fits(cells, sel)) { sel.cells = cells; draw(); status(k === 'r' ? 'Rotated' : 'Flipped'); } else status('No room to turn it here', true);
+  });
+
+  draw();
+  // shortcuts: room-shapes.html#free, #free-build
+  if (location.hash.includes('free')) document.querySelector('[data-mode="free"]').click();
+  if (location.hash.includes('build')) document.getElementById('build').click();
+</script>
+</body>
+</html>

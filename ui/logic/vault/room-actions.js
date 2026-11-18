@@ -25,7 +25,7 @@
   }
 
   listView.addEventListener('contextmenu', (e) => {
-    const room = e.target.closest('.vault-room');
+    const room = e.target.closest('.vault-room, .vault-annex');
     if (!room?.vaultGroup || e.target.closest('[data-sid]')) return;
     e.preventDefault();
     e.stopPropagation();
@@ -63,6 +63,14 @@
     if (typeof rerollWindowView === 'function' && (typeof vaultWindowsOn === 'undefined' || vaultWindowsOn)) {
       item('🪟 Change view', () => { rerollWindowView(g.windowKey, g.seed); renderSessionCards(true); },
         true, 'Show another scene through this room\'s window');
+    }
+    // layout: Normal = full-width rooms stacked · Free = shaped rooms on a grid (layout.js)
+    const L = window.vaultLayout;
+    if (L) {
+      const free = L.mode() === 'free';
+      item(free ? '▤ Normal layout' : '▦ Free layout', () => L.setMode(free ? 'normal' : 'free'), true,
+        free ? 'Every room full width, one under another' : 'Rooms get shapes and sit side by side');
+      item('✎ Edit layout…', () => L.enter(g.key), true, 'Move this room, change its shape, dig or fill blocks');
     }
     item('▸ Collapse room', () => {
       collapsedGroups.add(g.key);

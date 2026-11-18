@@ -1595,6 +1595,8 @@ function renderSessionCards(force = false) {
     );
   }
 
+  // Vault "Free" layout (logic/vault/layout.js): rooms side by side, in your order
+  if (window.vaultLayout) sortedGroups = window.vaultLayout.arrange(sortedGroups);
   sortedGroups.forEach(group => {
     // a chat open beside its robot (focus.js): its room shows while it's open, even if folded or hidden
     const hasPinned = typeof vaultPinnedId !== 'undefined' && !!vaultPinnedId && group.sessions.some((x) => x.id === vaultPinnedId);
@@ -1665,6 +1667,7 @@ function renderSessionCards(force = false) {
     groupEl.appendChild(header);
     if (vaultRoom) groupEl.appendChild(vaultRoom);
     groupEl.appendChild(body);
+    window.vaultLayout?.place(groupEl, group.key);
     sessionsContainer.appendChild(groupEl);
   });
   // Vault: a note at the bottom when rooms are hidden, to bring them back
@@ -1677,6 +1680,7 @@ function renderSessionCards(force = false) {
     note.addEventListener('click', (e) => { e.stopPropagation(); hiddenRooms.clear(); saveHiddenRooms(); renderSessionCards(true); });
     sessionsContainer.appendChild(note);
   }
+  window.vaultLayout?.afterRender();
 }
 
 // How the contact list is grouped: by folder (default) or by status (remembered)

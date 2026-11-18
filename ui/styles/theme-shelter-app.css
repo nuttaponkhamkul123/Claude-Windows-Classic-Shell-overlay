@@ -1,0 +1,243 @@
+/* ===================================================================
+   Shelter style, the rest of the app in the chat's screen look (see theme-shelter-pip.css):
+   green on dark olive, Monofonto, flat keys. Covers the room list's toolbar and filter tabs,
+   room name bars and plaques, the footer, approval pop-ups, menus, panels, the settings dialog
+   and scrollbars. The room artwork itself (walls, furniture, robots) is not changed.
+   Loaded after theme-shelter-pip.css.
+   =================================================================== */
+
+/* 1. re-point the Shelter colours, so everything built on them follows */
+body.style-shelter {
+  --pip: #ff9f1c; --pip-hi: #ff9f1c; --pip-dim: #b8761b; --pip-faint: #5a3a12;
+  --pip-bg: #1f1002; --pip-bg-2: #2a1806; --pip-ink: #1f1002; --pip-glow: 0 0.3px 1px #b86e0a;
+  --pip-font: "Roboto Mono", "Cascadia Mono", Consolas, monospace;
+  --sh-bg: #1f1002; --sh-panel: #2a1806; --sh-panel-2: #2a1806; --sh-inset: #160b01; --sh-line: #5a3a12;
+  --sh-steel: #3a2a14; --sh-steel-hi: #5a4020; --sh-text: #ff9f1c; --sh-dim: #b8761b;
+  --sh-amber: #ff9f1c; --sh-amber-deep: #c27a08; --sh-teal: #ff9f1c;
+  --sh-font: var(--pip-font); --sh-mono: var(--pip-font);
+}
+body.style-shelter ::selection { background: var(--pip); color: var(--pip-ink); }
+
+/* 2. window frame: olive, no steel rivets; lights up green when a chat needs you */
+body.style-shelter .overlay-card { background: var(--pip-bg); border: 1px solid var(--pip-faint); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6); }
+body.style-shelter .overlay-card.attention { border-color: var(--pip); box-shadow: 0 0 0 1px rgba(255, 159, 28, 0.35), 0 12px 32px rgba(0, 0, 0, 0.6); }
+
+/* 3. room list toolbar: flat green keys on a line with turned-down ends (like the chat's tabs) */
+body.style-shelter #listView .list-toolbar {
+  position: relative; background: none; box-shadow: none; border-bottom: 2px solid var(--pip);
+  margin: 6px 6px 0; padding: 4px 0; gap: 2px; align-items: center;
+}
+body.style-shelter #listView .list-toolbar::before,
+body.style-shelter #listView .list-toolbar::after { content: ""; position: absolute; bottom: -9px; width: 2px; height: 7px; background: var(--pip); }
+body.style-shelter #listView .list-toolbar::before { left: 0; }
+body.style-shelter #listView .list-toolbar::after { right: 0; }
+body.style-shelter #listView .list-toolbar > .tb-btn,
+body.style-shelter #listView .list-toolbar > .tb-btn:first-child,
+body.style-shelter #listView .list-toolbar > .tb-btn:has(+ .tb-spacer),
+body.style-shelter #listView .list-toolbar > .tb-spacer + .tb-btn {
+  font: 400 16px/1 var(--pip-font); letter-spacing: 0.02em; text-transform: uppercase; color: var(--pip); text-shadow: var(--pip-glow);
+  background: none; border: 1px solid transparent; border-radius: 0; box-shadow: none; clip-path: none; margin: 0; padding: 4px 7px 3px;
+}
+body.style-shelter #listView .list-toolbar > .tb-btn::after { display: none; }
+body.style-shelter #listView .list-toolbar > .tb-btn:hover,
+body.style-shelter #listView .list-toolbar > .tb-btn.open,
+body.style-shelter #listView .list-toolbar > .tb-btn.active { background: var(--pip); color: var(--pip-ink); text-shadow: none; }
+body.style-shelter #listView .list-toolbar > .tb-btn:active { margin: 0; }
+body.style-shelter #listView .list-toolbar > .tb-quit { border: 1.5px solid var(--pip); border-radius: 6px; padding: 2px 7px; }
+
+/* 4. filter tabs (ALL / RUNNING / IDLE / NEEDS INPUT): plain words, the current one bright, the others half-lit */
+body.style-shelter .tabs-bar { background: none; padding: 12px 8px 6px; gap: 4px; align-items: center; }
+body.style-shelter .tabs-bar > .tab-btn,
+body.style-shelter .tabs-bar > .tab-btn:first-child,
+body.style-shelter .tabs-bar > .tab-btn:last-child,
+body.style-shelter .tabs-bar > .tab-btn:has(+ .fx-compact-btn) {
+  font: 400 17px/1 var(--pip-font); letter-spacing: 0; text-transform: uppercase; color: var(--pip); text-shadow: var(--pip-glow);
+  background: none; border: 0; border-radius: 0; box-shadow: none; clip-path: none; margin: 0; padding: 4px 9px; opacity: 0.5;
+}
+body.style-shelter .tabs-bar > .tab-btn::before,
+body.style-shelter .tabs-bar > .tab-btn::after { display: none !important; }
+body.style-shelter .tabs-bar > .tab-btn.active { opacity: 1; background: none; color: var(--pip); text-shadow: var(--pip-glow); margin: 0; }
+body.style-shelter .tabs-bar > .tab-btn:hover { opacity: 1; background: none; color: var(--pip); }
+body.style-shelter .tabs-bar .fx-compact-btn {
+  background: none; color: var(--pip); border: 1.5px solid var(--pip); border-radius: 6px; box-shadow: none; clip-path: none;
+  text-shadow: none; padding: 3px 0 2px; margin: 0 0 0 auto;
+}
+body.style-shelter .tabs-bar .fx-compact-btn::after { display: none; }
+body.style-shelter .tabs-bar .fx-compact-btn:hover,
+body.style-shelter .tabs-bar .fx-compact-btn.active { background: var(--pip); color: var(--pip-ink); }
+
+/* 5. room name bars, plaques, robot names, the drawer of extra chats, speech bubbles */
+body.style-shelter .workspace-header,
+body.style-shelter .workspace-header:hover {
+  font: 400 15px var(--pip-font); letter-spacing: 0.02em; color: var(--pip); text-shadow: var(--pip-glow);
+  background: rgba(255, 159, 28, 0.12); border-color: var(--pip-faint);
+}
+body.style-shelter .workspace-header:hover { background: rgba(255, 159, 28, 0.2); }
+body.style-shelter .workspace-header :is(.ws-count, .ws-stat) { font-family: var(--pip-font); color: var(--pip); }
+body.style-shelter .vault-plaque { background: rgba(39, 43, 35, 0.92); border: 1px solid var(--pip-dim); border-radius: 2px; box-shadow: none; }
+body.style-shelter .vault-plaque :is(.vault-ws-name, .vault-ws-tag) { font-family: var(--pip-font); color: var(--pip); text-shadow: var(--pip-glow); font-weight: 400; }
+body.style-shelter .vault-plaque .vault-ws-tag { opacity: 0.7; }
+body.style-shelter .vault-name { font-family: var(--pip-font); font-weight: 400; color: var(--pip); background: rgba(39, 43, 35, 0.9); border: 1px solid var(--pip-faint); border-radius: 2px; }
+body.style-shelter .vault-drawer { background: rgba(255, 159, 28, 0.08); border-color: var(--pip-faint); }
+body.style-shelter .vault-drawer-label { font-family: var(--pip-font); color: var(--pip-dim); }
+body.style-shelter .vault-chip { font-family: var(--pip-font); color: var(--pip); background: var(--pip-bg); border: 1px solid var(--pip-dim); border-radius: 0; }
+body.style-shelter .vault-chip:hover { background: var(--pip); color: var(--pip-ink); }
+body.style-shelter .vault-say { font-family: var(--pip-font); color: var(--pip); background: var(--pip-bg); border: 1px solid var(--pip); border-radius: 2px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45); }
+body.style-shelter .vault-hidden-note { font-family: var(--pip-font); color: var(--pip-dim); background: none; border: 1px dashed var(--pip-faint); }
+
+/* 6. footer: the hint as a lit box, NEW CHAT as a solid green key */
+body.style-shelter .popup-footer { background: none; border-top: 0; padding: 6px 8px 8px; gap: 6px; }
+body.style-shelter .popup-footer .source-label {
+  flex: 1; font: 400 14px var(--pip-font); letter-spacing: 0; text-transform: uppercase; color: var(--pip); text-shadow: var(--pip-glow);
+  background: rgba(255, 159, 28, 0.15); padding: 4px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+body.style-shelter .btn-action.primary,
+body.style-shelter .sk-btn.primary {
+  font: 400 15px var(--pip-font); letter-spacing: 0.04em; color: var(--pip-ink); text-shadow: none;
+  background: var(--pip); border: 0; border-radius: 0; box-shadow: none; clip-path: none; padding: 4px 14px; filter: none;
+}
+body.style-shelter .btn-action.primary::after,
+body.style-shelter .sk-btn.primary::after { display: none; }
+body.style-shelter .btn-action.primary:hover,
+body.style-shelter .sk-btn.primary:hover { background: #fff; filter: none; }
+body.style-shelter .btn-action.primary:active,
+body.style-shelter .sk-btn.primary:active { margin: 0; border: 0; }
+
+/* 7. approval pop-up: olive card, green frame; Allow solid, Open outlined, Deny outlined in red so it stays easy to tell apart */
+body.style-shelter .perm-toast { background: var(--pip-bg); border: 1px solid var(--pip); border-radius: 2px; color: var(--pip); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55); }
+body.style-shelter .perm-toast *:not(svg):not(svg *) { font-family: var(--pip-font); }
+body.style-shelter .perm-toast .toast-cmd { color: var(--pip); background: rgba(255, 159, 28, 0.1); border-color: var(--pip-faint); }
+body.style-shelter .perm-toast .toast-btn { font: 400 14px var(--pip-font); letter-spacing: 0.03em; border-radius: 0; box-shadow: none; text-shadow: none; padding: 3px 12px; }
+body.style-shelter .perm-toast .toast-btn.allow { background: var(--pip); color: var(--pip-ink); border: 1px solid var(--pip); }
+body.style-shelter .perm-toast .toast-btn.deny { background: none; color: #ff8f84; border: 1px solid #ff8f84; }
+body.style-shelter .perm-toast .toast-btn.open { background: none; color: var(--pip); border: 1px solid var(--pip-dim); }
+body.style-shelter .perm-toast .toast-btn.allow:hover { background: #fff; }
+body.style-shelter .perm-toast .toast-btn.deny:hover { background: #ff8f84; color: var(--pip-ink); }
+body.style-shelter .perm-toast .toast-btn.open:hover { background: var(--pip); color: var(--pip-ink); }
+
+/* 8. menus, dropdowns, panels, the Ctrl+K finder and the settings dialog */
+body.style-shelter :is(.fx-menu, .ctx-menu, .mcp-panel, .usage-panel, .slash-menu, .finder-panel, .sk-dialog, .dress-panel, .my-ava-menu, .furn-shop) {
+  background: var(--pip-bg); color: var(--pip); border: 1px solid var(--pip); border-radius: 2px; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
+}
+body.style-shelter :is(.fx-menu, .ctx-menu, .mcp-panel, .usage-panel, .slash-menu, .finder-panel, .sk-dialog, .dress-panel, .my-ava-menu, .furn-shop) *:not(svg):not(svg *) { font-family: var(--pip-font); }
+body.style-shelter :is(.fx-menu-item, .ctx-item) { color: var(--pip); border-radius: 0; }
+body.style-shelter :is(.fx-menu-item, .ctx-item):hover:not(:disabled),
+body.style-shelter :is(.fx-menu-item, .ctx-item).on { background: var(--pip); color: var(--pip-ink); border-color: var(--pip); }
+body.style-shelter :is(.fx-menu-item, .ctx-item):hover:not(:disabled) * { color: var(--pip-ink); }
+body.style-shelter :is(.fx-menu-item, .ctx-item):disabled { color: var(--pip-faint); }
+body.style-shelter :is(.mcp-panel-head, .sk-head, .dress-head, .vault-room-menu-head) {
+  background: rgba(255, 159, 28, 0.15); color: var(--pip); border-bottom: 1px solid var(--pip-faint); font-weight: 400;
+}
+body.style-shelter :is(.sk-title, .dress-title, .mam-head, .fx-skill-group) { color: var(--pip); font-weight: 400; }
+body.style-shelter :is(.set-row, .fx-skill-row, .mcp-row, .finder-row) { border-radius: 0; }
+body.style-shelter :is(.set-row, .mcp-row):hover { background: rgba(255, 159, 28, 0.12); }
+body.style-shelter :is(.fx-skill-row:hover, .finder-row.on) { background: var(--pip); border-color: var(--pip); }
+body.style-shelter :is(.fx-skill-row:hover, .finder-row.on) * { color: var(--pip-ink) !important; }
+body.style-shelter :is(.fx-skill-name, .mcp-name, .finder-title) { color: var(--pip); }
+body.style-shelter :is(.fx-skill-desc, .mcp-status, .mcp-hint, .mcp-empty, .finder-sub) { color: var(--pip-dim); }
+body.style-shelter .fx-skill-scope { color: var(--pip); background: none; border: 1px solid var(--pip-dim); border-radius: 0; }
+body.style-shelter :is(.fx-skill-filter, .finder-input, .mcp-in, .sk-dialog input, .sk-dialog select, .sk-dialog textarea) {
+  background: #160b01; color: var(--pip); border: 1px solid var(--pip-dim); border-radius: 0; box-shadow: none;
+}
+body.style-shelter .theme-pill { color: var(--pip); background: none; border: 1px solid var(--pip-dim); border-radius: 0; }
+body.style-shelter .theme-pill.active { color: var(--pip-ink); background: var(--pip); border-color: var(--pip); }
+body.style-shelter .sk-btn:not(.primary) { background: none; color: var(--pip); border: 1px solid var(--pip-dim); border-radius: 0; box-shadow: none; }
+body.style-shelter .sk-btn:not(.primary):hover { background: var(--pip); color: var(--pip-ink); }
+/* the Model menu's This message / Every message switch */
+body.style-shelter .fx-scope { background: none; border: 1px solid var(--pip-dim); border-radius: 0; }
+body.style-shelter .fx-scope-btn { color: var(--pip); background: none; border-radius: 0; }
+body.style-shelter .fx-scope-btn.on { background: var(--pip); color: var(--pip-ink); }
+
+/* 8b. pieces with their own colours: list toolbar keys set by id, the settings dialog's cards, toggles and
+       footer (its --sk-* colours), the "today" summary box, the chosen row in the Model / Effort menus */
+body.style-shelter #listView #listToolbar > .tb-btn { background: none; }
+body.style-shelter #listView #listToolbar > .tb-btn:hover,
+body.style-shelter #listView #listToolbar > .tb-btn.open { background: var(--pip); color: var(--pip-ink); }
+body.style-shelter .sk-overlay {
+  --sk-bg: #1f1002; --sk-panel: #2a1806; --sk-text: #ff9f1c; --sk-dim: #b8761b; --sk-line: #5a3a12;
+  --sk-input: #160b01; --sk-accent: #ff9f1c; --sk-ok: #ff9f1c;
+  background: rgba(10, 6, 0, 0.6);
+}
+body.style-shelter .settings-card { background: rgba(255, 159, 28, 0.06); border: 1px solid var(--pip-faint); border-radius: 0; }
+body.style-shelter .settings-footer { background: var(--pip-bg); border-top: 1px solid var(--pip-faint); }
+body.style-shelter .settings-dialog .set-check { background: var(--pip-faint); border-radius: 0; }
+body.style-shelter .settings-dialog .set-check::before { background: var(--pip-bg); border-radius: 0; }
+body.style-shelter .settings-dialog .set-row.active .set-check { background: var(--pip); }
+body.style-shelter .set-digest { color: var(--pip); background: rgba(255, 159, 28, 0.08); border: 1px solid var(--pip-faint); border-radius: 0; }
+body.style-shelter .fx-skill-row.selected { background: rgba(255, 159, 28, 0.18); border-color: var(--pip-dim); }
+body.style-shelter .fx-skill-row.selected * { color: var(--pip) !important; }
+body.style-shelter .fx-model-check { color: var(--pip); }
+
+/* 8c. git changes panel (the side panel from the git box): green on olive, Monofonto everywhere.
+       Added lines stay green and removed lines stay a soft red, so a diff is still easy to read. */
+body.style-shelter .gd-panel {
+  --gd-bg: #1f1002; --gd-panel: #2a1806; --gd-panel-2: #2a1806; --gd-line: #5a3a12;
+  --gd-text: #ff9f1c; --gd-dim: #b8761b; --gd-accent: #ff9f1c;
+  --gd-green: #ff9f1c; --gd-red: #ff8f84; --gd-amber: #ffd166;
+  --gd-mono: var(--pip-font);
+  border-left: 2px solid var(--pip); border-radius: 0; font-family: var(--pip-font);
+}
+body.style-shelter .gd-panel *:not(svg):not(svg *) { font-family: var(--pip-font); }
+body.style-shelter .gd-backdrop { background: rgba(10, 6, 0, 0.55); }
+body.style-shelter .gd-head { border-bottom: 2px solid var(--pip); }
+body.style-shelter :is(.gd-title, .gd-folder-name, .gd-name, .gd-path) { color: var(--pip); }
+body.style-shelter :is(.gd-sub, .gd-dir, .gd-faint, .gd-path-dir, .gd-hint, .gd-note, .gd-empty, .gd-menu-hint, .gd-dlg-hint) { color: var(--pip-dim); }
+body.style-shelter :is(.gd-btn, .gd-menu-item, .gd-dlg, .gd-toast, .gd-menu, .gd-dlg-msg, .gd-dlg-input, .gd-check, .gd-badge) { border-radius: 0; }
+body.style-shelter .gd-btn { color: var(--pip); background: none; border-color: var(--pip-dim); }
+body.style-shelter .gd-btn:hover:not(:disabled) { background: var(--pip); color: var(--pip-ink); border-color: var(--pip); }
+body.style-shelter :is(.gd-btn.primary, .gd-primary) { color: var(--pip-ink); background: var(--pip); border-color: var(--pip); }
+body.style-shelter :is(.gd-btn.primary, .gd-primary):hover:not(:disabled) { background: #fff; border-color: #fff; }
+body.style-shelter .gd-btn.danger { color: #ff8f84; border-color: #ff8f84; }
+body.style-shelter .gd-btn.danger:hover:not(:disabled) { background: #ff8f84; color: var(--pip-ink); }
+body.style-shelter :is(.gd-file, .gd-folder):hover { background: rgba(255, 159, 28, 0.1); }
+body.style-shelter .gd-file.sel { background: rgba(255, 159, 28, 0.22); box-shadow: inset 3px 0 0 var(--pip); }
+body.style-shelter .gd-modified { color: var(--pip); background: rgba(255, 159, 28, 0.14); }
+body.style-shelter :is(.gd-added, .gd-untracked) { color: var(--pip-ink); background: var(--pip); }
+body.style-shelter .gd-deleted { color: #ff8f84; background: rgba(255, 143, 132, 0.14); }
+body.style-shelter .gd-renamed { color: var(--pip); background: none; outline: 1px solid var(--pip-dim); }
+body.style-shelter .gd-add { color: var(--pip); }
+body.style-shelter .gd-del { color: #ff8f84; }
+body.style-shelter .gd-plus { background: rgba(255, 159, 28, 0.13); }
+body.style-shelter .gd-plus .gd-code { color: #ffd59a; }
+body.style-shelter .gd-plus .gd-ln { color: var(--pip-dim); }
+body.style-shelter .gd-minus { background: rgba(255, 143, 132, 0.1); }
+body.style-shelter .gd-minus .gd-code { color: #ffc9c2; }
+body.style-shelter .gd-minus .gd-ln { color: #a86a62; }
+body.style-shelter .gd-code { color: #ffc46b; }
+body.style-shelter .gd-ln { color: var(--pip-faint); }
+body.style-shelter .gd-hunk { color: var(--pip-dim); background: rgba(255, 159, 28, 0.06); }
+body.style-shelter .gd-hunk .gd-code { color: var(--pip-dim); }
+body.style-shelter .gd-row.picked { box-shadow: inset 0 0 0 100vmax rgba(255, 159, 28, 0.2); }
+body.style-shelter :is(.gd-row.picked .gd-ln, .gd-pickable .gd-ln:hover) { color: var(--pip); }
+body.style-shelter .gd-code::selection { background: var(--pip); color: var(--pip-ink); }
+body.style-shelter :is(.gd-check.on, .gd-check.part) { background: var(--pip); border-color: var(--pip); }
+body.style-shelter .gd-check.on svg { stroke: var(--pip-ink); color: var(--pip-ink); }
+body.style-shelter .gd-check { border-color: var(--pip-dim); }
+body.style-shelter :is(.gd-menu, .gd-dlg, .gd-toast) { background: var(--pip-bg); border: 1px solid var(--pip); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55); }
+body.style-shelter .gd-menu-item:hover:not(:disabled) { background: var(--pip); color: var(--pip-ink); }
+body.style-shelter .gd-menu-item:hover:not(:disabled) * { color: var(--pip-ink); }
+body.style-shelter .gd-menu-item.primary .gd-menu-ico { color: var(--pip); }
+body.style-shelter :is(.gd-menu-item.danger, .gd-menu-item.danger .gd-menu-ico) { color: #ff8f84; }
+body.style-shelter :is(.gd-dlg-msg, .gd-dlg-input) { background: #160b01; color: var(--pip); border-color: var(--pip-dim); }
+body.style-shelter :is(.gd-dlg-msg, .gd-dlg-input):focus { border-color: var(--pip); box-shadow: none; }
+body.style-shelter .gd-dlg-back { background: rgba(10, 6, 0, 0.6); }
+body.style-shelter .gd-dlg-status.bad, body.style-shelter .gd-toast.bad, body.style-shelter .gd-dlg-warn { color: #ff8f84; }
+body.style-shelter :is(.gd-pickbar, .gd-actions) { background: rgba(255, 159, 28, 0.1); border-color: var(--pip-faint); }
+body.style-shelter :is(.gd-files, .gd-view)::-webkit-scrollbar-thumb { background: var(--pip-dim); border-radius: 0; }
+body.style-shelter :is(.gd-files, .gd-view)::-webkit-scrollbar-track { background: var(--pip-bg); }
+
+/* 8d. emoji icons drawn in the screen green (toolbar keys, settings rows, menus, Plan, info bar, question card) */
+body.style-shelter :is(#listToolbar .tb-notes, #listToolbar .tb-find, #listToolbar .tb-build, .set-ico, .fx-menu-item, .gd-menu-ico, .gd-folder-ico, .reply-toolbar .rt-plan, .infobar-icon, .ask-ico, .edit-title) {
+  filter: grayscale(1) sepia(1) saturate(6) hue-rotate(-8deg) brightness(1.05);
+}
+body.style-shelter :is(.fx-menu-item, #listToolbar .tb-notes, #listToolbar .tb-find, #listToolbar .tb-build, .reply-toolbar .rt-plan):hover { filter: none; }
+body.style-shelter .fx-menu-item:hover:not(:disabled) { filter: grayscale(1) brightness(0.9); }
+
+/* 9. scrollbars everywhere */
+body.style-shelter ::-webkit-scrollbar-track { background: var(--pip-bg); }
+body.style-shelter ::-webkit-scrollbar-thumb { background: var(--pip-dim); border: 2px solid var(--pip-bg); border-radius: 0; }
+body.style-shelter ::-webkit-scrollbar-thumb:hover { background: var(--pip); }
+
+/* (wider 3000A font: the room list toolbar keys get a bit smaller so they all fit) */
+body.style-shelter #listView #listToolbar > .tb-btn { font-size: 13px; letter-spacing: -0.01em; padding: 4px 5px 3px; }
+body.style-shelter .tabs-bar > .tab-btn { font-size: 15px; }
