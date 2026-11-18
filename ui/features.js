@@ -296,6 +296,8 @@
   document.querySelector('.reply-box')?.before(queueBar);
   let queueOpen = true;          // the card is expanded (remembered)
   const fullRows = new Set();    // queued items opened to show their whole text
+  const QUEUE_MAX_ITEMS = 20;        // per chat: a runaway queue would also bloat the settings file
+  const QUEUE_MAX_CHARS = 50000;     // per message
   const oneLine = (t) => String(t || '').replace(/\s+/g, ' ').trim();
   const fileCount = (it) => (it.attachments || []).filter((a) => !a.isImage && a.path).length;
 
@@ -327,9 +329,11 @@
         const time = row.querySelector('.row-time');
         if (time) time.before(tag); else row.querySelector('.row-line1')?.append(tag);
       }
-      const txt = `${n} queued`;
+      const held = !!queues.get(id)?.[0]?.held;
+      const txt = `${n} ${held ? 'held' : 'queued'}`;
       if (tag.textContent !== txt) tag.textContent = txt;
-      tag.title = `${n} message${n > 1 ? 's' : ''} waiting to be sent when this chat is free`;
+      tag.title = held ? `${n} message${n > 1 ? 's' : ''} kept from before the restart: open the chat and press Resume sending`
+        : `${n} message${n > 1 ? 's' : ''} waiting to be sent when this chat is free`;
     });
   }
 
@@ -340,26 +344,42 @@
     queueBar.innerHTML = '';
     queueBar.style.display = q.length ? '' : 'none';
     queueBar.dataset.count = String(q.length);
+    queueBar.dataset.held = q.length && q[0].held ? '1' : '';
     markQueuedRows();
     if (!q.length) return;
 
     const many = q.length > 1;
     const open = queueOpen || !many;
-    const card = el('div', 'queue-card' + (open ? ' open' : '') + (many ? ' many' : ''));
+    const held = !!q[0].held;
+    const card = el('div', 'queue-card' + (open ? ' open' : '') + (many ? ' many' : '') + (held ? ' held' : ''));
     const head = el('div', 'queue-head');
     if (many) head.append(el('span', 'queue-caret', open ? '▾' : '▸'));
-    head.append(el('span', 'queue-title', 'Queue'), el('span', 'queue-count', `${q.length} waiting`));
+    head.append(el('span', 'queue-title', 'Queue'), el('span', 'queue-count', `${q.length} ${held ? 'held' : 'waiting'}`));
     if (many && !open) head.append(el('span', 'queue-peek', `next: ${oneLine(q[0].text) || `${(q[0].attachments || []).length} attachment(s)`}`));
     else head.append(el('span', 'queue-spacer'));
     if (many) {
-      const clear = el('button', 'queue-clear', 'Clear all');
-      clear.title = 'Remove every queued message from this chat';
-      clear.addEventListener('click', (e) => { e.stopPropagation(); queues.delete(s.id); persistQueues(); renderQueue(); });
-      head.append(clear);
+      if (!held) { // (a held queue has its own Clear in the notice below)
+        const clear = el('button', 'queue-clear', 'Clear all');
+        clear.title = 'Remove every queued message from this chat';
+        clear.addEventListener('click', (e) => { e.stopPropagation(); queues.delete(s.id); persistQueues(); renderQueue(); });
+        head.append(clear);
+      }
       head.title = open ? 'Collapse' : 'Show every queued message';
       head.addEventListener('click', () => { queueOpen = !queueOpen; setStore('queueOpen', queueOpen); renderQueue(); });
     }
     card.append(head);
+    if (held) {
+      // restored after a restart: shown even when the card is collapsed, because nothing will send until you decide
+      const note = el('div', 'queue-held');
+      note.append(el('span', 'queue-held-text', 'Kept from before the restart. Nothing is sent until you resume.'));
+      const resume = el('button', 'queue-resume', 'Resume sending');
+      resume.title = 'Send these one at a time as soon as this chat is free';
+      resume.addEventListener('click', (e) => { e.stopPropagation(); q.forEach((it) => { it.held = false; }); renderQueue(); });
+      const clr = el('button', 'queue-clear', many ? 'Clear all' : 'Discard');
+      clr.addEventListener('click', (e) => { e.stopPropagation(); queues.delete(s.id); persistQueues(); renderQueue(); });
+      note.append(resume, clr);
+      card.append(note);
+    }
 
     if (open) {
       const list = el('div', 'queue-list');
@@ -372,7 +392,7 @@
         const files = fileCount(item);
         body.append(el('div', 'queue-text', item.text || (files ? `${files} file${files > 1 ? 's' : ''}` : '(images only)')));
         const tags = el('div', 'queue-tags');
-        if (i === 0) tags.append(el('span', 'queue-tag next', `next · sends when ${aName} is done`));
+        if (i === 0) tags.append(el('span', 'queue-tag next', item.held ? 'next · held' : `next · sends when ${aName} is done`));
         if (item.text && files) tags.append(el('span', 'queue-tag', `+${files} file${files > 1 ? 's' : ''}`));
         if (item.lost) tags.append(el('span', 'queue-tag', `${item.lost} image${item.lost > 1 ? 's' : ''} not kept`));
         if (item.restored) tags.append(el('span', 'queue-tag', 'kept after restart'));
@@ -400,7 +420,7 @@
         const list = items.filter((i) => i && (i.text || (i.files && i.files.length) || i.lost) && now - (i.at || now) < WEEK).map((i) => ({
           text: String(i.text || ''),
           attachments: (i.files || []).map((f) => ({ id: Math.random().toString(36).slice(2), name: f.name, size: f.size || 0, isImage: false, path: f.path })),
-          lost: i.lost || 0, at: i.at || now, restored: true,
+          lost: i.lost || 0, at: i.at || now, restored: true, held: true,
         }));
         if (list.length) queues.set(id, list);
       }
@@ -415,6 +435,8 @@
     const s = currentActiveSession;
     const reply = (text || replyTextarea.value || '').trim();
     if (s && !s.draft && (reply || attachments.length) && !reply.startsWith('/') && isBusy(s)) {
+      if (reply.length > QUEUE_MAX_CHARS) { replyStatusMsg.textContent = `⚠ Too long to queue (over ${QUEUE_MAX_CHARS.toLocaleString()} characters): send it when the chat is free`; return; }
+      if ((queues.get(s.id) || []).length >= QUEUE_MAX_ITEMS) { replyStatusMsg.textContent = `⚠ The queue is full (${QUEUE_MAX_ITEMS} messages): wait for it to drain or clear it`; return; }
       if (!queues.has(s.id)) queues.set(s.id, []);
       queues.get(s.id).push({ text: reply, attachments: attachments.slice(), at: Date.now() });
       persistQueues();
@@ -432,6 +454,7 @@
     for (const [id, q] of queues) {
       if (!q.length) { queues.delete(id); continue; }
       const s = liveSession(id);
+      if (q[0].held) { idleTicks.set(id, 0); continue; } // kept from before a restart: waits until you resume it
       if (!s || isBusy(s)) { idleTicks.set(id, 0); continue; }
       const n = (idleTicks.get(id) || 0) + 1;
       idleTicks.set(id, n);

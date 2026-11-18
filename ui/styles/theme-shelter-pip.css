@@ -914,3 +914,8 @@ body.style-shelter #detailView.pip-narrow .reply-toolbar { flex-wrap: wrap; row-
 body.style-shelter #detailView.pip-narrow .reply-toolbar > .tb-spacer { display: none; }
 body.style-shelter #detailView.pip-narrow .reply-toolbar .btn-send { margin-left: auto; }
 body.style-shelter #detailView.pip-narrow .reply-toolbar .rt-model { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* held queue notice in the Pip-Boy look */
+body.style-shelter #detailView .queue-held { border-top: 1px solid var(--pip-faint); background: rgba(255, 159, 28, 0.12); color: var(--pip); }
+body.style-shelter #detailView .queue-resume { border-radius: 0; border: 2px solid var(--pip); background: none; color: var(--pip); }
+body.style-shelter #detailView .queue-resume:hover { background: var(--pip); color: var(--pip-ink); }

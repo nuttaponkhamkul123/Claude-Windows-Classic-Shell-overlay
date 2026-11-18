@@ -329,6 +329,7 @@ ipcMain.handle('get-session-history', (_event, sessionId) => {
 
 // Settings → Restart app: start a fresh copy, then quit this one
 ipcMain.on('restart-app', () => {
+  features.flushStore?.(); // app.exit skips the normal quit, so write any settings change still waiting (e.g. a queued message)
   app.relaunch();
   app.exit(0);
 });

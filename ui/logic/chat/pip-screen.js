@@ -186,7 +186,7 @@
     if (branch) out.push({ k: 'Branch', v: branch });
     if (dirty) out.push({ k: 'Changes', v: dirty, click: () => q('.git-box')?.click() });
     const qn = Number(q('.queue-bar')?.dataset.count || 0);
-    if (qn) out.push({ k: 'Queue', v: `${qn} waiting`, click: () => q('.queue-head')?.click() });
+    if (qn) out.push({ k: 'Queue', v: `${qn} ${q('.queue-bar')?.dataset.held ? 'held' : 'waiting'}`, click: () => q('.queue-head')?.click() });
     if (q('.handoff-btn')) out.push({ k: 'Hand off', v: '↗', click: () => q('.handoff-btn')?.click(), hot: q('.handoff-btn').classList.contains('hot') });
     return out;
   }

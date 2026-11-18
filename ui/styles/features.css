@@ -1997,3 +1997,9 @@ body.vault-layout-edit .vault-room.sel, body.vault-layout-edit .vault-annex.sel 
 .vl-mini { display: grid; gap: 1px; } .vl-mini i { background: #8796a8; display: block; }
 .vl-hint { margin-top: 4px; color: #8796a8; font-size: 11px; }
 .vl-status { min-height: 15px; margin-top: 2px; font-size: 11.5px; color: #2dd4bf; } .vl-status.bad { color: #ffb4b0; }
+
+/* held queue (restored after a restart): a notice with Resume / Clear */
+.queue-held { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 5px 8px 5px 9px; border-top: 1px solid color-mix(in srgb, currentColor 18%, transparent); background: color-mix(in srgb, currentColor 10%, transparent); }
+.queue-held-text { flex: 1; min-width: 140px; }
+.queue-resume { font: inherit; color: inherit; cursor: pointer; background: color-mix(in srgb, currentColor 14%, transparent); border: 1px solid color-mix(in srgb, currentColor 45%, transparent); border-radius: 3px; padding: 1px 8px; }
+.queue-resume:hover { background: color-mix(in srgb, currentColor 26%, transparent); }

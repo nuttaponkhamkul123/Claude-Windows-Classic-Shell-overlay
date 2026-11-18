@@ -18,18 +18,39 @@ let ctx = null; // { app, ipcMain, getWin, getWatcher, showHud }
 // ---------------------------------------------------------------------------
 const STORE_DIR = path.join(os.homedir(), '.ovly-claude');
 const STORE_FILE = path.join(STORE_DIR, 'settings.json');
-let store = {};
-try { store = JSON.parse(fs.readFileSync(STORE_FILE, 'utf-8')) || {}; } catch (_) { store = {}; }
+const STORE_BAK = STORE_FILE + '.bak';
+// Load: the settings file; if it is unreadable or corrupt, the backup taken at the last start. A corrupt file is
+// moved aside (never silently overwritten), so nothing is lost for good.
+function loadStore() {
+  const read = (f) => { const v = JSON.parse(fs.readFileSync(f, 'utf-8')); return v && typeof v === 'object' ? v : {}; };
+  try { return { data: read(STORE_FILE), good: true }; } catch (e) {
+    if (e.code === 'ENOENT') return { data: {}, good: false };
+    try { fs.renameSync(STORE_FILE, STORE_FILE.replace(/\.json$/, '') + '.corrupt-' + Date.now() + '.json'); } catch (_) { /* keep going */ }
+    console.error('[store] settings.json was unreadable (' + e.message + '); trying the backup');
+    try { return { data: read(STORE_BAK), good: false }; } catch (_) { return { data: {}, good: false }; }
+  }
+}
+const loaded = loadStore();
+let store = loaded.data;
+if (loaded.good) { try { fs.copyFileSync(STORE_FILE, STORE_BAK); } catch (_) { /* no backup this time */ } } // a recovery point per start
 let saveTimer = null;
+// Saved atomically: the new content goes to a temp file first and replaces the real one in one step, so a crash or
+// power cut in the middle of a save can never leave a half-written settings file.
+function writeStoreNow() {
+  try {
+    fs.mkdirSync(STORE_DIR, { recursive: true });
+    const tmp = STORE_FILE + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(store, null, 2));
+    fs.renameSync(tmp, STORE_FILE);
+  } catch (e) { console.error('[store] save failed:', e.message); }
+}
 function saveStore() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    try {
-      fs.mkdirSync(STORE_DIR, { recursive: true });
-      fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2));
-    } catch (e) { console.error('[store] save failed:', e.message); }
-  }, 200);
+  saveTimer = setTimeout(writeStoreNow, 200);
 }
+// a save still waiting (the app is quitting) is written now, not lost
+function flushStore() { if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; writeStoreNow(); } }
+process.on('exit', flushStore);
 const getSetting = (k, d) => (store[k] === undefined ? d : store[k]);
 function setSetting(k, v) { store[k] = v; saveStore(); }
 
@@ -978,5 +999,5 @@ function register(c) {
 module.exports = {
   register, onSync, readClaudeHistory, readAntigravityHistory, readSessionHistory, pathForSession,
   getSetting, setSetting, trackChild, aliasChild, wasStopped, editFromToolUse, mergeEdit, openFile,
-  gitChanges, gitFileDiff, gitCommit, gitPush, gitDiscard, gitUndoDiscard, gitDraftMessage, handoffNote,
+  gitChanges, gitFileDiff, gitCommit, gitPush, gitDiscard, gitUndoDiscard, gitDraftMessage, handoffNote, flushStore,
 };
