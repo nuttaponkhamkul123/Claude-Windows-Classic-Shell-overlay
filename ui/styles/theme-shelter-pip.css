@@ -863,3 +863,6 @@ body.style-shelter :is(.pip-subtabs, .convo-contact, .tabs-bar, .popup-footer) :
 /* the plain-word labels pip-screen.js puts inside the toolbar keys only show in the Shelter / Pip-Boy styles
    (switching to Work or Classic used to show every label twice) */
 .convo-toolbar > .tb-btn > .pip-lbl { display: none; }
+
+/* the toolbar status text that only repeats progress (see pip-screen.js) is hidden; warnings and notes stay */
+body.style-shelter #replyStatusMsg.pip-progress { display: none; }

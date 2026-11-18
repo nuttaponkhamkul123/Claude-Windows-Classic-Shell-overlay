@@ -110,6 +110,17 @@
   head.append(first, box(hModel), box(hCtx), box(hCost));
   document.getElementById('detailView')?.prepend(head);
 
+  // The small status text in the input's toolbar ("⚡ Sent to Claude! Thinking…", "✓ Claude replied") repeats what the
+  // bar above the input shows, so in this style it is hidden while it is only progress. Warnings and notes
+  // ("⚠ That folder no longer exists", "Added to your message…") are marked differently and stay.
+  const msgEl = document.getElementById('replyStatusMsg');
+  if (msgEl) {
+    const PROGRESS = /^s*(⚡|✓.*(replied|Sent to))/;
+    const mark = () => { const p = PROGRESS.test(msgEl.textContent || ''); if (msgEl.classList.contains('pip-progress') !== p) msgEl.classList.toggle('pip-progress', p); };
+    new MutationObserver(mark).observe(msgEl, { childList: true, characterData: true, subtree: true });
+    mark();
+  }
+
   // status bar above the input: what Claude is doing right now · Stop.
   // (The working line with the robot, above the input, is hidden in this layout; its text and Stop live here.)
   const bar = el('div', 'pip-status');
