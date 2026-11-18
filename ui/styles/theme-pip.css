@@ -66,3 +66,28 @@ body.style-pip .wk-back { color: var(--pip); }
 body.style-pip #listView #listToolbar .tb-btn { font-size: 13px; letter-spacing: 0; padding: 0 4px; }
 body.style-pip .row-orb { width: 8px; height: 8px; margin-top: 6px; border: 0 !important; padding: 0; }
 body.style-pip #listView .workspace-header :is(.ws-count, .ws-stat) { border-radius: 0; background: none; }
+
+/* ===================================================================
+   Pip-Boy style: menus and dialogs are slide-over panels, like the git panel (they slide in from the right
+   and leave the rest of the window visible), instead of the full-screen Pip-Boy screens of the Shelter style.
+   Same look inside (title set into the top line, big rows); only the size and the entrance change.
+   The tab bar still stays under them when a chat is open (pip-menus.js).
+   =================================================================== */
+body.style-pip { --pip-slide-w: min(620px, calc(100vw - 52px)); }
+body.style-shelter.style-pip :is(#detailView .convo-toolbar > .mcp-panel, #usagePanel, .sk-overlay .sk-dialog, .finder-panel, .dress-panel) {
+  left: auto !important; right: 6px !important; top: 6px !important;
+  width: var(--pip-slide-w) !important; max-width: none !important;
+  border-left: 2px solid var(--pip) !important; border-radius: 12px 0 0 12px !important;
+  box-shadow: -18px 0 36px rgba(0, 0, 0, 0.55) !important;
+  animation: pip-slide-in 260ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@keyframes pip-slide-in { from { transform: translateX(105%); opacity: 0.6; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  body.style-shelter.style-pip :is(#detailView .convo-toolbar > .mcp-panel, #usagePanel, .sk-overlay .sk-dialog, .finder-panel, .dress-panel) { animation: none; }
+}
+/* the dialog's pieces that were pinned to the whole window now sit inside the panel */
+body.style-pip .sk-overlay .sk-dialog .settings-footer { left: auto; right: 22px; width: calc(var(--pip-slide-w) - 32px); }
+body.style-pip .sk-overlay .sk-dialog > .sk-head { max-width: calc(var(--pip-slide-w) - 70px); }
+body.style-pip .sk-overlay .sk-dialog > .sk-head .sk-x { right: 22px; }
+body.style-pip .pip-menu-back { left: auto; right: calc(var(--pip-slide-w) / 2 - 36px + 6px); transform: none; }
+body.style-pip .sk-overlay { background: rgba(10, 6, 0, 0.35) !important; }
