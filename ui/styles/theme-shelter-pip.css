@@ -819,3 +819,24 @@ body.style-shelter #detailView .pip-head-title { letter-spacing: 0.05em; font-si
 
 /* the line under the top line: just the folder (the chat title there was your latest message, shown twice) */
 body.style-shelter #detailView .convo-contact > #convoPersonal { display: none !important; }
+
+/* ===================================================================
+   Round 15: the tab bar stays under the full-screen menus (pip-menus.js sets body.pip-tabs-on and --pip-tb-gap).
+   The menu stops just above the tabs, the toolbar line becomes its bottom edge, the open menu's tab is boxed
+   and Chat is not. No "‹ Back" key then: Chat (or the open tab) goes back to the chat.
+   =================================================================== */
+body.style-shelter.pip-tabs-on :is(#detailView .convo-toolbar > .mcp-panel, #usagePanel, .sk-overlay .sk-dialog) {
+  bottom: var(--pip-tb-gap) !important; padding-bottom: 22px !important; box-shadow: none !important;
+  background:
+    linear-gradient(var(--pip), var(--pip)) left 10px top 18px / calc(100% - 20px) 2px no-repeat,
+    linear-gradient(var(--pip), var(--pip)) left 10px top 18px / 2px 12px no-repeat,
+    linear-gradient(var(--pip), var(--pip)) right 10px top 18px / 2px 12px no-repeat,
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.12) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 50% 45%, #2b1a07 0%, #1f1002 60%, #110800 100%) !important;
+}
+body.style-shelter.pip-tabs-on .sk-overlay { bottom: var(--pip-tb-gap) !important; background: none !important; }
+body.style-shelter.pip-tabs-on .sk-overlay .sk-dialog .settings-footer { bottom: calc(var(--pip-tb-gap) + 8px); }
+body.style-shelter.pip-tabs-on .pip-menu-back { display: none; }
+/* the open menu's tab is boxed; Chat steps back while a menu is open */
+body.style-shelter #detailView .convo-toolbar > .tb-btn.pip-on { border-color: var(--pip) !important; background: #2b1a07 !important; }
+body.style-shelter #detailView .convo-toolbar.pip-away > .tb-btn.pip-current { border-color: transparent !important; background: #1e1002 !important; }
