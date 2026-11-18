@@ -904,7 +904,9 @@ if (resizeGrip) {
   // Style: "shelter" (default) = the underground-base look in theme-shelter.css, built on
   // the plain dark layout; "classic" = the Windows themes below.
   // "work" = a plain, flat office look (theme-work.css): no Vault, robots or avatars.
-  let uiStyle = ['classic', 'work'].includes(window.electronAPI.settings?.uiStyle) ? window.electronAPI.settings.uiStyle : 'shelter';
+  // "pip" = Work's layout (sidebar + chat, no Vault) in the Pip-Boy look: it carries both the Work and the Shelter
+  // classes, plus style-pip for the few rules that are its own (theme-pip.css).
+  let uiStyle = ['classic', 'work', 'pip'].includes(window.electronAPI.settings?.uiStyle) ? window.electronAPI.settings.uiStyle : 'shelter';
   // Shelter's chat layout: both pictures live in the contact strip (agent left, you
   // right) instead of a column beside the chat. Classic keeps the column.
   const placeChatPictures = (shelter) => {
@@ -916,18 +918,20 @@ if (resizeGrip) {
     if (shelter) { contact.prepend(agent); contact.append(you); } else side.append(agent, you);
   };
   const apply = (theme) => {
+    const pip = uiStyle === 'pip';
     const shelter = uiStyle === 'shelter';
     const work = uiStyle === 'work';
     const classic = uiStyle === 'classic';
     placeChatPictures(shelter);
-    document.body.classList.toggle('style-shelter', shelter);
-    document.body.classList.toggle('style-work', work);
+    document.body.classList.toggle('style-shelter', shelter || pip);
+    document.body.classList.toggle('style-work', work || pip);
+    document.body.classList.toggle('style-pip', pip);
     document.body.classList.toggle('theme-aero', classic && theme !== 'dark');
     document.body.classList.toggle('theme-vista', classic && theme === 'vista');
     document.body.classList.toggle('theme-xp', classic && theme === 'xp');
     const v = document.getElementById('setThemeVal');
     if (v) v.textContent = LABELS[theme] || 'Aero';
-    window.electronAPI.notesTheme?.(shelter ? 'shelter' : work ? 'dark' : theme); // the pinned-notes panel follows
+    window.electronAPI.notesTheme?.(shelter || pip ? 'shelter' : work ? 'dark' : theme); // the pinned-notes panel follows
   };
   let theme = 'aero';
   theme = window.electronAPI.settings?.theme || 'aero';
@@ -940,14 +944,14 @@ if (resizeGrip) {
     styleRow.innerHTML = '<span class="set-ico">🏗</span><span class="set-label">Style</span>';
     const stylePills = document.createElement('div');
     stylePills.className = 'theme-pills style-pills';
-    const STYLES = [['shelter', 'Shelter'], ['classic', 'Classic (Windows)'], ['work', 'Work']];
+    const STYLES = [['shelter', 'Shelter'], ['pip', 'Pip-Boy'], ['classic', 'Classic (Windows)'], ['work', 'Work']];
     const markStyle = () => styleBtns.forEach((x, i) => x.classList.toggle('active', STYLES[i][0] === uiStyle));
     const styleBtns = STYLES.map(([key, label]) => {
       const b = document.createElement('button');
       b.className = 'theme-pill';
       b.textContent = label;
       b.addEventListener('click', () => {
-        if (key === 'work' && document.body.classList.contains('vault-focus')) window.closeVaultFocus?.(false);
+        if ((key === 'work' || key === 'pip') && document.body.classList.contains('vault-focus')) window.closeVaultFocus?.(false);
         uiStyle = key;
         window.electronAPI.storeSet('uiStyle', uiStyle);
         apply(theme);

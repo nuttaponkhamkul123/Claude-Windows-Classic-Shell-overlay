@@ -1,0 +1,68 @@
+/* ===================================================================
+   Pip-Boy style (Settings → Style → Pip-Boy): the Work layout (chat list as a sidebar, the open chat on the
+   right, no Vault, no robots) in the Pip-Boy 3000A look (amber on dark brown, Roboto Mono, boxed selection).
+   The body carries style-work (layout) + style-shelter (the Pip-Boy skin, see theme-shelter-*.css) + style-pip.
+   theme-work.css loads before the Shelter files, so where both define something the Pip-Boy look wins;
+   this file only fixes what is left: Work's blue/slate colours and a few Work layout rules the skin broke.
+   =================================================================== */
+body.style-pip {
+  --wk-bg: #1f1002; --wk-panel: #241505; --wk-panel-2: #2a1806; --wk-line: #5a3a12;
+  --wk-text: #ff9f1c; --wk-dim: #b8761b; --wk-accent: #ff9f1c; --wk-green: #b8761b; --wk-blue: #ff9f1c;
+  --wk-amber: #ffd28a; --wk-red: #ff8f84;
+  --wk-font: var(--pip-font); --wk-mono: var(--pip-font);
+  font-family: var(--pip-font);
+}
+body.style-pip .overlay-card { border-radius: 14px; }
+
+/* ---------- the sidebar: the Work grid, with amber keys ---------- */
+body.style-pip #listView { background: none; border-right: 2px solid var(--pip); }
+body.style-pip #listView #listToolbar {
+  position: static; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0; padding: 14px 12px 8px;
+  height: auto; border: 0; background: none; box-shadow: none; cursor: grab;
+}
+body.style-pip #listView #listToolbar::before, body.style-pip #listView #listToolbar::after { display: none; }
+body.style-pip #listView #listToolbar .tb-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px; height: 30px; padding: 0 8px; margin: 0; box-sizing: border-box;
+  font: 400 14px/1 var(--pip-font); letter-spacing: 0.02em; text-transform: none; white-space: nowrap; cursor: pointer;
+  color: var(--pip); background: none; border: 2px solid var(--pip-dim); border-radius: 0; box-shadow: none; text-shadow: none;
+}
+body.style-pip #listView #listToolbar .tb-btn:hover { background: var(--pip); color: var(--pip-ink); border-color: var(--pip); }
+body.style-pip #listView #lbNewChat { color: var(--pip-ink) !important; background: var(--pip) !important; border-color: var(--pip) !important; font-weight: 400; }
+body.style-pip #listView #lbNewChat:hover { background: #fff !important; border-color: #fff !important; }
+body.style-pip #listView #lbSettings { position: absolute; left: 12px; right: 12px; bottom: 10px; z-index: 2; }
+body.style-pip #listView #lbSettings::before { content: none; }
+body.style-pip #listView::after { background: var(--pip-bg); border-top: 2px solid var(--pip); }
+body.style-pip #listView .xb-search {
+  background: rgba(0, 0, 0, 0.25); border: 2px solid var(--pip-dim); border-radius: 0; box-shadow: none;
+}
+body.style-pip #listView .xb-search:focus-within { border-color: var(--pip); }
+body.style-pip #listView .xb-search-input { color: var(--pip); font-family: var(--pip-font); }
+body.style-pip #listView .xb-search-input::placeholder { color: var(--pip-dim); }
+
+/* ---------- the chat lines: dot · title · time; the open one is boxed like a selected item ---------- */
+body.style-pip #listView .session-row {
+  margin: 1px 8px; padding: 6px 10px; border: 0 !important; border-left: 2px solid transparent !important; border-right: 2px solid transparent !important; border-radius: 0 !important;
+}
+body.style-pip #listView .session-row:hover:not(.wk-active) { background: rgba(255, 159, 28, 0.08); }
+body.style-pip #listView .session-row.wk-active,
+body.style-pip #listView .session-row.wk-active:hover { background: rgba(255, 159, 28, 0.12) !important; border-left-color: var(--pip) !important; border-right-color: var(--pip) !important; }
+body.style-pip #listView .session-row.wk-active .row-title { color: var(--pip); }
+body.style-pip #listView .session-row.state-attention { background: rgba(255, 159, 28, 0.08); }
+/* the status dot becomes a small square: dim = idle, solid = working, bright = needs you */
+body.style-pip .row-orb { border-radius: 0; background: var(--pip-faint); }
+body.style-pip .state-running .row-orb { background: var(--pip); }
+body.style-pip .state-attention .row-orb { background: #ffd28a; box-shadow: 0 0 5px var(--pip) !important; }
+body.style-pip .run-pic { border-radius: 0; background: var(--pip); }
+body.style-pip #listView .workspace-header { background: none; border: 0; border-bottom: 1px solid var(--pip-faint); padding: 10px 12px 3px; }
+
+/* ---------- the right pane ---------- */
+body.style-pip #detailView { border-radius: 14px; }
+body.style-pip .wk-typing { color: var(--pip-dim); font-family: var(--pip-font); }
+body.style-pip .wk-dots i { background: var(--pip); border-radius: 0; }
+body.style-pip .wk-empty, body.style-pip .wk-empty * { color: var(--pip-dim); font-family: var(--pip-font); }
+body.style-pip .wk-back { color: var(--pip); }
+
+/* ---------- small fixes from the first screenshots ---------- */
+body.style-pip #listView #listToolbar .tb-btn { font-size: 13px; letter-spacing: 0; padding: 0 4px; }
+body.style-pip .row-orb { width: 8px; height: 8px; margin-top: 6px; border: 0 !important; padding: 0; }
+body.style-pip #listView .workspace-header :is(.ws-count, .ws-stat) { border-radius: 0; background: none; }

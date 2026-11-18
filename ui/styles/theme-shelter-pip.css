@@ -859,3 +859,7 @@ body.style-shelter #detailView .convo-toolbar > .tb-btn { cursor: pointer; }
 body.style-shelter #detailView .convo-toolbar::before, body.style-shelter #detailView .convo-toolbar::after { bottom: calc(50% - 1px); }
 body.style-shelter :is(.pip-subtabs, .convo-contact, .tabs-bar, .popup-footer) { cursor: grab; }
 body.style-shelter :is(.pip-subtabs, .convo-contact, .tabs-bar, .popup-footer) :is(button, a, .convo-workspace, #convoName) { cursor: pointer; }
+
+/* the plain-word labels pip-screen.js puts inside the toolbar keys only show in the Shelter / Pip-Boy styles
+   (switching to Work or Classic used to show every label twice) */
+.convo-toolbar > .tb-btn > .pip-lbl { display: none; }
