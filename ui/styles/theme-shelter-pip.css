@@ -805,3 +805,17 @@ body.style-shelter.pip-crt #detailView.pip-crt-on { animation: pip-crt-power 420
   body.style-shelter.pip-crt #detailView > .pip-scan::after,
   body.style-shelter.pip-crt #detailView.pip-crt-on { animation: none; }
 }
+
+/* Round 14: the title in the top line is the session name (click it to rename); the strip under it shows
+   the chat title and the folder; the git text sits on the same level as model / context / cost. */
+body.style-shelter #detailView .pip-head-title { cursor: text; }
+body.style-shelter #detailView .pip-head-title:hover { color: #fff; }
+body.style-shelter #detailView .pip-hgit { margin-top: 4px; }
+body.style-shelter #detailView .convo-contact > .convo-name-row:not(:has(input)) { display: none; }
+body.style-shelter #detailView .convo-contact > #convoPersonal { display: block !important; font: 400 13px var(--pip-font) !important; color: var(--pip-dim); text-shadow: none; max-width: 45%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.style-shelter #detailView .pip-hbox-first { flex: 2.2 1 0; }  /* room for a longer session name */
+body.style-shelter #detailView .pip-head-title { letter-spacing: 0.05em; font-size: 16px; max-width: calc(100% - 20px); }
+
+
+/* the line under the top line: just the folder (the chat title there was your latest message, shown twice) */
+body.style-shelter #detailView .convo-contact > #convoPersonal { display: none !important; }

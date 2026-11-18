@@ -99,6 +99,8 @@
   // top line: the session title set into the line, then stat boxes, like STATS · LVL · HP · AP · XP
   const head = el('div', 'pip-head');
   const hTitle = el('span', 'pip-head-title');
+  // the title is the session's name (the one you gave it); click it to rename, like the name in the old header
+  hTitle.addEventListener('click', () => q('#convoName')?.click());
   const hGit = el('button', 'pip-hseg pip-hgit'), hModel = el('span', 'pip-hseg'), hCtx = el('span', 'pip-hseg'), hCost = el('span', 'pip-hseg');
   hGit.title = 'Git changes (opens the changes panel)';
   hGit.addEventListener('click', () => q('.git-box')?.click());
@@ -126,8 +128,12 @@
     const get = (k) => r.find((x) => x.k === k)?.v || '';
     const act = q('#activityRow');
     const busy = !!act && act.style.display !== 'none';
-    setText(hTitle, text('#convoPersonal') || 'Chat');
-    hTitle.title = q('#convoPersonal')?.title || '';
+    // the session's name if you renamed it, else its title ("Claude" / "Antigravity" alone says nothing)
+    const nameEl = q('#convoName');
+    const named = nameEl && !nameEl.querySelector('input') ? text('#convoName') : '';
+    const title = named && !/^(claude|antigravity)$/i.test(named) ? named : (text('#convoPersonal') || named || 'Chat');
+    setText(hTitle, title);
+    hTitle.title = ['Click to rename', q('#convoPersonal')?.title].filter(Boolean).join('\n');
     const branch = get('Branch'), changes = get('Changes');
     setText(hGit, branch ? [branch, changes].filter(Boolean).join(' · ') : '');
     hGit.hidden = !branch;
