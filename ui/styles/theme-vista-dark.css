@@ -534,8 +534,6 @@ body.theme-aero.theme-vista .bubble-file { color: var(--vd-text); background: #2
 body.theme-aero.theme-vista .image-preview-bar { background: rgba(0, 0, 0, 0.35); border-color: #2a74b8; }
 body.theme-aero.theme-vista .reply-options { color: var(--vd-text-faint); }
 body.theme-aero.theme-vista .reply-option-chip { color: #9fd4ff; background: linear-gradient(180deg, #2c3138, #1f2329); border-color: #000; }
-body.theme-vista .queue-chip { color: #f3e7b5; background: linear-gradient(180deg, #3a3418, #2c2710); border-color: #6b5c1c; }
-body.theme-vista .queue-x { color: #c9b25a; }
 body.theme-vista .bubble-copy { color: var(--vd-text-soft); }
 body.theme-vista .bubble-copy:hover { border-color: #000; background: var(--vd-gel-hover); }
 

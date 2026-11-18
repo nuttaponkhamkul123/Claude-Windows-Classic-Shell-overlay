@@ -111,18 +111,45 @@
 .qp-btn.primary { border-color: #3c7fb1; }
 .qp-btn:hover { border-color: #3c7fb1; background: linear-gradient(180deg, #eaf6fd 0%, #d9f0fc 45%, #bee6fd 50%, #a7d9f5 100%); }
 
-/* ---- Queued messages ---- */
-.queue-bar { display: flex; flex-direction: column; gap: 3px; margin-bottom: 4px; }
-.queue-chip {
-  display: flex; align-items: center; gap: 6px;
-  padding: 3px 6px 3px 8px;
-  font-size: 11.5px; color: #4a3b00;
-  background: linear-gradient(180deg, #fffbe6 0%, #fff1b8 100%);
-  border: 1px solid #e3c96b; border-radius: 3px;
+/* ---- Queued messages: a card above the input. It borrows the text colour, so it fits every theme. ---- */
+.queue-bar { margin-bottom: 4px; }
+.queue-card {
+  font-size: 11.5px; overflow: hidden; border-radius: 6px;
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+  background: color-mix(in srgb, currentColor 7%, transparent);
 }
-.queue-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.queue-x { border: none; background: none; cursor: pointer; color: #8a6d00; font-size: 11px; }
-.queue-x:hover { color: #b3261e; }
+.queue-head { display: flex; align-items: center; gap: 7px; padding: 4px 6px 4px 9px; user-select: none; }
+.queue-card.many .queue-head { cursor: pointer; }
+.queue-card.many .queue-head:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
+.queue-caret { width: 10px; font-size: 10px; opacity: .7; }
+.queue-title { font-weight: 600; letter-spacing: .02em; }
+.queue-count { opacity: .7; white-space: nowrap; }
+.queue-peek { flex: 1; min-width: 0; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.queue-spacer { flex: 1; }
+.queue-clear, .queue-x {
+  font: inherit; color: inherit; opacity: .65; cursor: pointer; background: none; border-radius: 3px; padding: 0 6px;
+  border: 1px solid transparent;
+}
+.queue-clear:hover, .queue-x:hover { opacity: 1; border-color: color-mix(in srgb, currentColor 40%, transparent); }
+.queue-list { max-height: 150px; overflow-y: auto; border-top: 1px solid color-mix(in srgb, currentColor 18%, transparent); }
+.queue-row { display: flex; align-items: flex-start; gap: 8px; padding: 5px 6px 5px 9px; cursor: pointer; }
+.queue-row + .queue-row { border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
+.queue-row:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
+.queue-n { flex: none; min-width: 16px; opacity: .6; font-variant-numeric: tabular-nums; }
+.queue-body { flex: 1; min-width: 0; }
+.queue-text {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  white-space: pre-wrap; word-break: break-word; line-height: 1.35;
+}
+.queue-row.full .queue-text { display: block; -webkit-line-clamp: unset; }
+.queue-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; font-size: 10.5px; opacity: .7; }
+.queue-tag { border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 8px; padding: 0 6px; }
+.queue-tag.next { border-color: transparent; padding-left: 0; }
+/* "N queued" on a chat in the list */
+.row-queue {
+  flex: none; margin-left: 6px; padding: 0 6px; font-size: 10px; white-space: nowrap; border-radius: 8px;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+}
 
 /* ---- Stop button in the activity line ---- */
 .activity-stop {

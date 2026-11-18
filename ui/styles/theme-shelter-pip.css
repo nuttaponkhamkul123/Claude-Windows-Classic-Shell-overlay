@@ -866,3 +866,26 @@ body.style-shelter :is(.pip-subtabs, .convo-contact, .tabs-bar, .popup-footer) :
 
 /* the toolbar status text that only repeats progress (see pip-screen.js) is hidden; warnings and notes stay */
 body.style-shelter #replyStatusMsg.pip-progress { display: none; }
+
+/* ===================================================================
+   Queue card (features.js) in the Pip-Boy look: an outlined box like the other bars, no rounded corners,
+   the next message boxed like a selected item. "N queued" in the list is an amber outlined tag.
+   =================================================================== */
+body.style-shelter #detailView .queue-card {
+  color: var(--pip); border: 2px solid var(--pip-dim); border-radius: 0; background: rgba(255, 159, 28, 0.06); font-size: 14px;
+}
+body.style-shelter #detailView .queue-head { padding: 3px 8px; }
+body.style-shelter #detailView .queue-card.many .queue-head:hover { background: rgba(255, 159, 28, 0.1); }
+body.style-shelter #detailView .queue-title { font-weight: 400; text-transform: uppercase; letter-spacing: 0.08em; }
+body.style-shelter #detailView .queue-count, body.style-shelter #detailView .queue-peek { color: var(--pip-dim); opacity: 1; }
+body.style-shelter #detailView .queue-list { border-top: 1px solid var(--pip-faint); }
+body.style-shelter #detailView .queue-row + .queue-row { border-top: 1px solid var(--pip-faint); }
+body.style-shelter #detailView .queue-row { border-left: 2px solid transparent; border-right: 2px solid transparent; }
+body.style-shelter #detailView .queue-row:hover { background: rgba(255, 159, 28, 0.1); border-left-color: var(--pip); border-right-color: var(--pip); }
+body.style-shelter #detailView .queue-n, body.style-shelter #detailView .queue-tags { color: var(--pip-dim); opacity: 1; }
+body.style-shelter #detailView .queue-tag { border-radius: 0; border-color: var(--pip-faint); }
+body.style-shelter #detailView .queue-tag.next { border-color: transparent; }
+body.style-shelter #detailView .queue-clear, body.style-shelter #detailView .queue-x { border-radius: 0; border: 1px solid var(--pip-faint); color: var(--pip); opacity: 1; }
+body.style-shelter #detailView .queue-clear:hover { background: var(--pip); color: var(--pip-ink); border-color: var(--pip); }
+body.style-shelter #detailView .queue-x:hover { color: #ff8f84; border-color: #ff8f84; }
+body.style-shelter .row-queue { border-radius: 0; color: var(--pip); border-color: var(--pip-dim); font-family: var(--pip-font); }

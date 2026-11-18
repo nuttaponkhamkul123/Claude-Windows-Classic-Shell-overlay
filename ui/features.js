@@ -287,27 +287,127 @@
     return Date.now() - lastActivity < BUSY_STALE_MS;
   }
 
+  // ---- The queue card above the input: "Queue · 3 waiting", collapsible, one numbered line per message ----
+  // Several queued messages can be watched at a glance: collapse the card to a one-line peek of what is next, or
+  // expand it to see them all (click a line to read the whole message). The queue is kept in settings, so it
+  // survives a restart, and every chat that has queued messages shows "N queued" in the list.
   const queueBar = el('div', 'queue-bar');
   queueBar.style.display = 'none';
   document.querySelector('.reply-box')?.before(queueBar);
+  let queueOpen = true;          // the card is expanded (remembered)
+  const fullRows = new Set();    // queued items opened to show their whole text
+  const oneLine = (t) => String(t || '').replace(/\s+/g, ' ').trim();
+  const fileCount = (it) => (it.attachments || []).filter((a) => !a.isImage && a.path).length;
 
-  function renderQueue() {
-    const q = currentActiveSession ? (queues.get(currentActiveSession.id) || []) : [];
-    const aName = currentActiveSession ? agentLabel(currentActiveSession.source, currentActiveSession.id) : 'Claude';
-    queueBar.innerHTML = '';
-    queueBar.style.display = q.length ? '' : 'none';
-    q.forEach((item, i) => {
-      const chip = el('div', 'queue-chip');
-      chip.append(el('span', 'queue-ico', '⏳'));
-      const label = item.text || `${item.attachments.length} attachment(s)`;
-      chip.append(el('span', 'queue-text', `${i === 0 ? `Sends when ${aName} is done: ` : 'Then: '}${label}`));
-      const x = el('button', 'queue-x', '✕');
-      x.title = 'Remove from queue';
-      x.addEventListener('click', () => { q.splice(i, 1); renderQueue(); });
-      chip.appendChild(x);
-      queueBar.appendChild(chip);
+  // What is kept across a restart: the text and the files that live on disk. Pasted images (only in memory)
+  // are not kept; the line says so instead of silently losing them.
+  function persistQueues() {
+    const out = {};
+    for (const [id, q] of queues) {
+      if (!q.length) continue;
+      out[id] = q.map((it) => ({
+        text: it.text,
+        files: (it.attachments || []).filter((a) => !a.isImage && a.path).map((a) => ({ name: a.name, path: a.path, size: a.size || 0 })),
+        lost: (it.lost || 0) + (it.attachments || []).filter((a) => a.isImage || !a.path).length,
+        at: it.at || Date.now(),
+      }));
+    }
+    setStore('queuedMessages', out);
+  }
+
+  // "N queued" beside the time on each chat in the list
+  function markQueuedRows() {
+    document.querySelectorAll('#sessionsContainer .session-row').forEach((row) => {
+      const id = row.id.replace(/^card-/, '');
+      const n = queues.get(id)?.length || 0;
+      let tag = row.querySelector('.row-queue');
+      if (!n) { tag?.remove(); return; }
+      if (!tag) {
+        tag = el('span', 'row-queue');
+        const time = row.querySelector('.row-time');
+        if (time) time.before(tag); else row.querySelector('.row-line1')?.append(tag);
+      }
+      const txt = `${n} queued`;
+      if (tag.textContent !== txt) tag.textContent = txt;
+      tag.title = `${n} message${n > 1 ? 's' : ''} waiting to be sent when this chat is free`;
     });
   }
+
+  function renderQueue() {
+    const s = currentActiveSession;
+    const q = s ? (queues.get(s.id) || []) : [];
+    const aName = s ? agentLabel(s.source, s.id) : 'Claude';
+    queueBar.innerHTML = '';
+    queueBar.style.display = q.length ? '' : 'none';
+    queueBar.dataset.count = String(q.length);
+    markQueuedRows();
+    if (!q.length) return;
+
+    const many = q.length > 1;
+    const open = queueOpen || !many;
+    const card = el('div', 'queue-card' + (open ? ' open' : '') + (many ? ' many' : ''));
+    const head = el('div', 'queue-head');
+    if (many) head.append(el('span', 'queue-caret', open ? '▾' : '▸'));
+    head.append(el('span', 'queue-title', 'Queue'), el('span', 'queue-count', `${q.length} waiting`));
+    if (many && !open) head.append(el('span', 'queue-peek', `next: ${oneLine(q[0].text) || `${(q[0].attachments || []).length} attachment(s)`}`));
+    else head.append(el('span', 'queue-spacer'));
+    if (many) {
+      const clear = el('button', 'queue-clear', 'Clear all');
+      clear.title = 'Remove every queued message from this chat';
+      clear.addEventListener('click', (e) => { e.stopPropagation(); queues.delete(s.id); persistQueues(); renderQueue(); });
+      head.append(clear);
+      head.title = open ? 'Collapse' : 'Show every queued message';
+      head.addEventListener('click', () => { queueOpen = !queueOpen; setStore('queueOpen', queueOpen); renderQueue(); });
+    }
+    card.append(head);
+
+    if (open) {
+      const list = el('div', 'queue-list');
+      q.forEach((item, i) => {
+        const row = el('div', 'queue-row' + (fullRows.has(item) ? ' full' : ''));
+        row.title = 'Click to show the whole message';
+        row.addEventListener('click', () => { fullRows.has(item) ? fullRows.delete(item) : fullRows.add(item); renderQueue(); });
+        row.append(el('span', 'queue-n', String(i + 1)));
+        const body = el('div', 'queue-body');
+        const files = fileCount(item);
+        body.append(el('div', 'queue-text', item.text || (files ? `${files} file${files > 1 ? 's' : ''}` : '(images only)')));
+        const tags = el('div', 'queue-tags');
+        if (i === 0) tags.append(el('span', 'queue-tag next', `next · sends when ${aName} is done`));
+        if (item.text && files) tags.append(el('span', 'queue-tag', `+${files} file${files > 1 ? 's' : ''}`));
+        if (item.lost) tags.append(el('span', 'queue-tag', `${item.lost} image${item.lost > 1 ? 's' : ''} not kept`));
+        if (item.restored) tags.append(el('span', 'queue-tag', 'kept after restart'));
+        if (tags.children.length) body.append(tags);
+        row.append(body);
+        const x = el('button', 'queue-x', '✕');
+        x.title = 'Remove from queue';
+        x.addEventListener('click', (e) => { e.stopPropagation(); fullRows.delete(item); q.splice(i, 1); persistQueues(); renderQueue(); });
+        row.append(x);
+        list.append(row);
+      });
+      card.append(list);
+    }
+    queueBar.append(card);
+  }
+
+  // restore the queue (and the card's open/closed state) once the settings have loaded
+  ready.then(() => {
+    queueOpen = store.queueOpen !== false;
+    const saved = store.queuedMessages;
+    if (saved && typeof saved === 'object') {
+      const now = Date.now(), WEEK = 7 * 24 * 3600 * 1000; // messages older than a week are dropped, not sent out of the blue
+      for (const [id, items] of Object.entries(saved)) {
+        if (!Array.isArray(items) || queues.has(id)) continue;
+        const list = items.filter((i) => i && (i.text || (i.files && i.files.length) || i.lost) && now - (i.at || now) < WEEK).map((i) => ({
+          text: String(i.text || ''),
+          attachments: (i.files || []).map((f) => ({ id: Math.random().toString(36).slice(2), name: f.name, size: f.size || 0, isImage: false, path: f.path })),
+          lost: i.lost || 0, at: i.at || now, restored: true,
+        }));
+        if (list.length) queues.set(id, list);
+      }
+      persistQueues();
+    }
+    renderQueue();
+  });
 
   const origSubmit = submitReply;
   // eslint-disable-next-line no-global-assign
@@ -316,7 +416,8 @@
     const reply = (text || replyTextarea.value || '').trim();
     if (s && !s.draft && (reply || attachments.length) && !reply.startsWith('/') && isBusy(s)) {
       if (!queues.has(s.id)) queues.set(s.id, []);
-      queues.get(s.id).push({ text: reply, attachments: attachments.slice() });
+      queues.get(s.id).push({ text: reply, attachments: attachments.slice(), at: Date.now() });
+      persistQueues();
       replyTextarea.value = '';
       attachments = [];
       renderAttachments();
@@ -337,6 +438,7 @@
       if (n < 2) continue; // idle for ~2 s, so a turn that is just chaining tools isn't interrupted
       idleTicks.set(id, 0);
       const item = q.shift();
+      if (!item.text && !(item.attachments || []).length) { persistQueues(); renderQueue(); continue; } // an image-only message whose images were not kept
       if (currentActiveSession?.id === id) {
         const keepText = replyTextarea.value, keepAtt = attachments;
         replyTextarea.value = item.text;
@@ -357,6 +459,7 @@
         const opts = typeof takeReplyOptions === 'function' ? takeReplyOptions(s) : {};
         api.sendReply({ text: item.text, ...att, session: s, options: opts });
       }
+      persistQueues();
       renderQueue();
     }
   }
@@ -379,6 +482,7 @@
     // Stop means stop: don't fire the queued messages right after
     const dropped = queues.get(id)?.length || 0;
     queues.delete(id);
+    persistQueues();
     renderQueue();
     replyStatusMsg.textContent = dropped ? `■ Stopped — ${dropped} queued message${dropped > 1 ? 's' : ''} cancelled` : '■ Stopping…';
   });
@@ -438,6 +542,7 @@
         }
       }
     });
+    markQueuedRows();
     const nHidden = all.filter((s) => hidden.has(s.id)).length;
     if (nHidden) {
       const t = el('div', 'fx-hidden-toggle', showHidden ? `Hide hidden sessions (${nHidden})` : `Show hidden sessions (${nHidden})`);

@@ -115,7 +115,7 @@
   // ("⚠ That folder no longer exists", "Added to your message…") are marked differently and stay.
   const msgEl = document.getElementById('replyStatusMsg');
   if (msgEl) {
-    const PROGRESS = /^s*(⚡|✓.*(replied|Sent to))/;
+    const PROGRESS = /^\s*(⚡|⏳\s*Queued|✓.*(replied|Sent to))/; // ("Queued": the queue card above the input says it)
     const mark = () => { const p = PROGRESS.test(msgEl.textContent || ''); if (msgEl.classList.contains('pip-progress') !== p) msgEl.classList.toggle('pip-progress', p); };
     new MutationObserver(mark).observe(msgEl, { childList: true, characterData: true, subtree: true });
     mark();
@@ -131,7 +131,7 @@
   segStop.addEventListener('click', () => q('#activityRow .activity-stop')?.click());
   bar.append(segNow, segStop);
   // sits directly on top of the input box (where the old working line was)
-  const inputBox = reply.querySelector('.reply-box');
+  const inputBox = reply.querySelector('.queue-bar') || reply.querySelector('.reply-box'); // above the queue card, if there is one
   if (inputBox) inputBox.before(bar); else reply.after(bar);
   const setText = (e, t) => { if (e.textContent !== t) e.textContent = t; };
 
@@ -178,6 +178,8 @@
     const branch = text('.git-branch');
     if (branch) out.push({ k: 'Branch', v: branch });
     if (dirty) out.push({ k: 'Changes', v: dirty, click: () => q('.git-box')?.click() });
+    const qn = Number(q('.queue-bar')?.dataset.count || 0);
+    if (qn) out.push({ k: 'Queue', v: `${qn} waiting`, click: () => q('.queue-head')?.click() });
     if (q('.handoff-btn')) out.push({ k: 'Hand off', v: '↗', click: () => q('.handoff-btn')?.click(), hot: q('.handoff-btn').classList.contains('hot') });
     return out;
   }
