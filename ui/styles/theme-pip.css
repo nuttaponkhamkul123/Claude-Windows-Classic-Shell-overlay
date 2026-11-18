@@ -91,3 +91,6 @@ body.style-pip .sk-overlay .sk-dialog > .sk-head { max-width: calc(var(--pip-sli
 body.style-pip .sk-overlay .sk-dialog > .sk-head .sk-x { right: 22px; }
 body.style-pip .pip-menu-back { left: auto; right: calc(var(--pip-slide-w) / 2 - 36px + 6px); transform: none; }
 body.style-pip .sk-overlay { background: rgba(10, 6, 0, 0.35) !important; }
+
+/* the "working…" dots at the end of the chat (Work layout) repeat what the status bar above the input says */
+body.style-pip .wk-typing { display: none !important; }
