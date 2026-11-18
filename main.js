@@ -194,6 +194,11 @@ app.whenReady().then(() => {
   require('./main/ipc/clipboard').register(ipc);
   require('./main/ipc/snap').register(ipc);
   require('./main/ipc/permissions').register(ipc, appCtx, permState);
+  // IDE pickers (VS Code / Antigravity 'HUD bridge' extension) shown in the HUD
+  const idePick = require('./main/ipc/ide-pick');
+  idePick.register(ipc);
+  idePick.start(appCtx);
+  app.on('will-quit', () => idePick.cleanup());
 
   features.register({
     app, ipcMain,

@@ -80,6 +80,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onPermissionRequest: (callback) => ipcRenderer.on('permission-request', (_event, req) => callback(req)),
   onPermissionExpired: (callback) => ipcRenderer.on('permission-expired', (_event, data) => callback(data)),
   respondPermission: (id, choice, message) => ipcRenderer.send('permission-response', { id, choice, message }),
+  // IDE pickers (ide-bridge extension → main/ipc/ide-pick.js)
+  onIdePick: (callback) => ipcRenderer.on('ide-pick:show', (_event, req) => callback(req)),
+  onIdePickCancel: (callback) => ipcRenderer.on('ide-pick:cancel', (_event, data) => callback(data)),
+  answerIdePick: (id, result) => ipcRenderer.send('ide-pick:answer', { id, result }),
   // MCP + slash commands
   listMcpServers: (cwd, refresh, source) => ipcRenderer.invoke('mcp-list', { cwd, refresh, source }),
   listSlashCommands: (cwd, source) => ipcRenderer.invoke('list-slash-commands', { cwd, source }),

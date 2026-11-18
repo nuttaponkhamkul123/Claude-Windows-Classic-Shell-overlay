@@ -1,0 +1,26 @@
+{
+  "name": "hud-bridge",
+  "displayName": "AI HUD bridge",
+  "description": "Shows other extensions' pick lists and text boxes (showQuickPick / showInputBox) in the AI HUD when it's running, e.g. abap-fs asking for a transport request. Falls back to the normal pop-up when the HUD is closed.",
+  "publisher": "ovly",
+  "version": "0.1.0",
+  "license": "UNLICENSED",
+  "engines": { "vscode": "^1.80.0" },
+  "main": "./extension.js",
+  "activationEvents": ["*"],
+  "contributes": {
+    "configuration": {
+      "title": "AI HUD bridge",
+      "properties": {
+        "hudBridge.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show other extensions' pick lists and text boxes in the AI HUD while it's running."
+        }
+      }
+    },
+    "commands": [
+      { "command": "hudBridge.showLog", "title": "AI HUD bridge: Show which extensions are bridged" }
+    ]
+  }
+}
