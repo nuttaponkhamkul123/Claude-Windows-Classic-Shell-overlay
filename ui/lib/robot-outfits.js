@@ -438,6 +438,15 @@
     return normalize(outfits['*']);
   };
 
+  // What the chat screen's picture wears: the chat's (or the all-robots) outfit; a robot that has never been dressed
+  // wears a plain shirt, so it is not drawn bare. An outfit saved as {} means 'nothing on' on purpose.
+  window.robotOutfitShown = function (session) {
+    const id = session && session.id;
+    const has = (k) => Object.prototype.hasOwnProperty.call(outfits, k);
+    if ((id && has(id)) || has('*')) return { ...(window.robotOutfitFor(session) || {}) };
+    return { clothes: 'shirt', clothesColor: '#3faa4a' };
+  };
+
   function refreshAvatars() {
     try { if (typeof renderSessionCards === 'function') renderSessionCards(true); } catch (_) {}
     try { if (typeof currentActiveSession !== 'undefined' && currentActiveSession && typeof updateConvoHeader === 'function') updateConvoHeader(currentActiveSession); } catch (_) {}

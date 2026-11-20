@@ -64,7 +64,8 @@
   window.addEventListener('mouseup', (e) => {
     if (e.button !== 0 || !start) return;
     start = null;
-    window.snipAPI.done(rect && rect.width >= 3 && rect.height >= 3 ? rect : null);
+    // the rectangle plus this window's real size, so main can map it onto the picture whatever the screen scaling
+    window.snipAPI.done(rect && rect.width >= 3 && rect.height >= 3 ? { ...rect, vw: window.innerWidth, vh: window.innerHeight } : null);
   });
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape') window.snipAPI.done(null); });
   window.addEventListener('contextmenu', (e) => e.preventDefault());

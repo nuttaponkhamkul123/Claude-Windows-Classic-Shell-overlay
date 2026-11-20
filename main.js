@@ -14,7 +14,17 @@ app.setPath('userData', path.join(os.tmpdir(), 'ovly-claude-cache-' + Date.now()
 let mainWindow = null;
 let tray = null;
 let watcher = null;
-let isAlwaysOnTop = true;
+let isAlwaysOnTop = features.getSetting('alwaysOnTop', true) !== false; // remembered between runs
+// one place that changes it: window, saved setting, tray check mark and the Settings row all follow
+function setAlwaysOnTopSaved(on) {
+  isAlwaysOnTop = !!on;
+  features.setSetting('alwaysOnTop', isAlwaysOnTop);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setAlwaysOnTop(isAlwaysOnTop, 'screen-saver');
+    mainWindow.webContents.send('pin-state', isAlwaysOnTop);
+  }
+  if (tray) tray.setContextMenu(buildTrayMenu());
+}
 
 const DEFAULT_WIDTH = 480;
 const COMPACT_HEIGHT = 74;
@@ -58,7 +68,7 @@ function createWindow() {
     y: saved ? Math.round(saved.y) : 30,
     frame: false,
     transparent: true,
-    alwaysOnTop: true,
+    alwaysOnTop: isAlwaysOnTop,
     resizable: true,
     hasShadow: false,
     skipTaskbar: false,
@@ -71,7 +81,7 @@ function createWindow() {
 
   const indexHtmlPath = path.join(__dirname, 'ui', 'index.html');
   mainWindow.loadFile(indexHtmlPath);
-  mainWindow.setAlwaysOnTop(true, 'screen-saver');
+  mainWindow.setAlwaysOnTop(isAlwaysOnTop, 'screen-saver');
 
   // Never let a clicked link (file://, https://, etc.) navigate the HUD window away from index.html
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -128,12 +138,7 @@ function buildTrayMenu() {
       label: 'Toggle Always On Top',
       type: 'checkbox',
       checked: isAlwaysOnTop,
-      click: (item) => {
-        isAlwaysOnTop = item.checked;
-        if (mainWindow) {
-          mainWindow.setAlwaysOnTop(isAlwaysOnTop, 'screen-saver');
-        }
-      },
+      click: (item) => setAlwaysOnTopSaved(item.checked),
     },
     {
       label: 'Mini bar',
@@ -171,6 +176,7 @@ function createTray() {
 const appCtx = {
   getWin: () => mainWindow,
   mirror: (channel, payload) => { if (minibar) minibar.mirror(channel, payload); }, // approvals also go to the mini bar
+  snipBegin: () => (minibar ? minibar.hideTemp() : null), // the mini bar steps aside while a screen snip is taken
   getWatcher: () => watcher,
   window: {
     isDocked: () => dockState.docked,
@@ -190,6 +196,9 @@ app.whenReady().then(() => {
   startPermissionServer();
 
   watcher = new MultiAISessionWatcher();
+  const profiler = require('./main/profiler').create({ getMainWin: () => mainWindow, getWatcher: () => watcher });
+  profiler.hookWatcher(); // times the watcher's check for the Performance panel
+  app.on('will-quit', () => profiler.cleanup());
   const skillInstaller = require('./skill-install-main');
   skillInstaller.register({ getWin: () => mainWindow });
   app.on('will-quit', () => skillInstaller.cleanup());
@@ -335,8 +344,7 @@ ipcMain.on('close-window', () => {
 
 ipcMain.handle('toggle-pin', () => {
   if (!mainWindow) return isAlwaysOnTop;
-  isAlwaysOnTop = !isAlwaysOnTop;
-  mainWindow.setAlwaysOnTop(isAlwaysOnTop, 'screen-saver');
+  setAlwaysOnTopSaved(!isAlwaysOnTop);
   return isAlwaysOnTop;
 });
 

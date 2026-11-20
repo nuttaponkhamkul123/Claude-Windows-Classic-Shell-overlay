@@ -209,6 +209,8 @@ body.style-shelter #detailView .pip-picture {
   filter: grayscale(1) sepia(1) saturate(4) hue-rotate(-8deg) brightness(1.15); opacity: 0.92;
 }
 body.style-shelter #detailView .pip-picture svg { height: 92px; width: auto; }
+body.style-shelter #detailView .pip-picture { cursor: pointer; transition: filter 160ms ease; }
+body.style-shelter #detailView .pip-picture:hover { filter: grayscale(1) sepia(1) saturate(5) hue-rotate(-8deg) brightness(1.4) drop-shadow(0 0 6px rgba(255, 159, 28, .8)); }
 body.style-shelter #detailView .pip-row {
   display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 1px 7px;
   background: rgba(255, 159, 28, 0.2); color: var(--pip-hi); font-size: 14px; letter-spacing: 0.03em; text-transform: uppercase; line-height: 1.45;
@@ -922,3 +924,41 @@ body.style-shelter #detailView.pip-narrow .reply-toolbar .rt-model { max-width: 
 body.style-shelter #detailView .queue-held { border-top: 1px solid var(--pip-faint); background: rgba(255, 159, 28, 0.12); color: var(--pip); }
 body.style-shelter #detailView .queue-resume { border-radius: 0; border: 2px solid var(--pip); background: none; color: var(--pip); }
 body.style-shelter #detailView .queue-resume:hover { background: var(--pip); color: var(--pip-ink); }
+
+/* ===================================================================
+   Readout panel as a grid of cells: every entry (Status, Model, Cost, …) is a cell with the same tinted
+   background as the "Idle" bar above the input; a small dim name over the value. Long ones (Context, Branch,
+   Changes, Queue, Hand off) take the whole row. The picture stays on top.
+   =================================================================== */
+body.style-shelter #detailView .pip-stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 4px; align-content: start; flex: 0 0 clamp(150px, 36%, 250px);
+}
+body.style-shelter #detailView .pip-stats .pip-picture { grid-column: 1 / -1; height: 84px; margin-bottom: 2px; }
+body.style-shelter #detailView .pip-stats .pip-picture svg { height: 80px; }
+body.style-shelter #detailView .pip-stats .pip-row,
+body.style-shelter #detailView .pip-stats .pip-row.pct,
+body.style-shelter #detailView .pip-stats .pip-row.warn {
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px;
+  min-height: 38px; padding: 2px 8px 3px; box-sizing: border-box; min-width: 0; line-height: 1.2;
+  background: rgba(255, 159, 28, 0.1); border: 0; border-radius: 0; text-align: left;
+}
+body.style-shelter #detailView .pip-stats .pip-row .pip-k {
+  font: 400 11px/1.2 var(--pip-font); letter-spacing: 0.1em; text-transform: uppercase; color: var(--pip-dim);
+}
+body.style-shelter #detailView .pip-stats .pip-row .pip-v {
+  font: 400 15px/1.25 var(--pip-font); color: var(--pip); text-align: left; align-self: flex-start; width: 100%; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+body.style-shelter #detailView .pip-stats .pip-row:is([data-k="context"], [data-k="branch"], [data-k="changes"], [data-k="queue"], [data-k="hand-off"]) { grid-column: 1 / -1; }
+body.style-shelter #detailView .pip-stats .pip-row:is([data-k="branch"], [data-k="changes"]) .pip-v { white-space: normal; overflow-wrap: anywhere; }
+/* the context cell fills like a gauge */
+body.style-shelter #detailView .pip-stats .pip-row.pct,
+body.style-shelter #detailView .pip-stats .pip-row.warn { background: linear-gradient(90deg, rgba(255, 159, 28, 0.38) var(--p), rgba(255, 159, 28, 0.1) var(--p)); }
+body.style-shelter #detailView .pip-stats .pip-row.warn .pip-v { text-decoration: underline; text-underline-offset: 3px; }
+/* clickable cells: the boxed look of the other lists on hover */
+body.style-shelter #detailView .pip-stats .pip-row.link:hover,
+body.style-shelter #detailView .pip-stats .pip-row.hot { background: rgba(255, 159, 28, 0.2); box-shadow: inset 2px 0 0 var(--pip), inset -2px 0 0 var(--pip); color: var(--pip); }
+body.style-shelter #detailView .pip-stats .pip-row.link:hover *, body.style-shelter #detailView .pip-stats .pip-row.hot * { color: var(--pip); }
+body.style-shelter #detailView .pip-stats .pip-row.hot .pip-v { font-weight: 600; }
+
+/* the top line holds only the chat's name now (everything else is in the readout panel on the right) */
+body.style-shelter #detailView > .pip-head .pip-hbox-first { flex: 1 1 auto; }

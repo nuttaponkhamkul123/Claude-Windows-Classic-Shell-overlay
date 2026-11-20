@@ -51,8 +51,8 @@ const imagePreviewBar = document.getElementById('imagePreviewBar'); // attachmen
 
 let sessionsList = [];
 let isExpanded = true; // the HUD is always expanded (no collapsed bar any more)
-let soundEnabled = true;
-let isPinned = true;
+let soundEnabled = window.electronAPI.settings?.chime !== false; // saved: Settings → Chime
+let isPinned = window.electronAPI.settings?.alwaysOnTop !== false; // saved: Settings → Always on top
 let currentFilter = 'all';
 let commonModelText = ''; // model/effort most sessions use (session list)
 let currentActiveSession = null;
@@ -494,7 +494,8 @@ if (btnSnip) btnSnip.addEventListener('click', async () => {
       renderAttachments();
     }
   } catch (e) {
-    replyStatusMsg.textContent = '⚠ Snip failed';
+    const why = String((e && e.message) || '').split('Error: ').pop().trim(); // "Error invoking remote method…: Error: <reason>"
+    replyStatusMsg.textContent = why ? `⚠ Snip failed: ${why}` : '⚠ Snip failed';
   } finally {
     btnSnip.disabled = false;
     replyTextarea.focus();
@@ -987,12 +988,17 @@ if (resizeGrip) {
 })();
 
 // Sound toggle
-btnSound.addEventListener('click', () => {
-  soundEnabled = !soundEnabled;
+function paintSound() {
   window.soundSynth.enabled = soundEnabled;
   btnSound.classList.toggle('active', soundEnabled);
   const ico = btnSound.querySelector('.set-ico');
   if (ico) ico.textContent = soundEnabled ? '🔔' : '🔕';
+}
+paintSound(); // the saved choice, at start
+btnSound.addEventListener('click', () => {
+  soundEnabled = !soundEnabled;
+  paintSound();
+  window.electronAPI.storeSet('chime', soundEnabled);
 });
 
 // Nudge toggle: shake + glow when a chat finishes (main/ipc/snap.js reads "nudge")
@@ -1033,10 +1039,12 @@ if (btnWindows) {
 }
 
 // Pin toggle
+btnPin.classList.toggle('active', isPinned); // the saved choice, at start (main.js applies it to the window)
 btnPin.addEventListener('click', async () => {
   isPinned = await window.electronAPI.togglePin();
   btnPin.classList.toggle('active', isPinned);
 });
+window.electronAPI.onPinState?.((on) => { isPinned = !!on; btnPin.classList.toggle('active', isPinned); }); // changed from the tray menu
 
 // Settings modal dialog (shared by the contact-list and conversation toolbars)
 const tbSettings = document.getElementById('tbSettings');

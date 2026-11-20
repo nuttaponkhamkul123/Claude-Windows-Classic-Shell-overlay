@@ -82,6 +82,7 @@
     on = !!v;
     document.body.classList.toggle('chat-cards', on);
     document.getElementById('tbCards')?.classList.toggle('open', on);
+    document.getElementById('btnCards')?.classList.toggle('active', on); // the Settings row
     if (on) { const f = document.getElementById('chatStream'); if (f && f.dataset.pipFilter) f.dataset.pipFilter = 'all'; }
     if (save) api?.storeSet?.('chatCards', on);
     annotate();

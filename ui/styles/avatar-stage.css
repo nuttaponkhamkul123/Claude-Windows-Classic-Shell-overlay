@@ -1,0 +1,102 @@
+/* Avatar stage (logic/chat/avatar-stage.js), laid out like the Pip-Boy STATS screen: category tabs along the top, the
+   figure in the middle with short bars around it, its name under it, a strip of little pictures, and a status bar.
+   Amber on dark brown, mono, square, boxed selection, scan lines, a lit patch of floor under the avatar. */
+.av-stage {
+  --a: var(--pip, #ff9f1c); --a-dim: var(--pip-dim, #b8761b); --a-faint: var(--pip-faint, #5a3a12);
+  --a-hi: var(--pip-hi, #ffb347); --a-ink: var(--pip-ink, #1f1002);
+  --a-font: var(--pip-font, "Roboto Mono", "Cascadia Mono", Consolas, monospace);
+  position: fixed; z-index: 800; box-sizing: border-box; padding: 6px 10px 8px;
+  display: grid; gap: 4px; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto auto;
+  color: var(--a); font: 13px/1.35 var(--a-font); text-transform: uppercase; letter-spacing: .04em;
+  background: radial-gradient(ellipse at 50% 46%, rgba(255, 159, 28, 0) 0%, rgba(255, 159, 28, 0) 100%), rgba(20, 10, 0, 0);
+  border: 2px solid transparent; opacity: 0;
+  transition: background 1300ms ease, opacity 600ms ease, border-color 900ms ease;
+}
+.av-stage.on {
+  opacity: 1; border-color: var(--a-faint);
+  background: radial-gradient(ellipse at 50% 46%, rgba(255, 159, 28, .2) 0%, rgba(255, 159, 28, 0) 66%), rgb(20, 10, 0); /* solid base: the chat behind must not show through */
+}
+.av-stage::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .16;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .55) 0 1px, transparent 1px 3px); }
+.av-stage * { font-family: var(--a-font); }
+
+/* everything but the avatar waits until it has arrived */
+.av-tabs, .av-marks, .av-caption, .av-swatches, .av-strip, .av-status { opacity: 0; transition: opacity 650ms ease; position: relative; z-index: 1; }
+.av-stage.ready .av-tabs, .av-stage.ready .av-marks, .av-stage.ready .av-caption, .av-stage.ready .av-swatches, .av-stage.ready .av-strip, .av-stage.ready .av-status { opacity: 1; }
+
+/* top line: AVATAR, the categories as tabs, the keys */
+.av-tabs { display: flex; align-items: flex-end; gap: 12px; padding-bottom: 3px; border-bottom: 2px solid var(--a); flex-wrap: wrap; }
+.av-title { font-size: 15px; letter-spacing: .14em; color: var(--a-hi); padding-bottom: 2px; }
+.av-tabrow { display: flex; gap: 4px; flex: 1 1 auto; min-width: 0; }
+.av-tab { background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -5px; padding: 1px 10px 3px; color: var(--a-dim); cursor: pointer; font: inherit; text-transform: uppercase; letter-spacing: inherit; border-radius: 0; }
+.av-tab:hover { color: var(--a); }
+.av-tab.on { color: var(--a-hi); border: 1px solid var(--a); border-bottom-color: rgb(20, 10, 0); background: rgb(20, 10, 0); margin-bottom: -5px; padding-bottom: 4px; }
+.av-keys { display: flex; gap: 6px; margin-left: auto; }
+.av-btn { background: none; color: var(--a); border: 1px solid var(--a-dim); border-radius: 0; padding: 1px 9px; cursor: pointer; font: inherit; font-size: 12px; text-transform: uppercase; letter-spacing: inherit; }
+.av-btn:hover, .av-btn.lit { background: var(--a); color: var(--a-ink); border-color: var(--a); }
+.av-btn.primary { background: var(--a); color: var(--a-ink); border-color: var(--a); }
+.av-btn.primary:hover { background: #fff; border-color: #fff; }
+
+/* the field: the figure in the middle, the bars around it */
+.av-field { position: relative; min-height: 0; display: flex; align-items: center; justify-content: center; padding-top: 22px; box-sizing: border-box; }
+.av-slot { height: calc(100% - 32px); max-height: 300px; min-height: 90px; aspect-ratio: 40 / 52; position: relative; margin-bottom: 30px; }
+/* a lit patch of floor under the avatar */
+.av-slot::after { content: ""; position: absolute; left: -22%; right: -22%; bottom: -3%; height: 12%; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(255, 159, 28, .5) 0%, rgba(255, 159, 28, 0) 70%); opacity: 0; transition: opacity 1200ms ease .3s; }
+.av-stage.on .av-slot::after { opacity: 1; }
+.av-marks { position: absolute; inset: 0; pointer-events: none; }
+.av-mark { position: absolute; display: flex; align-items: center; gap: 6px; padding: 0; background: none; border: 0; color: var(--a-dim); font: inherit; font-size: 12px; text-transform: uppercase; letter-spacing: inherit; white-space: nowrap; pointer-events: auto; cursor: pointer; border-radius: 0; }
+.av-mark.plain { pointer-events: none; cursor: default; opacity: .55; }
+.av-mark.side-l { transform: translate(-100%, -50%); flex-direction: row-reverse; }
+.av-mark.side-r { transform: translate(0, -50%); }
+.av-mark.center { transform: translate(-11px, -50%); }
+.av-bar { display: block; width: 22px; height: 5px; background: var(--a); box-shadow: 0 0 6px rgba(255, 159, 28, .5); flex: none; }
+.av-mark.on, .av-mark:hover:not(.plain) { color: var(--a-hi); }
+.av-mark.on .av-bar { height: 7px; background: #fff; box-shadow: 0 0 10px var(--a); }
+.av-mark.on .av-mlabel { background: rgba(255, 159, 28, .18); border-left: 2px solid var(--a); border-right: 2px solid var(--a); padding: 0 6px; }
+.av-mlabel { padding: 0 8px; border-left: 2px solid transparent; border-right: 2px solid transparent; }
+.av-caption { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; line-height: 1.2; pointer-events: none; }
+.av-name { color: var(--a-hi); letter-spacing: .08em; }
+.av-scope { font-size: 11px; color: var(--a-dim); }
+.av-swatches { position: absolute; right: 2px; top: 4px; display: grid; grid-template-columns: repeat(2, 15px); gap: 4px; }
+.av-swatches:empty { display: none; }
+.av-swatch { width: 15px; height: 15px; padding: 0; border-radius: 0; border: 1px solid var(--a-faint); cursor: pointer; }
+.av-swatch:hover { border-color: var(--a); }
+.av-swatch.on { outline: 2px solid var(--a); outline-offset: 1px; }
+
+.av-actor { position: fixed; z-index: 801; pointer-events: none; will-change: transform; filter: drop-shadow(0 0 10px rgba(255, 159, 28, .35)); transition: filter 1300ms ease; }
+.av-actor.amber, .av-actor.mono { filter: grayscale(1) sepia(1) saturate(4) hue-rotate(-8deg) brightness(1.15) drop-shadow(0 0 10px rgba(255, 159, 28, .5)); }
+.av-sway { width: 100%; height: 100%; }
+.av-sway svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.av-actor.idle .av-sway { animation: av-sway 4.2s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes av-sway { 0%, 100% { transform: translateY(0) rotate(-.8deg); } 50% { transform: translateY(-3px) rotate(.8deg); } }
+@media (prefers-reduced-motion: reduce) { .av-actor.idle .av-sway { animation: none; } }
+
+/* the strip of little pictures: what can be put on in this category */
+.av-strip { display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 3px 2px 5px; min-height: 0; }
+.av-strip::-webkit-scrollbar { height: 4px; }
+.av-strip::-webkit-scrollbar-thumb { background: var(--a-dim); border-radius: 0; }
+.av-strip::-webkit-scrollbar-track { background: transparent; }
+.av-opt { flex: none; width: 54px; height: 54px; padding: 2px; border-radius: 0; cursor: pointer; background: rgba(255, 159, 28, .06); border: 1px solid var(--a-faint); color: var(--a); display: flex; align-items: center; justify-content: center; }
+.av-opt:hover { border-color: var(--a-dim); background: rgba(255, 159, 28, .12); }
+.av-opt.on { border: 2px solid var(--a); background: rgba(255, 159, 28, .22); padding: 1px; }
+.av-opt svg { width: 100%; height: 100%; display: block; }
+.av-none { font-size: 18px; color: var(--a-dim); }
+
+/* bottom bar, as on the real screen: model | how full the chat is | cost */
+.av-status { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr); gap: 3px; font-size: 12px; }
+.av-seg { background: rgba(255, 159, 28, .22); color: var(--a-hi); padding: 0 8px; line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.av-seg:last-child { text-align: right; }
+.av-seg-mid { display: flex; align-items: center; gap: 8px; }
+.av-meter { flex: 1; height: 7px; border: 1px solid var(--a); position: relative; }
+.av-meter i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--a); }
+
+/* a narrow chat screen: no labels beside the bars (the tabs and the strip say it), smaller figure */
+.av-stage.av-narrow { padding: 5px 7px 6px; }
+.av-stage.av-narrow .av-title, .av-stage.av-narrow .av-mlabel, .av-stage.av-narrow .av-scope { display: none; }
+.av-stage.av-narrow .av-tab { padding: 1px 6px 3px; }
+.av-stage.av-narrow .av-tabs { gap: 6px; }
+.av-stage.av-narrow .av-bar { width: 14px; }
+.av-stage.av-narrow .av-mark.center { transform: translate(-7px, -50%); }
+.av-stage.av-narrow .av-opt { width: 46px; height: 46px; }
+.av-stage.av-short .av-status { display: none; }

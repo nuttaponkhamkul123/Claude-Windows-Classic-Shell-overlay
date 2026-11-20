@@ -4,7 +4,7 @@
 // handlers in main.js (dragTimer / boundsAnim) plus shakeTimer / lastNudgeAt,
 // which only this module touches.
 
-const { BrowserWindow, desktopCapturer, ipcMain, screen } = require('electron');
+const { BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen } = require('electron');
 const path = require('path');
 
 let snipInProgress = null;
@@ -22,67 +22,88 @@ function register(r) {
 
   // ---------- Quick snip (all monitors): hide the HUD, freeze every screen,
   // let the user drag a rectangle on any of them, return the cropped PNG ----------
+  // The HUD (and the mini bar) are put back whatever happens: a finished or cancelled snip, a timeout, or an error.
+  // An error is thrown to the page, which says "Snip failed" (it used to just do nothing).
   r.handle('quick-snip', async (ctx) => {
     if (snipInProgress) return snipInProgress;
     snipInProgress = (async () => {
       const win = ctx.getWin();
       const displays = screen.getAllDisplays();
-      const wasVisible = win && win.isVisible();
-      if (wasVisible) win.hide();
-      await new Promise((resolve) => setTimeout(resolve, 220)); // let DWM drop the HUD from the screen
-
-      let pairs = [];
+      const wasVisible = !!(win && !win.isDestroyed() && win.isVisible());
+      const restoreBar = ctx.snipBegin ? ctx.snipBegin() : null; // hides the mini bar so it is not in the picture
       try {
-        // one capture call for every screen; size the thumbnails for the largest physical display
-        const maxW = Math.max(...displays.map((d) => Math.round(d.bounds.width * (d.scaleFactor || 1))));
-        const maxH = Math.max(...displays.map((d) => Math.round(d.bounds.height * (d.scaleFactor || 1))));
-        const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: maxW, height: maxH } });
-        const used = new Set();
-        displays.forEach((d, i) => {
-          // match by display id; fall back to list order (display_id can be blank on some Windows setups)
-          let src = sources.find((s) => s.display_id && String(s.display_id) === String(d.id));
-          if (!src && sources.length === displays.length) src = sources[i];
-          if (!src || used.has(src.id) || !src.thumbnail || src.thumbnail.isEmpty()) return;
-          used.add(src.id);
-          pairs.push({ display: d, shot: src.thumbnail });
-        });
-      } catch (err) {
-        console.error('[snip] capture failed:', err.message);
-      }
-
-      let result = null;
-      if (pairs.length) {
+        if (wasVisible) win.hide();
+        await new Promise((resolve) => setTimeout(resolve, 220)); // let DWM drop the HUD from the screen
+        const pairs = await (ctx.snipCapture || captureAllDisplays)(displays);
+        if (!pairs.length) throw new Error('Windows did not give a picture of the screen');
         const cursorDisplay = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-        result = await runSnipSelectors(pairs, cursorDisplay.id);
+        return await runSnipSelectors(pairs, cursorDisplay.id, ctx.snipTimeoutMs || SNIP_TIMEOUT_MS); // data URL or null (cancelled)
+      } finally {
+        if (win && !win.isDestroyed() && wasVisible) { win.show(); win.focus(); }
+        if (typeof restoreBar === 'function') restoreBar();
       }
-
-      if (win && wasVisible) { win.show(); win.focus(); }
-      return result; // data URL or null (cancelled / failed)
     })();
     try { return await snipInProgress; } finally { snipInProgress = null; }
   });
 }
 
+const SNIP_TIMEOUT_MS = 90 * 1000; // nobody is dragging any more: give the screen back
+
+// One picture per display: [{ display, shot }]
+async function captureAllDisplays(displays) {
+  const pairs = [];
+  try {
+    // one capture call for every screen; size the thumbnails for the largest physical display
+    const maxW = Math.max(...displays.map((d) => Math.round(d.bounds.width * (d.scaleFactor || 1))));
+    const maxH = Math.max(...displays.map((d) => Math.round(d.bounds.height * (d.scaleFactor || 1))));
+    const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: maxW, height: maxH } });
+    const used = new Set();
+    displays.forEach((d, i) => {
+      // match by display id; fall back to list order (display_id can be blank on some Windows setups)
+      let src = sources.find((s) => s.display_id && String(s.display_id) === String(d.id));
+      if (!src && sources.length === displays.length) src = sources[i];
+      if (!src || used.has(src.id) || !src.thumbnail || src.thumbnail.isEmpty()) return;
+      used.add(src.id);
+      pairs.push({ display: d, shot: src.thumbnail });
+    });
+  } catch (err) {
+    console.error('[snip] capture failed:', err.message);
+  }
+  return pairs;
+}
+
 // One frozen-screen window per monitor. The first finished selection (or a
 // cancel on any screen) closes them all.
-function runSnipSelectors(pairs, focusDisplayId) {
+function runSnipSelectors(pairs, focusDisplayId, timeoutMs) {
   return new Promise((resolve) => {
     const wins = new Map(); // webContents.id -> { win, display, shot }
     let done = false;
+    let timer = null;
+    let escRegistered = false;
     const finish = (val) => {
       if (done) return;
       done = true;
+      clearTimeout(timer);
+      if (escRegistered) { try { globalShortcut.unregister('Escape'); } catch (_) {} }
       ipcMain.removeListener('snip-result', onResult);
       for (const { win } of wins.values()) if (!win.isDestroyed()) win.close();
       resolve(val);
     };
+    // Esc cancels from anywhere, even when the screen you are looking at does not have the keyboard focus
+    try { escRegistered = globalShortcut.register('Escape', () => finish(null)); } catch (_) { escRegistered = false; }
+    timer = setTimeout(() => finish(null), timeoutMs);
     const onResult = (event, rect) => {
       const entry = wins.get(event.sender.id);
       if (!entry) return;
-      if (!rect || rect.width < 3 || rect.height < 3) return finish(null);
+      const n = (v) => typeof v === 'number' && Number.isFinite(v);
+      if (!rect || !n(rect.x) || !n(rect.y) || !n(rect.width) || !n(rect.height) || rect.width < 3 || rect.height < 3) return finish(null);
       const b = entry.display.bounds;
       const size = entry.shot.getSize();
-      const kx = size.width / b.width, ky = size.height / b.height;
+      // The rectangle is in the selection window's own pixels. Use that window's real size (it can differ from the
+      // display's when Windows resizes it on a screen with different scaling), not the size we asked for.
+      const wCss = n(rect.vw) && rect.vw > 0 ? rect.vw : b.width;
+      const hCss = n(rect.vh) && rect.vh > 0 ? rect.vh : b.height;
+      const kx = size.width / wCss, ky = size.height / hCss;
       const crop = {
         x: Math.max(0, Math.round(rect.x * kx)),
         y: Math.max(0, Math.round(rect.y * ky)),

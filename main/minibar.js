@@ -190,9 +190,15 @@ function create({ features, getMainWin, showHud, onChange }) {
   function toggle() { if (win && !win.isDestroyed()) close(); else open(); }
   const isOn = () => !!(win && !win.isDestroyed());
   function start() { if (prefs().on) open(); }
+  // hide the bar for a moment (a screen snip must not show it); the returned function brings it back
+  function hideTemp() {
+    if (!win || win.isDestroyed() || !win.isVisible()) return null;
+    win.hide();
+    return () => { if (win && !win.isDestroyed()) win.showInactive(); };
+  }
   function cleanup() { if (win && !win.isDestroyed()) win.destroy(); win = null; }
 
-  return { start, toggle, open, close, isOn, onSessions, mirror, cleanup };
+  return { start, toggle, open, close, isOn, onSessions, mirror, hideTemp, cleanup };
 }
 
 module.exports = { create };

@@ -108,13 +108,11 @@
   const hTitle = el('span', 'pip-head-title');
   // the title is the session's name (the one you gave it); click it to rename, like the name in the old header
   hTitle.addEventListener('click', () => q('#convoName')?.click());
-  const hGit = el('button', 'pip-hseg pip-hgit'), hModel = el('span', 'pip-hseg'), hCtx = el('span', 'pip-hseg'), hCost = el('span', 'pip-hseg');
-  hGit.title = 'Git changes (opens the changes panel)';
-  hGit.addEventListener('click', () => q('.git-box')?.click());
+  // The top line holds only the chat's name. Branch, changes, model, context and cost live in the readout panel on the
+  // right (Branch and Changes there open the git panel, as the git box up here used to).
   const first = el('span', 'pip-hbox pip-hbox-first');
-  first.append(hTitle, hGit);
-  const box = (seg) => { const b = el('span', 'pip-hbox'); b.appendChild(seg); return b; };
-  head.append(first, box(hModel), box(hCtx), box(hCost));
+  first.append(hTitle);
+  head.append(first);
   document.getElementById('detailView')?.prepend(head);
 
   // The small status text in the input's toolbar ("⚡ Sent to Claude! Thinking…", "✓ Claude replied") repeats what the
@@ -152,13 +150,6 @@
     const title = named && !/^(claude|antigravity)$/i.test(named) ? named : (text('#convoPersonal') || named || 'Chat');
     setText(hTitle, title);
     hTitle.title = ['Click to rename', q('#convoPersonal')?.title].filter(Boolean).join('\n');
-    const branch = get('Branch'), changes = get('Changes');
-    setText(hGit, branch ? [branch, changes].filter(Boolean).join(' · ') : '');
-    hGit.hidden = !branch;
-    setText(hModel, get('Model'));
-    setText(hCtx, get('Context'));
-    hCtx.title = 'Context used';
-    setText(hCost, get('Cost'));
     setText(segNow, busy ? [text('#activityVerb'), text('#activityMeta'), text('#activityTarget')].filter(Boolean).join(' · ') || get('Status') : get('Status'));
     segNow.classList.toggle('busy', busy);
     segStop.hidden = !(busy && act.querySelector('.activity-stop'));
@@ -183,7 +174,7 @@
     if (cost) out.push({ k: 'Cost', v: cost });
     if (today) out.push({ k: 'Today', v: today });
     const branch = text('.git-branch');
-    if (branch) out.push({ k: 'Branch', v: branch });
+    if (branch) out.push({ k: 'Branch', v: branch, click: () => q('.git-box')?.click() });
     if (dirty) out.push({ k: 'Changes', v: dirty, click: () => q('.git-box')?.click() });
     const qn = Number(q('.queue-bar')?.dataset.count || 0);
     if (qn) out.push({ k: 'Queue', v: `${qn} ${q('.queue-bar')?.dataset.held ? 'held' : 'waiting'}`, click: () => q('.queue-head')?.click() });
@@ -197,20 +188,24 @@
     relabel();
     const r = rows(s);
     updateBar(r);
-    const key = JSON.stringify(r.map((x) => [x.k, x.v, x.pct, x.hot])) + '|' + s.id;
+    const key = JSON.stringify(r.map((x) => [x.k, x.v, x.pct, x.hot])) + '|' + s.id + '|' + JSON.stringify(window.robotOutfitShown ? window.robotOutfitShown(s) : null); // (a new outfit redraws the picture)
     if (key === lastKey) return;
     lastKey = key;
 
-    // the picture: the agent robot, drawn in the screen's green by CSS
-    if (pictureFor !== s.id) {
-      pictureFor = s.id;
-      picture.innerHTML = typeof window.buildRunnerSvg === 'function'
-        ? window.buildRunnerSvg(typeof robotHueFor === 'function' ? robotHueFor(s) : 120, null, 'stand') : '';
+    // the picture: the agent robot facing you, in its own outfit (dress-up), tinted to the screen's colour by CSS.
+    // A robot with no outfit set wears a plain shirt, so it is never drawn bare.
+    const hue = typeof robotHueFor === 'function' ? robotHueFor(s) : 120;
+    const outfit = typeof window.robotOutfitShown === 'function' ? window.robotOutfitShown(s) : null;
+    const look = s.id + '|' + hue + '|' + JSON.stringify(outfit);
+    if (pictureFor !== look) {
+      pictureFor = look;
+      picture.innerHTML = typeof window.buildRunnerSvg === 'function' ? window.buildRunnerSvg(hue, outfit, 'front') : '';
     }
     stats.textContent = '';
     stats.appendChild(picture);
     for (const x of r) {
       const row = el('div', 'pip-row' + (x.pct != null ? ' pct' : '') + (x.warn ? ' warn' : '') + (x.click ? ' link' : '') + (x.hot ? ' hot' : ''));
+      row.dataset.k = x.k.toLowerCase().replace(/\s+/g, '-'); // (the CSS lets the long ones span the whole width)
       if (x.pct != null) row.style.setProperty('--p', x.pct + '%');
       row.append(el('span', 'pip-k', x.k), el('b', 'pip-v', x.v));
       if (x.click) row.addEventListener('click', x.click);

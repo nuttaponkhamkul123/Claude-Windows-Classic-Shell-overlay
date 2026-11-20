@@ -819,6 +819,11 @@
   const rowAg = setRow('btnShowAg', '✦', 'Show Antigravity');
   rowAg.title = 'Include Antigravity sessions, search hits, and New chat option';
   window.isAntigravityEnabled = () => store.showAntigravity !== false;
+  const rowCards = setRow('btnCards', '▤', 'Chat as cards');
+  rowCards.title = 'Show each of your questions as a card; click a card to open its answer (also the Cards button in the chat toolbar)';
+  const rowPerf = setRow('btnPerf', '⏱', 'Performance');
+  rowPerf.querySelector('.set-check').remove();
+  rowPerf.title = 'Memory, CPU and timers of every part of the app (Ctrl+Alt+P)';
   const rowBar = setRow('btnMiniBar', '▭', 'Mini bar');
   rowBar.title = 'A thin always-on-top strip with the state of every chat. Right-click it for options.';
   const rowDigest = setRow('btnDigest', '📊', "Today's summary");
@@ -832,13 +837,19 @@
   rowShortcut.querySelector('.set-check').remove();
   rowShortcut.title = 'Create an "AI Overlay HUD" shortcut on your Desktop';
   if (settingsPanelEl) {
-    (sep || restartRow)?.before(rowNotify, rowAg, rowBar, rowDigest, digestBox, rowExport, rowShortcut);
+    (sep || restartRow)?.before(rowNotify, rowAg, rowCards, rowBar, rowPerf, rowDigest, digestBox, rowExport, rowShortcut);
   }
 
   ready.then(() => {
     rowNotify.classList.toggle('active', store.notify !== false);
     rowAg.classList.toggle('active', store.showAntigravity !== false);
     api.miniBarState?.().then((on) => rowBar.classList.toggle('active', !!on)).catch(() => {});
+  });
+  rowCards.classList.toggle('active', !!window.chatCardsOn?.());
+  rowCards.addEventListener('click', () => window.setChatCards?.(!window.chatCardsOn?.()));
+  rowPerf.addEventListener('click', () => {
+    if (typeof closeSettingsPanel === 'function') closeSettingsPanel();
+    window.openPerf?.();
   });
   rowBar.addEventListener('click', async () => {
     try { rowBar.classList.toggle('active', !!(await api.toggleMiniBar())); } catch (_) {}

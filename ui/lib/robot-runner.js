@@ -144,6 +144,7 @@
   // pose: run | think | type | read | search | hammer | web (CSS: .pose-<name> in features.css)
   window.buildRunnerSvg = function (hue, outfit, pose) {
     if (pose === 'gaze') return buildBackSvg(hue, outfit);
+    if (pose === 'front') return buildFrontSvg(hue, outfit);
     const prop = PROPS[pose] || {};
     const sh = (hex) => (hue && typeof shiftHexHue === 'function' ? shiftHexHue(hex, hue) : hex);
     const o = sh(P.outline), main = sh(P.main), light = sh(P.light), mid = sh(P.mid), dark = sh(P.dark), white = P.white;
@@ -203,6 +204,84 @@
   </g>
 </svg>`;
   };
+
+  // Front view (pose "front"): the robot facing you, standing still, wearing its outfit. Used for the picture on the
+  // chat screen's readout panel. Same 40×52 box as the side view, centred on x 20. Hats that are drawn around the
+  // middle of the head in the side view are shifted onto the centre line; the ones that only make sense from the
+  // side (cap peak, headphones, glasses) have their own front drawing here.
+  const FRONT_HATS = {
+    cap: (c, o) => `<path d="M8.6,5C9.4,-4 14.4,-6.4 20,-6.4C25.6,-6.4 30.6,-4 31.4,5Z" fill="${c}" stroke="${o}" stroke-width="1"/>
+      <path d="M9,4.6Q20,9.6 31,4.6Q20,6.8 9,4.6Z" fill="${shade(c, -0.25)}" stroke="${o}" stroke-width="1" stroke-linejoin="round"/>
+      <circle cx="20" cy="-6.6" r="1.1" fill="${shade(c, -0.3)}"/>`,
+    headphones: (c, o) => `<path d="M8.4,10C7.4,-1 13,-5.5 20,-5.5C27,-5.5 32.6,-1 31.6,10" fill="none" stroke="${shade(c, -0.25)}" stroke-width="2.4" stroke-linecap="round"/>
+      <rect x="4.6" y="6" width="6.6" height="11" rx="3.2" fill="${c}" stroke="${o}" stroke-width="1"/>
+      <rect x="28.8" y="6" width="6.6" height="11" rx="3.2" fill="${c}" stroke="${o}" stroke-width="1"/>
+      <rect x="6" y="8" width="3.6" height="6.6" rx="1.8" fill="${shade(c, 0.3)}"/><rect x="30.4" y="8" width="3.6" height="6.6" rx="1.8" fill="${shade(c, 0.3)}"/>`,
+  };
+  const FRONT_GLASSES = {
+    round: (c) => `<circle cx="14.8" cy="9" r="4.4" fill="rgba(255,255,255,.18)" stroke="${c}" stroke-width="1.2"/><circle cx="25.2" cy="9" r="4.4" fill="rgba(255,255,255,.18)" stroke="${c}" stroke-width="1.2"/><path d="M19.2,8.6Q20,7.6 20.8,8.6" fill="none" stroke="${c}" stroke-width="1.1"/>`,
+    shades: (c) => `<path d="M9.6,6H30.4V9.4C30.4,12 28,12.8 25.2,12.8C22.2,12.8 20.6,11.4 20,10.6C19.4,11.4 17.8,12.8 14.8,12.8C12,12.8 9.6,12 9.6,9.4Z" fill="${shade(c, -0.55)}" stroke="${c}" stroke-width="1"/><path d="M11.4,7.5L14,7.5M22,7.5L24.6,7.5" stroke="#fff" stroke-width=".8" opacity=".55" stroke-linecap="round"/>`,
+    nerd: (c) => `<rect x="9.6" y="4.6" width="9.4" height="8.6" rx="2.2" fill="rgba(255,255,255,.12)" stroke="${c}" stroke-width="1.8"/><rect x="21" y="4.6" width="9.4" height="8.6" rx="2.2" fill="rgba(255,255,255,.12)" stroke="${c}" stroke-width="1.8"/><path d="M19,8.4H21" stroke="${c}" stroke-width="1.6"/>`,
+    hearts: (c) => `<path d="M14.6,13.2C10,10.2 9.4,7.4 10.6,5.6C11.8,3.8 14,4.2 14.6,6C15.2,4.2 17.4,3.8 18.6,5.6C19.8,7.4 19.2,10.2 14.6,13.2Z" fill="${c}" opacity=".88" stroke="${shade(c, -0.35)}" stroke-width=".8"/><path d="M25.4,13.2C20.8,10.2 20.2,7.4 21.4,5.6C22.6,3.8 24.8,4.2 25.4,6C26,4.2 28.2,3.8 29.4,5.6C30.6,7.4 30,10.2 25.4,13.2Z" fill="${c}" opacity=".88" stroke="${shade(c, -0.35)}" stroke-width=".8"/>`,
+    monocle: (c) => `<circle cx="25.2" cy="9" r="4.4" fill="rgba(255,255,255,.18)" stroke="${c}" stroke-width="1.3"/><path d="M27.6,12.8C29,16 28,18.5 30.4,20.5" fill="none" stroke="${c}" stroke-width=".7"/>`,
+  };
+  const FRONT_TORSO = (c, o) => `<rect x="12" y="19.5" width="16" height="12.5" rx="4" fill="${c}" stroke="${o}" stroke-width="1"/>`;
+  const FRONT_CLOTHES = {
+    shirt: (c, o) => `${FRONT_TORSO(c, o)}<path d="M16.6,19.8L20,24L23.4,19.8" fill="none" stroke="${shade(c, -0.35)}" stroke-width=".9"/><circle cx="20" cy="27" r=".7" fill="${shade(c, -0.4)}"/><circle cx="20" cy="30" r=".7" fill="${shade(c, -0.4)}"/>`,
+    hoodie: (c, o) => `<ellipse cx="20" cy="20.4" rx="8.6" ry="3.2" fill="${shade(c, -0.15)}" stroke="${o}" stroke-width="1"/>${FRONT_TORSO(c, o)}
+      <path d="M14.4,28H25.6V31.4H14.4Z" fill="${shade(c, -0.12)}" stroke="${shade(c, -0.3)}" stroke-width=".7"/><path d="M18.4,20.6V25M21.6,20.6V25" stroke="#fff" stroke-width=".7" opacity=".85"/>`,
+    suit: (c, o) => `${FRONT_TORSO(c, o)}<path d="M17,19.8L20,26.5L23,19.8Z" fill="#fff"/><path d="M19.2,21.4H20.8L21.4,27.4L20,29L18.6,27.4Z" fill="${shade(c, -0.45)}"/><path d="M17,19.8L20,26.5M23,19.8L20,26.5" stroke="${shade(c, -0.4)}" stroke-width=".8" fill="none"/>`,
+    sweater: (c, o) => `${FRONT_TORSO(c, o)}<path d="M12.3,23.3H27.7M12,26.6H28M12.3,29.9H27.7" stroke="#fff" stroke-width="1.3" opacity=".9"/>`,
+    overalls: (c, o) => `<path d="M13,24.6H27V28A4,4 0 0 1 23,32H17A4,4 0 0 1 13,28Z" fill="${c}" stroke="${o}" stroke-width="1"/>
+      <rect x="14.2" y="19.8" width="2.8" height="5.2" fill="${c}" stroke="${o}" stroke-width=".8"/><rect x="23" y="19.8" width="2.8" height="5.2" fill="${c}" stroke="${o}" stroke-width=".8"/>
+      <circle cx="15.6" cy="25.2" r=".8" fill="#f2f4f7"/><circle cx="24.4" cy="25.2" r=".8" fill="#f2f4f7"/>`,
+    scarf: (c, o) => `<rect x="11.4" y="17.6" width="17.2" height="4.2" rx="2.1" fill="${c}" stroke="${o}" stroke-width="1"/>
+      <path d="M22.5,20.6L26,20.6L27.2,29L24,28.2L23.2,24Z" fill="${shade(c, -0.1)}" stroke="${o}" stroke-width=".9" stroke-linejoin="round"/>
+      <path d="M15,17.8V21.6M18.5,17.8V21.6M22,17.8V21.6" stroke="${shade(c, 0.35)}" stroke-width=".7"/>`,
+  };
+
+  function buildFrontSvg(hue, outfit) {
+    const sh = (hex) => (hue && typeof shiftHexHue === 'function' ? shiftHexHue(hex, hue) : hex);
+    const o = sh(P.outline), main = sh(P.main), light = sh(P.light), mid = sh(P.mid), dark = sh(P.dark), white = P.white;
+    const fit = outfit || {};
+    const hatC = okHex(fit.hatColor, '#e0483e'), glC = okHex(fit.glassesColor, '#3a3f4b'), clC = okHex(fit.clothesColor, '#3faa4a');
+    const clothed = fit.clothes && FRONT_CLOTHES[fit.clothes];
+    const sleeves = fit.clothes && SLEEVES[fit.clothes];
+    const torso = clothed ? FRONT_CLOTHES[fit.clothes](clC, o) : FRONT_TORSO(main, o);
+    const bare = !clothed || fit.clothes === 'overalls' || fit.clothes === 'scarf';
+    const armFill = sleeves ? clC : mid;
+    const legFill = fit.clothes === 'overalls' ? clC : mid;
+    const hat = fit.hat ? (FRONT_HATS[fit.hat] ? FRONT_HATS[fit.hat](hatC, o) : HATS[fit.hat] ? `<g transform="translate(-1 0)">${HATS[fit.hat](hatC, o)}</g>` : '') : '';
+    const glasses = fit.glasses && FRONT_GLASSES[fit.glasses] ? FRONT_GLASSES[fit.glasses](glC) : '';
+    const ears = HAT_HIDES_EAR[fit.hat] ? '' : `<circle cx="7.8" cy="10.6" r="2.6" fill="${mid}" stroke="${o}" stroke-width="1"/><circle cx="32.2" cy="10.6" r="2.6" fill="${mid}" stroke="${o}" stroke-width="1"/>`;
+    const leg = (x) => `<rect x="${x}" y="30" width="4.2" height="13" rx="2.1" fill="${legFill}" stroke="${o}" stroke-width="1.2"/>` +
+      `<rect x="${x - 0.9}" y="42" width="6" height="3" rx="1.5" fill="${legFill}" stroke="${o}" stroke-width="1.2"/>`;
+    const arm = (x1, x2) => `<path d="M${x1},21.8 L${x2},29.6" stroke="${o}" stroke-width="4.6" stroke-linecap="round"/>` +
+      `<path d="M${x1},21.8 L${x2},29.6" stroke="${armFill}" stroke-width="2.6" stroke-linecap="round"/>` +
+      `<circle cx="${x2}" cy="30.2" r="2" fill="${mid}" stroke="${o}" stroke-width="1"/>`;
+    return `<svg viewBox="0 -5 40 52" class="runner runner-front" aria-hidden="true" overflow="visible">
+  <g class="r-body">
+    ${leg(14.8)}${leg(21)}
+    ${arm(12, 9.6)}${arm(28, 30.4)}
+    ${torso}
+    ${bare ? `<circle cx="20" cy="25.5" r="1.8" fill="${white}" opacity=".85"/>` : ''}
+    <g class="r-head">
+      ${ears}
+      <ellipse cx="20" cy="9.5" rx="12.6" ry="11" fill="${main}" stroke="${o}" stroke-width="1.4"/>
+      <path d="M12.5,5.5C14,1.8 17,0.2 20,0.2C17.6,1.8 15.6,4 14.8,6.8Z" fill="${light}" opacity=".9"/>
+      <ellipse cx="11.6" cy="14.6" rx="3.2" ry="2" fill="${dark}" opacity=".28"/><ellipse cx="28.4" cy="14.6" rx="3.2" ry="2" fill="${dark}" opacity=".28"/>
+      <g class="r-eye">
+        <ellipse cx="14.8" cy="9" rx="3.2" ry="4.1" fill="${white}" stroke="${o}" stroke-width="1"/><ellipse cx="25.2" cy="9" rx="3.2" ry="4.1" fill="${white}" stroke="${o}" stroke-width="1"/>
+        <ellipse cx="15.2" cy="9.6" rx="1.8" ry="2.7" fill="${o}"/><ellipse cx="24.8" cy="9.6" rx="1.8" ry="2.7" fill="${o}"/>
+        <circle cx="15.8" cy="8.2" r=".8" fill="#fff"/><circle cx="25.4" cy="8.2" r=".8" fill="#fff"/>
+      </g>
+      <path d="M17,15.4Q20,17.6 23,15.4" fill="none" stroke="${o}" stroke-width="1.1" stroke-linecap="round"/>
+      ${glasses}
+      ${hat}
+    </g>
+  </g>
+</svg>`;
+  }
 
   // Back view (pose "gaze"): the robot seen from behind, looking out of a window —
   // back of the head with both ears, hands clasped behind its back, feet together.

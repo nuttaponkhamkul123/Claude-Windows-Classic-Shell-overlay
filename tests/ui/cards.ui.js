@@ -51,8 +51,16 @@ app.whenReady().then(async () => {
   check('even if you close that card, the answer being written stays visible', (await shown()).some((s) => /Typing/.test(s)));
   if (SHOT) require('fs').writeFileSync(path.join(__dirname, 'shot-cards.png'), (await w.webContents.capturePage()).toPNG());
 
+  // the Settings row does the same as the toolbar button
+  check('Settings has a "Chat as cards" row, lit while Cards is on', !!(await js(`document.getElementById('btnCards')`)) && await js(`document.getElementById('btnCards').classList.contains('active')`));
+  await js(`document.getElementById('btnCards').click()`); await wait(300);
+  check('the row turns Cards off (saved, toolbar button and row follow)', !(await js(`document.body.classList.contains('chat-cards')`)) && (await js(`window.__stored.chatCards`)) === false && !(await js(`document.getElementById('btnCards').classList.contains('active')`)) && !(await js(`document.getElementById('tbCards').classList.contains('open')`)));
+  await js(`document.getElementById('btnCards').click()`); await wait(300);
+  check('and on again', (await js(`document.body.classList.contains('chat-cards')`)) && (await js(`window.__stored.chatCards`)) === true && (await n('.qa-q')) === 4);
+
   // off again
   await js(`document.getElementById('tbCards').click()`); await wait(300);
+  check('the toolbar button also updates the Settings row', !(await js(`document.getElementById('btnCards').classList.contains('active')`)));
   check('Cards off: back to the normal chat, every answer visible', (await n('.qa-q')) === 0 && (await shown()).length === 4 && (await js(`window.__stored.chatCards`)) === false, String((await shown()).length));
 
   console.log(`\n${pass} passed, ${fail} failed`);

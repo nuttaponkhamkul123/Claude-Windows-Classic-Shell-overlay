@@ -1,3 +1,26 @@
+// Interval bookkeeping for the Performance panel: which setInterval timers are running, how often, and where they
+// were started. Costs a stack read when a timer is created, nothing while it runs.
+(function () {
+  const timers = (window.__timers = new Map());
+  const rawSet = window.setInterval.bind(window);
+  const rawClear = window.clearInterval.bind(window);
+  const where = () => {
+    const lines = String(new Error().stack || '').split('\n').slice(2);
+    for (const l of lines) {
+      if (/[\\/]dom\.js/.test(l)) continue; // skip uiInterval itself
+      const m = /([\w.-]+\.js):(\d+)/.exec(l);
+      if (m) return m[1] + ':' + m[2];
+    }
+    return '?';
+  };
+  window.setInterval = function (fn, ms, ...rest) {
+    const id = rawSet(fn, ms, ...rest);
+    timers.set(id, { ms: Number(ms) || 0, src: where(), hidden: false });
+    return id;
+  };
+  window.clearInterval = function (id) { timers.delete(id); return rawClear(id); };
+})();
+
 // Shared DOM helpers. Loaded before every other ui script.
 // Feature modules used to keep private copies of these; this is the single source.
 window.el = function el(tag, cls, text) {
