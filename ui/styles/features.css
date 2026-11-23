@@ -173,7 +173,7 @@
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 .fx-search-input:focus { outline: none; border-color: #3d7bad; box-shadow: 0 0 0 1px #c9e3f7; }
-.fx-results { flex: 1; overflow-y: auto; min-height: 0; }
+.fx-results { flex: 1; order: 2; overflow-y: auto; min-height: 0; }
 .fx-results-note { padding: 6px 8px; color: #6a7a8c; font-size: 11px; }
 .fx-hit {
   margin: 0 2px 4px; padding: 6px 8px;
@@ -187,6 +187,15 @@
 .fx-hit-time { color: #8a96a3; font-size: 10.5px; }
 .fx-hit-snip { color: #3a4654; font-size: 11.5px; line-height: 1.4; }
 .fx-hit-snip mark { background: #fff1a8; color: inherit; padding: 0 1px; }
+.fx-hit-snip:not(:has(b)) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fx-older-btn {
+  flex: none; order: 2; margin: 4px 2px 2px; padding: 4px 8px;
+  border: 1px solid #d3dde9; border-radius: 3px; background: #f6f9fc;
+  color: #2a5885; font-size: 11px; text-align: left; cursor: pointer;
+}
+.fx-older-btn:hover { border-color: #7eb4ea; background: #e8f3fc; }
+body.theme-vista .fx-older-btn { background: var(--vd-panel); border-color: #000; color: var(--vd-text-soft); }
+body.theme-vista .fx-older-btn:hover { background: var(--vd-hover); }
 .chat-bubble.fx-flash { animation: fx-flash 2.4s ease-out; }
 @keyframes fx-flash { 0%, 30% { background-color: #fff3b0; } 100% { background-color: transparent; } }
 

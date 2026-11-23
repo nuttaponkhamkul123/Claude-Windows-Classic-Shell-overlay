@@ -564,6 +564,55 @@ async function searchTranscripts(query) {
   return hits.slice(0, 40);
 }
 
+// Past Claude chats (last 60 days, newest first) for the "Older chats" list.
+// Reads only the head and tail of each transcript: cwd, AI title, first prompt.
+const PAST_MAX = 60;
+async function readSlice(p, start, len) {
+  const fd = await fs.promises.open(p, 'r');
+  try {
+    const buf = Buffer.alloc(len);
+    const { bytesRead } = await fd.read(buf, 0, len, start);
+    return buf.toString('utf-8', 0, bytesRead);
+  } finally { await fd.close(); }
+}
+
+async function listPastChats() {
+  const out = [];
+  for (const f of await listTranscripts()) {
+    if (out.length >= PAST_MAX) break;
+    if (f.source !== 'claude') continue;
+    let head, tail = '';
+    try {
+      head = await readSlice(f.path, 0, Math.min(f.size, 256 * 1024));
+      if (f.size > 256 * 1024) tail = await readSlice(f.path, f.size - 64 * 1024, 64 * 1024);
+    } catch (_) { continue; }
+    let cwd = '', title = '', prompt = '';
+    for (const line of (tail + '\n' + head).split('\n')) {
+      if (!title && line.includes('"ai-title"')) { try { const t = JSON.parse(line); title = t.aiTitle || t.title || ''; } catch (_) {} }
+    }
+    for (const line of head.split('\n')) {
+      if (!cwd && line.includes('"cwd"')) { try { cwd = JSON.parse(line).cwd || ''; } catch (_) {} }
+      if (!prompt && line.includes('"type":"user"')) {
+        try {
+          const e = JSON.parse(line);
+          const text = e.isMeta || e.isSidechain ? '' : textOfContent(e.message?.content).trim();
+          if (text && !/^<(local-command-|command-|system-reminder)/.test(text)) prompt = text.replace(/\s+/g, ' ').slice(0, 160);
+        } catch (_) {}
+      }
+      if (cwd && prompt) break;
+    }
+    if (!prompt && !title) continue; // empty or command-only session
+    const uuid = path.basename(f.path, '.jsonl');
+    const id = 'claude_' + uuid;
+    extraPaths.set(id, f.path);
+    out.push({
+      id, uuid, source: 'claude', cwd, title: title || prompt, snippet: prompt, ts: f.mtime,
+      project: cwd ? path.basename(cwd) : f.dirName.replace(/^[a-zA-Z]--Users-[^-]+-(Desktop-)?/, ''),
+    });
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // "Done" notifications + today's digest
 // ---------------------------------------------------------------------------
@@ -896,6 +945,7 @@ function register(c) {
   });
 
   ipcMain.handle('search-transcripts', (_e, q) => searchTranscripts(q).catch(() => []));
+  ipcMain.handle('list-past-chats', () => listPastChats().catch(() => []));
   ipcMain.handle('get-steps', (_e, id) => stepsOfSession(id));
   ipcMain.handle('search-steps', (_e, q) => searchSteps(q).catch(() => []));
   ipcMain.handle('open-file', (_e, p) => openFile(p));
@@ -1069,5 +1119,5 @@ function register(c) {
 module.exports = {
   register, onSync, readClaudeHistory, readAntigravityHistory, readSessionHistory, pathForSession,
   getSetting, setSetting, trackChild, aliasChild, wasStopped, editFromToolUse, mergeEdit, openFile,
-  gitChanges, gitFileDiff, gitCommit, gitPush, gitDiscard, gitUndoDiscard, gitDraftMessage, handoffNote, flushStore, searchSteps,
+  gitChanges, gitFileDiff, gitCommit, gitPush, gitDiscard, gitUndoDiscard, gitDraftMessage, handoffNote, flushStore, searchSteps, listPastChats,
 };

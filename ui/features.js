@@ -699,7 +699,41 @@
     return safe.replace(re, (m) => `<mark>${m}</mark>`);
   }
 
+  // "Older chats": browse past Claude chats (60 days) without searching; click one to open and resume it
+  const olderBtn = el('button', 'fx-older-btn');
+  const olderLabel = (open) => olderBtn.replaceChildren(el('span', 'fx-older-ico', open ? '←' : '🕘'), open ? ' Back to current chats' : ' Older chats');
+  olderLabel(false);
+  olderBtn.title = 'Past Claude chats from the last 60 days — open one to continue it';
+  results.after(olderBtn);
+  let olderOpen = false;
+  async function showOlder() {
+    olderOpen = true;
+    olderLabel(true);
+    const seq = ++searchSeq;
+    results.innerHTML = '';
+    results.appendChild(el('div', 'fx-results-note', 'Loading…'));
+    results.style.display = '';
+    sessionsContainer.style.display = 'none';
+    let list = [];
+    try { list = (await api.listPastChats?.()) || []; } catch (_) {}
+    if (seq !== searchSeq || !olderOpen) return;
+    results.innerHTML = '';
+    results.appendChild(el('div', 'fx-results-note', list.length ? `${list.length} chat${list.length > 1 ? 's' : ''} from the last 60 days — click to open and continue` : 'No past chats in the last 60 days.'));
+    for (const h of list) {
+      const row = el('div', 'fx-hit');
+      const top = el('div', 'fx-hit-top');
+      top.append(el('span', 'fx-hit-title', h.title || 'Conversation'), el('span', 'fx-hit-proj', h.project || ''), el('span', 'fx-hit-time', formatShortAgo(h.ts)));
+      row.appendChild(top);
+      if (h.snippet && h.snippet !== h.title) row.appendChild(el('div', 'fx-hit-snip', h.snippet));
+      row.addEventListener('click', () => openHit(h, ''));
+      results.appendChild(row);
+    }
+  }
+  olderBtn.addEventListener('click', () => (olderOpen ? endSearch() : showOlder()));
+
   function endSearch() {
+    olderOpen = false;
+    olderLabel(false);
     searchInput.value = '';
     results.style.display = 'none';
     results.innerHTML = '';
@@ -708,6 +742,8 @@
 
   async function runSearch() {
     const q = searchInput.value.trim();
+    olderOpen = false;
+    olderLabel(false);
     if (q.length < 2) { results.style.display = 'none'; sessionsContainer.style.display = ''; return; }
     const seq = ++searchSeq;
     results.innerHTML = '';
@@ -776,7 +812,7 @@
         fullContent: '', detail: '', mtime: h.ts,
       };
     }
-    jump = { id: h.id, q: q.toLowerCase(), snippet: h.snippet.replace(/^…|…$/g, '').toLowerCase().replace(/\s+/g, ' '), until: Date.now() + 8000 };
+    jump = q ? { id: h.id, q: q.toLowerCase(), snippet: h.snippet.replace(/^…|…$/g, '').toLowerCase().replace(/\s+/g, ' '), until: Date.now() + 8000 } : null;
     endSearch();
     showDetailView(s);
     tryJump();

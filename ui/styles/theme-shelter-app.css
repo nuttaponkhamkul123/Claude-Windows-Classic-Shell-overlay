@@ -298,3 +298,22 @@ body.style-shelter #listView .workspace-body { background: none; border: 0; bord
 body.style-shelter .row-orb img.robot-avatar { filter: grayscale(1) sepia(1) saturate(4) hue-rotate(-8deg) brightness(1.05) !important; }
 body.style-shelter .workspace-header *:not(svg) { font-family: var(--pip-font); }
 body.style-shelter .workspace-header .workspace-name { font-weight: 400; letter-spacing: 0.04em; }
+
+/* 13. the "Older chats" key and its list (also the search results): 3000A list lines, like the chat rows */
+body.style-shelter .fx-older-btn {
+  background: none; color: var(--pip); border: 1px solid var(--pip-dim); border-radius: 0; box-shadow: none;
+  font: 400 13px var(--pip-font); letter-spacing: 0.04em; text-transform: uppercase;
+}
+body.style-shelter .fx-older-btn:hover { background: var(--pip); color: var(--pip-ink); border-color: var(--pip); }
+body.style-shelter .fx-older-ico { display: none; }
+body.style-shelter .fx-results * { font-family: var(--pip-font); }
+body.style-shelter .fx-results-note { color: var(--pip-dim); }
+body.style-shelter .fx-hit {
+  background: none; color: var(--pip); border: 0; border-left: 2px solid transparent; border-right: 2px solid transparent;
+  border-radius: 0; box-shadow: none; margin: 2px 0; padding: 6px 10px;
+}
+body.style-shelter .fx-hit:hover { background: rgba(255, 159, 28, 0.1); border-left-color: var(--pip); border-right-color: var(--pip); }
+body.style-shelter .fx-hit-title { color: var(--pip); font-weight: 400; font-size: 14px; }
+body.style-shelter :is(.fx-hit-proj, .fx-hit-time, .fx-hit-snip) { color: var(--pip-dim); }
+body.style-shelter .fx-hit-snip b { color: var(--pip); font-weight: 400; }
+body.style-shelter .fx-hit-snip mark { background: var(--pip); color: var(--pip-ink); }

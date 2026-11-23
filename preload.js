@@ -38,6 +38,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   storeGetAll: () => ipcRenderer.invoke('store-get-all'),
   storeSet: (key, value) => ipcRenderer.send('store-set', { key, value }),
   searchTranscripts: (q) => ipcRenderer.invoke('search-transcripts', q),
+  listPastChats: () => ipcRenderer.invoke('list-past-chats'),
   getSteps: (sessionId) => ipcRenderer.invoke('get-steps', sessionId),
   searchSteps: (q) => ipcRenderer.invoke('search-steps', q),
   openFile: (p) => ipcRenderer.invoke('open-file', p),

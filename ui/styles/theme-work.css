@@ -356,6 +356,20 @@ body.style-work #listView .xb-search {
   order: 1; flex: 0 0 auto; height: 30px; margin: 0 12px 8px; box-sizing: border-box; border-radius: 6px;
 }
 body.style-work #sessionsContainer { order: 2; flex: 1; background: none; padding: 0 0 56px; }
+/* the "Older chats" key sits under the list, so it keeps the room for the Settings button instead */
+body.style-work #listView #sessionsContainer:has(~ .fx-older-btn) { padding-bottom: 4px; }
+body.style-work #listView .fx-older-btn { margin: 4px 12px 56px; padding: 5px 10px; text-align: center; }
+/* the key and its list (also search results) in the dark Work look, like the chat rows */
+body.style-work:not(.style-shelter) .fx-older-btn { background: var(--wk-panel); color: var(--wk-text); border: 1px solid var(--wk-line); border-radius: 6px; font-family: var(--wk-font); }
+body.style-work:not(.style-shelter) .fx-older-btn:hover { border-color: var(--wk-accent); background: var(--wk-panel); }
+body.style-work:not(.style-shelter) .fx-results-note { color: var(--wk-dim); }
+body.style-work:not(.style-shelter) .fx-hit { background: none; border: 0; border-radius: 0; margin: 0; padding: 8px 12px; }
+body.style-work:not(.style-shelter) .fx-hit + .fx-hit { border-top: 1px solid var(--wk-line); }
+body.style-work:not(.style-shelter) .fx-hit:hover { background: var(--wk-panel); }
+body.style-work:not(.style-shelter) .fx-hit-title { color: var(--wk-text); }
+body.style-work:not(.style-shelter) :is(.fx-hit-proj, .fx-hit-time, .fx-hit-snip) { color: var(--wk-dim); }
+body.style-work:not(.style-shelter) .fx-hit-snip b { color: var(--wk-text); }
+body.style-work:not(.style-shelter) .fx-hit-snip mark { background: rgba(210, 153, 34, 0.35); color: var(--wk-text); }
 /* strip behind the bottom Settings button so the list doesn't show through */
 body.style-work #listView::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 50px; pointer-events: none;
