@@ -1,8 +1,8 @@
-# ovly-claude: a desktop HUD for Claude Code (and Antigravity)
+# ovly-claude: a desktop HUD for Claude Code, Antigravity and OpenCode
 
-A small always-on-top Windows window that watches your **Claude Code** chats (and **Antigravity** agent chats), tells you when one needs you, and lets you **reply, approve tool use, review and commit changes** without leaving it.
+A small always-on-top Windows window that watches your **Claude Code**, **Antigravity** and **OpenCode** chats, tells you when one needs you, and lets you **reply, approve tool use, review and commit changes** without leaving it.
 
-It reads the logs Claude Code already writes (`~/.claude/projects/`, and `~/.gemini/…/brain/` for Antigravity). It does not need an API key. Replies you send from the HUD run the `claude` command on your PC (`claude -p`, resuming the chat).
+Claude and Antigravity are read from the logs they already write (`~/.claude/projects/` and `~/.gemini/…/brain/`); no API key is needed. **OpenCode** is watched through its own local HTTP service (it reads `~/.local/state/opencode/service.json` for the URL and password), so the HUD gets exact live text, tool calls and approval requests. Replies to Claude run `claude -p` on your PC; OpenCode replies go straight to its service.
 
 ---
 
@@ -12,17 +12,18 @@ It reads the logs Claude Code already writes (`~/.claude/projects/`, and `~/.gem
 - One card or row per chat, with a live status: *Running* (thinking / which tool), *Idle*, *Needs input*. Filter by All, Running, Idle, Needs input.
 - Chime and a pop-out when a chat asks a question, needs an approval, or finishes. Desktop notification when a long run ends.
 - Docks to a screen edge as a small tab. System-tray menu to reset size and position.
-- Context meter per chat, cost of the chat (`$…`), tokens used today, and a **Usage** panel (tokens per day, plan limits).
+- Context meter per chat, cost of the chat (`$…`), tokens used today, and a **Usage** panel (tokens per day, plan limits). OpenCode shows cost and tokens from its service; it has no context meter.
 
 **Reply**
 - Full conversation view with Markdown, syntax-coloured code, and **Mermaid diagrams** (ask Claude for "a Mermaid diagram of…").
-- Attach images and files (paste, drag, paperclip). Slash commands and your own skills: type `/`.
-- **Model per message:** the Model menu has *This message* (one-off, e.g. Haiku for a quick question) and *Every message*. Effort works the same way.
-- **Plan** mode, a message queue while Claude is busy, **Stop** that really stops, and a **Hand off ↗** button (or `/handoff`) that writes a short note from a long chat and opens a fresh chat with it, which keeps long chats cheap.
+- Attach images and files (paste, drag, paperclip). Slash commands and your own skills: type `/` — including OpenCode's commands and skills, loaded from the service for the current folder.
+- **New chat ▾** starts a fresh conversation with Claude, Antigravity or OpenCode in the current folder.
+- **Model per message:** the Model menu has *This message* (one-off, e.g. Haiku for a quick question) and *Every message* (OpenCode switches the session model before sending). Effort works the same way for Claude / Antigravity.
+- **Plan** mode (Claude / Antigravity), a message queue while the agent is busy, **Stop** that really stops (including OpenCode, via its interrupt API), and a **Hand off ↗** button (or `/handoff`) that writes a short note from a long chat and opens a fresh chat with it, which keeps long chats cheap.
 - Remote Control, pinned notes, Ctrl+K finder, search across all chats, export a chat to Markdown.
 
 **Approve**
-- Claude's tool requests appear in the HUD with **Allow / Allow always / Deny**. "Always" saves a narrow rule (for example `npm test`). Rules never cover chained or hidden commands, and delete / kill / download-and-run commands never get a rule.
+- Claude's tool requests appear in the HUD with **Allow / Allow always / Deny**. "Always" saves a narrow rule (for example `npm test`). Rules never cover chained or hidden commands, and delete / kill / download-and-run commands never get a rule. OpenCode's requests use the same card; its decisions are answered through its own permission API.
 - *Always allow all commands in this folder* is available for shell commands. It still asks for delete, kill, downloads, `| sh`, `git push`, `git reset --hard` and `git clean`.
 - Manage or delete rules in Settings → Approval rules.
 
@@ -38,7 +39,7 @@ It reads the logs Claude Code already writes (`~/.claude/projects/`, and `~/.gem
 
 ## Quick start
 
-Windows, Node.js, and Claude Code installed (VS Code extension or `claude` on your PATH).
+Windows and Node.js, plus whichever agents you want to use: Claude Code (VS Code extension or `claude` on your PATH), Antigravity (`agy`), and/or OpenCode with its local service running. Missing agents simply don't add sessions.
 
 ```bash
 npm install
@@ -53,7 +54,7 @@ Or double-click **`Launch AI HUD.vbs`** (no console window). The app also create
 npm test
 ```
 
-Runs `tests/` with Node's built-in test runner (no extra packages): the approval-rule parser and the git actions behind the Changes panel.
+Runs `tests/` with Node's built-in test runner (no extra packages): the approval-rule parser, the git actions behind the Changes panel, and OpenCode's session/helper mappings.
 
 ## Safety notes
 
@@ -68,6 +69,7 @@ Runs `tests/` with Node's built-in test runner (no extra packages): the approval
 - `main/`: main-process parts: `ipc/` (approvals, clipboard, snapshots), `notes.js`, `git.js` and `proc.js` (git and one-off process helpers).
 - `features-main.js`: settings store, history, search, notifications, remote control, hand-off note.
 - `watcher.js`: reads Claude Code and Antigravity logs and works out each chat's state.
+- `opencode-watcher.js`: watches OpenCode over its local HTTP service; streams text, forwards approvals, sends prompts, interrupts and reads history/models/commands.
 - `approval-shell.js`: splits shell commands and decides what an "Always allow" rule may cover.
 - `usage.js`: token and plan-limit numbers. `skill-install-main.js`: skill installer.
 - `preload.js`: the only bridge between the page and the main process.

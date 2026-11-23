@@ -59,13 +59,14 @@ let currentActiveSession = null;
 // Display names for the agents ("Claude said", header, list). Each session can
 // have its own name — click the name in the conversation header to rename that
 // chat only (features-names.js saves them). Default = "Claude" / "Antigravity".
-var agentNames = { claude: 'Claude', antigravity: 'Antigravity' };
+var agentNames = { claude: 'Claude', antigravity: 'Antigravity', opencode: 'OpenCode' };
 var sessionAgentNames = {}; // session id -> your name for the agent in that chat
 var syncedRecord = new Map(); // session id -> lastRecordId already drawn into its open chat
 function agentLabel(source, sessionId) {
   const id = sessionId === undefined ? currentActiveSession?.id : sessionId;
   if (id && sessionAgentNames[id]) return sessionAgentNames[id];
-  return source === 'claude' ? agentNames.claude : agentNames.antigravity;
+  return source === 'antigravity' ? agentNames.antigravity
+    : source === 'opencode' ? agentNames.opencode : agentNames.claude;
 }
 
 // Attachments for the next message: [{ id, name, size, isImage, dataUrl?, path? }]
@@ -372,7 +373,7 @@ function showDetailView(session) {
 
   // Header identity
   detailLogo.className = `card-logo ${session.source}`;
-  detailLogo.textContent = session.source === 'claude' ? 'C' : 'A';
+  detailLogo.textContent = session.source === 'claude' ? 'C' : session.source === 'opencode' ? 'O' : 'A';
   detailProject.textContent = session.project;
   detailProject.title = session.sessionTitle || session.project;
   renderModelChip(detailModel, session);
@@ -429,7 +430,7 @@ function showDetailView(session) {
 // only remembers chat while it is running). Replaces the one-message
 // placeholder history with the real conversation, once per session.
 async function loadHistoryFromDisk(session, history, preloaded) {
-  if ((session.source !== 'claude' && session.source !== 'antigravity') || !window.electronAPI.getSessionHistory) return;
+  if (!['claude', 'antigravity', 'opencode'].includes(session.source) || !window.electronAPI.getSessionHistory) return;
   // Only when we have nothing better than the "latest reply" placeholder
   // (`preloaded` = the disk messages were already fetched because something sent from
   // elsewhere is missing from the chat; then the whole chat is redrawn from disk)
@@ -732,7 +733,7 @@ function submitReply(text) {
     window.electronAPI.dismissSession(currentActiveSession.id);
   }
 
-  // 2. Send IPC to main process (runs Claude --resume or Antigravity chat)
+  // 2. Send IPC to main process (Claude CLI, agy, or the OpenCode service)
   window.electronAPI.sendReply({
     text: reply,
     ...att, // image (first), images, files
@@ -742,7 +743,9 @@ function submitReply(text) {
 
   replyStatusMsg.textContent = currentActiveSession?.source === 'claude'
     ? '⚡ Sent to Claude Code! Streaming response...'
-    : '⚡ Sent to Antigravity IDE!';
+    : currentActiveSession?.source === 'opencode'
+      ? '⚡ Sent to OpenCode! Streaming response...'
+      : '⚡ Sent to Antigravity IDE!';
 
   replyTextarea.value = '';
   clearAttachedImage();
@@ -1249,7 +1252,7 @@ function renderModelChip(el, session) {
   el.title = session?.model ? `Model: ${session.model}${session.effort ? `\nEffort: ${session.effort}` : ''}` : '';
   const where = el.classList.contains('rt-model') ? ' rt-model' : ''; // the one in the input toolbar
   el.className = `model-chip${where} ${session?.effort ? 'effort-' + session.effort : ''}`;
-  if (where && !label && session && (session.source === 'claude' || session.source === 'antigravity')) {
+  if (where && !label && session && ['claude', 'antigravity', 'opencode'].includes(session.source)) {
     el.textContent = 'Model ▾'; // nothing known yet: still the way into the Model menu
     el.style.display = '';
     return;
@@ -1439,7 +1442,8 @@ function setHeaderIdentity(session) {
   if (inDetail) {
     setRobotAvatar(badgeIcon, session);
     primaryBadge.className = `agent-badge ${session.source}`;
-    primaryBadge.title = session.source === 'claude' ? 'Claude Code' : 'Antigravity';
+    primaryBadge.title = session.source === 'antigravity' ? 'Antigravity'
+      : session.source === 'opencode' ? 'OpenCode' : 'Claude Code';
   } else {
     badgeIcon.classList.remove('has-robot');
     badgeIcon.textContent = '✦';
@@ -1537,7 +1541,7 @@ function renderQuickChips() {
     dot.className = `chip-dot ${session.unread ? 'attention' : (isRunning ? 'tool' : 'ready')}`;
 
     const text = document.createElement('span');
-    const prefix = session.source === 'claude' ? 'C' : 'A';
+    const prefix = session.source === 'claude' ? 'C' : session.source === 'opencode' ? 'O' : 'A';
     text.textContent = `${prefix}:${session.project.slice(0, 7)} [${isRunning ? '▶' : '⏸'}]`;
 
     chip.appendChild(dot);
@@ -1794,9 +1798,10 @@ function buildSessionCard(session) {
   timeEl.title = new Date(session.mtime).toLocaleString();
   // Agent name (or your renamed one) in front of the title
   const agentEl = document.createElement('span');
-  agentEl.className = `row-agent ${session.source === 'claude' ? 'claude' : 'antigravity'}`;
+  agentEl.className = `row-agent ${session.source === 'antigravity' ? 'antigravity' : session.source === 'opencode' ? 'opencode' : 'claude'}`;
   agentEl.textContent = agentLabel(session.source, session.id);
-  agentEl.title = session.source === 'claude' ? 'Claude Code' : 'Antigravity';
+  agentEl.title = session.source === 'antigravity' ? 'Antigravity'
+    : session.source === 'opencode' ? 'OpenCode' : 'Claude Code';
   line1.append(agentEl, titleEl, timeEl);
 
   // Messenger style: "Title — latest message" on one line
@@ -2205,7 +2210,7 @@ async function redrawInLogOrder(s) {
 
 const normMsg = (t) => String(t || '').replace(/\s+/g, ' ').trim();
 async function redrawIfRemoteMessages(s) {
-  if ((s.source !== 'claude' && s.source !== 'antigravity') || !window.electronAPI.getSessionHistory) return false;
+  if ((s.source !== 'claude' && s.source !== 'antigravity' && s.source !== 'opencode') || !window.electronAPI.getSessionHistory) return false;
   let msgs = null;
   try { msgs = await window.electronAPI.getSessionHistory(s.id); } catch (e) { return false; }
   if (!msgs || !msgs.length) return false;
@@ -2407,7 +2412,7 @@ function renderApprovalCard(req) {
 
   const head = document.createElement('div');
   head.className = 'perm-head';
-  head.textContent = `${currentActiveSession?.source === 'antigravity' ? 'Antigravity' : 'Claude'} wants to use `;
+  head.textContent = `${agentLabel(currentActiveSession?.source)} wants to use `;
   const tool = document.createElement('strong');
   tool.textContent = prettyToolName(req.toolName);
   head.appendChild(tool);
@@ -2546,7 +2551,7 @@ function renderApprovalToasts() {
 
   for (const req of shown) {
     const s = sessionsList.find((x) => x.id === req.sessionId);
-    const agent = s?.source === 'antigravity' ? 'Antigravity' : 'Claude';
+    const agent = agentLabel(s?.source);
     const t = document.createElement('div');
     t.className = 'perm-toast';
     t.title = `${s ? s.project + ' — ' + (s.sessionTitle || '') + '\n' : ''}${describeToolInput(req.toolName, req.input)}`;
@@ -2706,8 +2711,8 @@ function updateConvoHeader(s) {
   bar.style.display = msg ? '' : 'none';
   renderActivity(s);
 
-  // Toolbar actions apply to both Claude Code and Antigravity
-  const isSupported = s.source === 'claude' || s.source === 'antigravity';
+  // Toolbar actions apply to Claude, Antigravity and OpenCode
+  const isSupported = ['claude', 'antigravity', 'opencode'].includes(s.source);
   document.querySelectorAll('.tb-claude').forEach((b) => { b.style.display = isSupported ? '' : 'none'; });
 }
 
@@ -2720,6 +2725,7 @@ function openSlashFor(text) {
 }
 document.getElementById('tbModel')?.addEventListener('click', (e) => {
   if (currentActiveSession?.source === 'antigravity' && window.openAgyModelMenu) { e.stopPropagation(); window.openAgyModelMenu(); }
+  else if (currentActiveSession?.source === 'opencode') openSlashFor('/model ');
   else if (window.openClaudeModelMenu) { e.stopPropagation(); window.openClaudeModelMenu(); }
   else openSlashFor('/model ');
 });
@@ -2736,9 +2742,9 @@ function onDetailOpened(session) {
   mcpPanel.style.display = 'none';
   closeUsagePanel();
   closeSettingsPanel();
-  if (btnMcp) btnMcp.style.display = (session.source === 'claude' || session.source === 'antigravity') ? '' : 'none';
+  if (btnMcp) btnMcp.style.display = ['claude', 'antigravity', 'opencode'].includes(session.source) ? '' : 'none';
   renderReplyOptions();
-  if (session.source === 'claude' || session.source === 'antigravity') loadSlashCommands(session.cwd, session.source); // warm the cache
+  if (['claude', 'antigravity', 'opencode'].includes(session.source)) loadSlashCommands(session.cwd, session.source); // warm the cache
   for (const req of pendingApprovals.values()) {
     if (req.sessionId === session.id) renderApprovalCard(req);
   }

@@ -722,7 +722,15 @@ function aliasChild(oldId, newId) { const r = children.get(oldId); if (r) childr
 function wasStopped(sessionId) { return !!children.get(sessionId)?.stopped; }
 function stopReply(sessionId) {
   const rec = children.get(sessionId);
-  if (!rec || !rec.child.pid) return false;
+  // OpenCode runs in its background service, not as a child we spawned: ask it
+  // to interrupt instead of looking for a PID that will never be there.
+  if (!rec || !rec.child.pid) {
+    if (ctx?.interruptSession && typeof sessionId === 'string' && sessionId.startsWith('opencode_')) {
+      ctx.interruptSession(sessionId);
+      return true;
+    }
+    return false;
+  }
   rec.stopped = true;
   if (process.platform === 'win32') execFile('taskkill', ['/pid', String(rec.child.pid), '/T', '/F'], () => {});
   else try { rec.child.kill('SIGTERM'); } catch (_) {}
@@ -1070,7 +1078,13 @@ function register(c) {
   ipcMain.handle('git-discard', (_e, cwd, files) => gitDiscard(cwd, files));
   ipcMain.handle('git-undo-discard', (_e, cwd, id) => gitUndoDiscard(cwd, id));
   ipcMain.handle('git-draft-message', (_e, cwd, files) => gitDraftMessage(cwd, files));
-  ipcMain.handle('handoff-note', (_e, sessionId) => handoffNote(sessionId));
+  ipcMain.handle('handoff-note', async (_e, sessionId) => {
+  if (typeof sessionId === 'string' && sessionId.startsWith('opencode_') && ctx?.getRemoteHistory) {
+    const history = await ctx.getRemoteHistory(sessionId).catch(() => null);
+    return handoffNote(sessionId, { history });
+  }
+  return handoffNote(sessionId);
+});
 
   // Desktop shortcut creator (Windows .lnk via Electron's shell.writeShortcutLink)
   function createDesktopShortcut({ force = false } = {}) {

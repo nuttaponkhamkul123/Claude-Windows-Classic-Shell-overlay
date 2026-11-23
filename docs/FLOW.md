@@ -9,13 +9,16 @@ flowchart LR
   subgraph Agents["AI agents (outside the app)"]
     CC["Claude Code"]
     AG["Antigravity"]
+    OC["OpenCode"]
   end
-  subgraph Disk["Log files"]
+  subgraph Disk["Log files / local service"]
     CL["~/.claude/projects/*.jsonl"]
     GL["~/.gemini/antigravity*/"]
+    SV["OpenCode HTTP service<br/>~/.local/state/opencode/service.json"]
   end
   subgraph Main["Electron main process"]
     W["watcher.js<br/>polls every 0.8s"]
+    OW["opencode-watcher.js<br/>HTTP + event stream"]
     M["main.js<br/>windows, send-reply"]
     P["main/ipc/permissions.js<br/>approval server + rules"]
     F["features-main.js + main/git.js<br/>settings, search, git, costs"]
@@ -29,16 +32,22 @@ flowchart LR
   AG -- writes --> GL
   CL --> W
   GL --> W
+  OC <-- "HTTP /api/event" --> SV
+  SV <-- "REST: sessions, prompt, interrupt" --> OW
+  OW -- "merge opencode_* sessions" --> W
+  OW -- "stream / permission" --> M
   W -- "sync / alert" --> M
   M -- "sessions-sync, session-alert" --> PL --> A
   A -- "send-reply, settings…" --> PL --> M
   PL --> F
   M -- "spawn claude -p / agy" --> CC
   M -- spawn --> AG
+  M -- "sendPrompt / interrupt" --> OW
   CC -. "permission request" .-> P -- "permission-request" --> PL
+  OW -. "permission.asked" .-> P -- "permission-request" --> PL
 ```
 
-The app never talks to an AI service directly. It **reads the agents' log files** to show status, and **starts the agents' CLIs** to send messages.
+Claude and Antigravity are read from **log files** and driven through their **CLIs**. OpenCode is different: the app talks to its **local HTTP service** (authenticated with the password in `service.json`), so status, live text and approvals arrive as API events rather than log lines. No cloud API key is handled by the HUD.
 
 ## 2. Sending a message
 
@@ -69,6 +78,8 @@ sequenceDiagram
 
 Antigravity takes the same path using `agy` instead of `claude -p`. If `agy` is not installed, the app pastes the message into the Antigravity window as a fallback.
 
+OpenCode skips the child process entirely: `main.js` calls `opencode.sendPrompt()` (which creates a session for a New-chat draft, optionally switches model/agent, then POSTs `/api/session/<id>/prompt`). `opencode-watcher.js` emits `reply-stream` for live text and `reply-rekey` when a draft gets its real id. **Stop** calls `POST /api/session/<id>/interrupt`.
+
 ## 3. Tool approvals
 
 ```mermaid
@@ -88,6 +99,8 @@ flowchart TD
 
 Saved rules can be reviewed and deleted in **Settings → Approval rules** (`ui/logic/system/rules.js`).
 
+OpenCode asks through the same event stream; `main.js` puts the request in `pendingPermissions` with an `onDecision` callback and the approval card replies `once` / `always` / `reject` to `POST /api/session/<id>/permission/<rid>/reply`. No HUD-side rule is saved for OpenCode — its own permission config owns that.
+
 ## 4. Session status
 
 ```mermaid
@@ -103,13 +116,14 @@ stateDiagram-v2
   Question --> Idle: dismissed
 ```
 
-`watcher.js` works this out from the log on every poll. A **Question** raises a `session-alert`: the HUD expands and plays a chime.
+`watcher.js` works this out from the log on every poll; `opencode-watcher.js` derives the same states from API events and hands finished session objects to the watcher, which merges them under `opencode_*` ids. A **Question** raises a `session-alert`: the HUD expands and plays a chime.
 
 ## Where to look
 
 | Area | File |
 |---|---|
 | Reading logs, session state | `watcher.js` |
+| OpenCode service, events, prompts, approvals | `opencode-watcher.js` |
 | Windows, sending messages, MCP list | `main.js` |
 | Approvals and rules | `main/ipc/permissions.js`, `mcp/permission.js`, `approval-shell.js` |
 | Settings, search, notifications, hand-off note | `features-main.js` |

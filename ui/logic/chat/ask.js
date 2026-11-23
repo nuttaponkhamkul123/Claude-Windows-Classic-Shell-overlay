@@ -10,7 +10,7 @@
 
   const questionsOf = (req) => (Array.isArray(req.input?.questions) ? req.input.questions : []);
   const labelOf = (o) => String(o && typeof o === 'object' ? o.label ?? '' : o ?? '');
-  const agentName = (s) => (s && s.source === 'antigravity' ? 'Antigravity' : 'Claude');
+  const agentName = (s) => (s && s.source === 'antigravity' ? 'Antigravity' : s && s.source === 'opencode' ? 'OpenCode' : 'Claude');
 
   function cardFor(sessionId) {
     return chatStream.querySelector(`.ask-card[data-session="${CSS.escape(sessionId)}"]`);

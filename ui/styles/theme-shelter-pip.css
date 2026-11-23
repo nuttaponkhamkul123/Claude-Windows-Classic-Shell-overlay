@@ -395,7 +395,9 @@ body.style-shelter #detailView .pip-seg:empty { display: none; }
 body.style-shelter #detailView .pip-seg.busy::before {
   content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 9px; background: var(--pip); animation: pip-pulse 1s steps(2, jump-none) infinite;
 }
-@keyframes pip-pulse { 0% { opacity: 1; } 100% { opacity: 0.15; } }
+/* the fade stops at 0.6, not 0.15: on the dark brown screen a mostly-transparent square reads as
+   pale grey, so the pulse stays solid and only dips enough to be seen as blinking */
+@keyframes pip-pulse { 0% { opacity: 1; } 100% { opacity: 0.6; } }
 @media (prefers-reduced-motion: reduce) { body.style-shelter #detailView .pip-seg.busy::before { animation: none; } }
 body.style-shelter #detailView .pip-stop { cursor: pointer; background: var(--pip); color: var(--pip-ink); text-shadow: none; }
 body.style-shelter #detailView .pip-stop[hidden] { display: none; }

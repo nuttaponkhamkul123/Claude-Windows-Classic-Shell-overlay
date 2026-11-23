@@ -90,7 +90,8 @@
         note.remove();
         if (!hits.length) { list.appendChild(el('div', 'finder-note', `No messages contain “${q}”.`)); return; }
         for (const h of hits.slice(0, 8)) {
-          const who = h.role === 'user' ? 'You' : (h.source === 'antigravity' ? 'Antigravity' : 'Claude');
+          const who = h.role === 'user' ? 'You'
+            : h.source === 'antigravity' ? 'Antigravity' : h.source === 'opencode' ? 'OpenCode' : 'Claude';
           addRow('💬', String(h.snippet || '').replace(/\s+/g, ' ').slice(0, 90), `${who} · ${h.title || h.project || 'Conversation'}`,
             () => window.fxOpenSearchHit?.(h, q), 'finder-msg');
         }

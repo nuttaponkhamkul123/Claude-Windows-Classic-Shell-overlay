@@ -258,8 +258,34 @@ async function gitDiscard(cwd, rels) {
   }
   const id = Date.now().toString(36);
   const dir = path.join(BACKUPS, id);
+  // A staged file may have no worktree copy (stage it, then delete it). `git diff HEAD` only
+  // compares HEAD with the worktree, so it cannot see that content — put a temporary copy back
+  // before making the patch, otherwise Undo would have nothing to restore.
+  const stagedOnly = [];
+  for (const f of sel.files) {
+    if (f.kind === 'untracked' || fs.existsSync(path.join(sel.top, f.path))) continue;
+    // Only staged content needs rescuing. A plain worktree deletion of an unmodified tracked
+    // file must stay a deletion in the patch, so don't put HEAD's copy back for it.
+    const staged = await gitRun(sel.top, ['diff', '--cached', '--name-only', '--', f.path]);
+    if (staged.ok && staged.out.trim()) stagedOnly.push(f);
+  }
+  const scratch = stagedOnly.length ? fs.mkdtempSync(path.join(os.tmpdir(), 'ovly-staged-')) : '';
+  const materialized = [];
   try {
     fs.mkdirSync(path.join(dir, 'files'), { recursive: true });
+    if (stagedOnly.length) {
+      const prefix = scratch.replace(/\\/g, '/') + '/';
+      for (const f of stagedOnly) {
+        const r = await gitRun(sel.top, ['checkout-index', '-f', '--prefix=' + prefix, '--', f.path]);
+        if (!r.ok) continue;
+        const src = path.join(scratch, f.path);
+        if (!fs.existsSync(src)) continue;
+        const dest = path.join(sel.top, f.path);
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        fs.copyFileSync(src, dest);
+        materialized.push(dest);
+      }
+    }
     if (toSave.length) {
       const d = await gitRun(sel.top, ['diff', 'HEAD', '--binary', '-M', '--no-color', '--', ...toSave], { timeout: 60000 });
       if (!d.ok) throw new Error(d.err || 'could not save a backup patch');
@@ -272,9 +298,12 @@ async function gitDiscard(cwd, rels) {
     }
     fs.writeFileSync(path.join(dir, 'meta.json'), JSON.stringify({ top: sel.top, at: Date.now(), count: sel.files.length }));
   } catch (err) {
-    fs.rm(dir, { recursive: true, force: true }, () => {});
+    materialized.forEach((p) => fs.rmSync(p, { force: true }));
+    if (scratch) fs.rmSync(scratch, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true });
     return { error: `Backup failed, nothing was changed: ${err.message}` };
   }
+  if (scratch) fs.rmSync(scratch, { recursive: true, force: true });
   if (toRestore.length) {
     const r = await gitRun(sel.top, ['restore', '--source=HEAD', '--staged', '--worktree', ...PATHSPEC], { input: nulList(toRestore) });
     if (!r.ok) return { error: r.err || 'git restore failed', backup: id };
@@ -293,21 +322,31 @@ async function gitUndoDiscard(cwd, id) {
   try { meta = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8')); } catch (_) { return { error: 'That backup is gone' }; }
   const top = (await git(cwd, ['rev-parse', '--show-toplevel']))?.replace(/\//g, path.sep);
   if (!top || top.toLowerCase() !== String(meta.top).toLowerCase()) return { error: 'That backup belongs to another folder' };
+  const walk = (d, rel = '') => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory() ? walk(path.join(d, e.name), rel + e.name + '/') : [rel + e.name]);
+  const filesDir = path.join(dir, 'files');
+  const savedFiles = fs.existsSync(filesDir) ? walk(filesDir) : [];
+  // Never throw away a backup because a file was recreated in the meantime. Check before
+  // touching anything, so a failed undo can simply be retried once the path is free.
+  const blocked = savedFiles.filter((rel) => {
+    const dest = path.resolve(top, rel);
+    return dest.toLowerCase().startsWith(path.resolve(top).toLowerCase() + path.sep) && fs.existsSync(dest);
+  });
+  if (blocked.length) {
+    return { error: `${blocked.length} file${blocked.length === 1 ? '' : 's'} already in the folder (${blocked.slice(0, 3).join(', ')}). Remove them and undo again. Backup: ${dir}`, blocked };
+  }
   const patch = path.join(dir, 'changes.patch');
   if (fs.existsSync(patch)) {
     const r = await gitRun(top, ['apply', '--binary', '--whitespace=nowarn', '-'], { input: fs.readFileSync(patch) });
     if (!r.ok) return { error: `Could not put the changes back: ${r.err}. Your backup is in ${dir}` };
   }
-  const walk = (d, rel = '') => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) =>
-    e.isDirectory() ? walk(path.join(d, e.name), rel + e.name + '/') : [rel + e.name]);
-  const filesDir = path.join(dir, 'files');
-  for (const rel of fs.existsSync(filesDir) ? walk(filesDir) : []) {
+  for (const rel of savedFiles) {
     const dest = path.join(top, rel);
-    if (!path.resolve(dest).toLowerCase().startsWith(top.toLowerCase() + path.sep) || fs.existsSync(dest)) continue;
+    if (!path.resolve(dest).toLowerCase().startsWith(path.resolve(top).toLowerCase() + path.sep)) continue;
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.copyFileSync(path.join(filesDir, rel), dest);
   }
-  fs.rm(dir, { recursive: true, force: true }, () => {});
+  fs.rmSync(dir, { recursive: true, force: true });
   gitCache.clear(); changesCache.clear();
   return { ok: true, count: meta.count };
 }

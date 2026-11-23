@@ -6,8 +6,8 @@
   const api = window.electronAPI;
   const nameEl = document.getElementById('convoName');
   if (!nameEl || typeof sessionAgentNames === 'undefined') return;
-  const DEFAULTS = { claude: 'Claude', antigravity: 'Antigravity' };
-  const defaultFor = (source) => (source === 'claude' ? DEFAULTS.claude : DEFAULTS.antigravity);
+  const DEFAULTS = { claude: 'Claude', antigravity: 'Antigravity', opencode: 'OpenCode' };
+  const defaultFor = (source) => DEFAULTS[source] || DEFAULTS.claude;
   const save = () => api.storeSet?.('sessionAgentNames', { ...sessionAgentNames });
 
   // Re-label everything on screen after a rename / on load

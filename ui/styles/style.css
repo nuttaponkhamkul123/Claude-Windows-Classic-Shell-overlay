@@ -140,6 +140,11 @@ body {
   color: #fff;
 }
 
+.agent-badge.opencode {
+  background: linear-gradient(135deg, #16a34a, #047857);
+  color: #fff;
+}
+
 /* Pulsing Status Dot */
 .status-indicator {
   position: absolute;
@@ -663,6 +668,7 @@ body {
 }
 .card-logo.claude { background: #d97706; }
 .card-logo.antigravity { background: #6366f1; }
+.card-logo.opencode { background: #16a34a; }
 
 .card-project {
   font-size: 12px;

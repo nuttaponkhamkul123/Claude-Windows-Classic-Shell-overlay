@@ -289,6 +289,7 @@ body.theme-vista .fx-older-btn:hover { background: var(--vd-hover); }
 }
 .fx-newchat-ico.claude { background: linear-gradient(180deg, #f6b06a 0%, #d97706 100%); }
 .fx-newchat-ico.antigravity { background: linear-gradient(180deg, #b7b3ff 0%, #6f6cf0 100%); }
+.fx-newchat-ico.opencode { background: linear-gradient(180deg, #b8f0d8 0%, #16a34a 100%); }
 .fx-newchat-row .fx-skill-desc { -webkit-line-clamp: 3; }
 .fx-newchat { max-height: 380px; }
 /* chosen folder + "Change…" */
@@ -355,6 +356,11 @@ body.theme-vista .fx-older-btn:hover { background: var(--vd-hover); }
   color: #4b3fb8;
   background: linear-gradient(180deg, #f5f4ff 0%, #e2defe 100%);
   border-color: #c7c1f5;
+}
+.row-agent.opencode {
+  color: #14663a;
+  background: linear-gradient(180deg, #eafff4 0%, #cdf3df 100%);
+  border-color: #9bdcba;
 }
 
 /* ---- Antigravity model picker ---- */

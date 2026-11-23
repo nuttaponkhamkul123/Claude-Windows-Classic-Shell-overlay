@@ -92,6 +92,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onSessionNudge: (callback) => ipcRenderer.on('session-nudge', (_event, data) => callback(data)),
   // Tool approvals
   onPermissionRequest: (callback) => ipcRenderer.on('permission-request', (_event, req) => callback(req)),
+  onOpenCodeState: (cb) => ipcRenderer.on('opencode-state', (_e, st) => cb(st)),
   onPermissionExpired: (callback) => ipcRenderer.on('permission-expired', (_event, data) => callback(data)),
   respondPermission: (id, choice, message) => ipcRenderer.send('permission-response', { id, choice, message }),
   // IDE pickers (ide-bridge extension → main/ipc/ide-pick.js)
@@ -101,6 +102,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // MCP + slash commands
   listMcpServers: (cwd, refresh, source) => ipcRenderer.invoke('mcp-list', { cwd, refresh, source }),
   listSlashCommands: (cwd, source) => ipcRenderer.invoke('list-slash-commands', { cwd, source }),
+  listModels: (cwd, source) => ipcRenderer.invoke('list-models', { cwd, source }),
   // MCP servers
   mcpAdd: (p) => ipcRenderer.invoke('mcp-add', p),
   mcpRemove: (p) => ipcRenderer.invoke('mcp-remove', p),

@@ -252,7 +252,7 @@
     const out = [];
     const add = (p) => { if (p && !samePath(p, exclude) && !out.some((q) => samePath(q, p))) out.push(p); };
     recentPicked.forEach(add);
-    [...(sessionsList || [])].filter((x) => x && x.cwd && (x.source === 'claude' || x.source === 'antigravity'))
+    [...(sessionsList || [])].filter((x) => x && x.cwd && ['claude', 'antigravity', 'opencode'].includes(x.source))
       .sort((a, b) => (b.mtime || 0) - (a.mtime || 0)).forEach((x) => add(x.cwd));
     return out.slice(0, 6);
   }
@@ -316,7 +316,7 @@
           }
           if (!s || !samePath(folder, s.cwd)) rememberFolder(folder);
           close();
-          const keep = s && (s.source === 'claude' || s.source === 'antigravity') ? s : null;
+          const keep = s && ['claude', 'antigravity', 'opencode'].includes(s.source) ? s : null;
           startNewChat(keep, agent, keep && samePath(folder, keep.cwd) ? undefined : folder);
         });
         panel.appendChild(row);
@@ -325,6 +325,7 @@
       if (typeof window.isAntigravityEnabled !== 'function' || window.isAntigravityEnabled()) {
         option('antigravity', 'Antigravity', 'Fresh Antigravity conversation' + (s?.source === 'antigravity' ? ' (keeps your Model / Effort choice).' : ', using its default model.'));
       }
+      option('opencode', 'OpenCode', 'Fresh OpenCode conversation in this folder.');
     };
     draw();
   }
@@ -374,11 +375,14 @@
     skillList.innerHTML = '';
     if (!shown.length) {
       const isAg = currentActiveSession?.source === 'antigravity';
+      const isOc = currentActiveSession?.source === 'opencode';
       skillList.appendChild(el('div', 'mcp-empty', skillItems.length
         ? 'No match.'
         : isAg
           ? 'No skills or workflows found.\nAdd them in .agents/skills/<name>/SKILL.md\nor ~/.gemini/config/skills/<name>/SKILL.md'
-          : 'No skills or custom commands found.\nAdd them in .claude/skills/<name>/SKILL.md\nor .claude/commands/<name>.md'));
+          : isOc
+            ? 'No skills or commands found.\nAdd them in .opencode/skills/<name>/SKILL.md\nor ~/.config/opencode/skills/<name>/SKILL.md'
+            : 'No skills or custom commands found.\nAdd them in .claude/skills/<name>/SKILL.md\nor .claude/commands/<name>.md'));
       return;
     }
     for (const [kind, label] of [['skill', 'Skills'], ['command', 'Commands & Workflows']]) {

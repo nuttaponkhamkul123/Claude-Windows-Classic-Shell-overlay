@@ -6,6 +6,7 @@ const { spawn, execFile } = require('child_process');
 const http = require('http');
 const crypto = require('crypto');
 const MultiAISessionWatcher = require('./watcher');
+const OpencodeWatcher = require('./opencode-watcher');
 const features = require('./features-main');
 
 app.commandLine.appendSwitch('disable-gpu-cache');
@@ -20,6 +21,9 @@ function setAlwaysOnTopSaved(on) {
   isAlwaysOnTop = !!on;
   features.setSetting('alwaysOnTop', isAlwaysOnTop);
   if (mainWindow && !mainWindow.isDestroyed()) {
+    // On Windows, re-enabling the same level ("screen-saver") after it was set to
+    // false is a no-op. Clear the flag first so turning the pin back on actually works.
+    if (isAlwaysOnTop) mainWindow.setAlwaysOnTop(false);
     mainWindow.setAlwaysOnTop(isAlwaysOnTop, 'screen-saver');
     mainWindow.webContents.send('pin-state', isAlwaysOnTop);
   }
@@ -237,6 +241,10 @@ app.whenReady().then(() => {
     app, ipcMain,
     getWin: () => mainWindow,
     getWatcher: () => watcher,
+    // OpenCode has no child process to kill (see features-main stopReply)
+    interruptSession: (id) => opencode.interrupt(id),
+    // ...and no transcript on disk for the hand-off note
+    getRemoteHistory: (id) => opencode.history(id),
     findClaudeBinary,
     findAgyBinary,
     showHud: () => {
@@ -267,6 +275,68 @@ app.whenReady().then(() => {
     }
   });
 
+  // OpenCode streams its own text and asks for approvals through the service.
+  // Both are forwarded on the channels the HUD already listens to.
+  watcher.setOpencodeSource(opencode);
+  opencode.on('stream', (e) => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (e.done) {
+      // Finalise the streaming bubble exactly like the CLI paths do. The
+      // watcher already has the authoritative label (Idle (Question), etc.).
+      const label = e.statusLabel || opencode.sessions.get(e.sessionId)?.statusLabel || 'Idle (Ready)';
+      mainWindow.webContents.send('reply-status', {
+        sessionId: e.sessionId,
+        status: 'idle',
+        statusLabel: label,
+        text: e.text,
+      });
+      return;
+    }
+    mainWindow.webContents.send('reply-stream', {
+      sessionId: e.sessionId,
+      statusLabel: 'Running (Thinking...)',
+      text: e.text,
+      activity: { kind: 'thinking' },
+    });
+  });
+  opencode.on('state', (st) => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('opencode-state', st);
+  });
+  opencode.on('permission', (req) => {
+    const sessionId = 'opencode_' + req.sessionID;
+    const action = String(req.action || 'tool');
+    const meta = req.metadata && typeof req.metadata === 'object' ? req.metadata : {};
+    const toolName = meta.tool || meta.name || action;
+    const shellish = /shell|bash|command|exec/i.test(action) || /shell|bash/i.test(String(toolName));
+    const input = meta.toolInput || meta.input || (shellish
+      ? { command: (req.resources || []).join(' ') }
+      : { path: (req.resources || []).join(', ') });
+    // Same approval card as Claude. "Always" is answered by OpenCode's own
+    // permission rules, so no HUD-side rule is saved here.
+    permState.pendingPermissions.set(req.id, {
+      sessionId,
+      toolName,
+      onDecision: (decision, choice) => {
+        const map = { always: 'always', 'always-folder': 'always', deny: 'reject' };
+        // a timeout / closed window answers deny without a choice
+        const verdict = map[choice] || (decision && decision.behavior === 'deny' ? 'reject' : 'once');
+        opencode.replyPermission(req.id, verdict).catch((err) => {
+          console.error('[Main] OpenCode permission reply failed:', err.message);
+        });
+      },
+    });
+    permissions.sendToWin(appCtx, 'permission-request', {
+      id: req.id,
+      sessionId,
+      toolName,
+      input,
+      always: null,
+      trustFolder: null,
+    });
+    if (watcher) watcher.check();
+  });
+
+  opencode.start();
   watcher.start();
   minibar.start(); // only if it was left on last time
 
@@ -355,8 +425,11 @@ ipcMain.handle('get-initial-sessions', () => {
     : all;
 });
 
-ipcMain.handle('get-session-history', (_event, sessionId) => {
+ipcMain.handle('get-session-history', async (_event, sessionId) => {
   try {
+    if (typeof sessionId === 'string' && sessionId.startsWith('opencode_')) {
+      return await opencode.history(sessionId);
+    }
     return features.readSessionHistory(sessionId);
   } catch (e) {
     console.error('[history] failed:', e.message);
@@ -413,6 +486,8 @@ const sessionAliases = permState.sessionAliases;
 const PERM_TOKEN = permissions.PERM_TOKEN;
 const answerPermission = (id, decision) => permissions.answerPermission(permState, id, decision);
 const getPermPort = () => permState.permPort;
+// OpenCode: a background service we talk to over HTTP (see opencode-watcher.js).
+const opencode = new OpencodeWatcher();
 function startPermissionServer() {
   permissions.startPermissionServer(appCtx, permState);
 }
@@ -614,7 +689,17 @@ function readDescription(file) {
   } catch (e) { return ''; }
 }
 
-ipcMain.handle('list-slash-commands', (_event, { cwd, source } = {}) => {
+ipcMain.handle('list-models', async (_event, { cwd, source } = {}) => {
+  if (source === 'opencode') {
+    try { return await opencode.models(cwd); } catch (e) { return []; }
+  }
+  return [];
+});
+
+ipcMain.handle('list-slash-commands', async (_event, { cwd, source } = {}) => {
+  if (source === 'opencode') {
+    try { return await opencode.commands(cwd); } catch (e) { return []; }
+  }
   const results = [];
   const seen = new Set();
   const add = (item) => { if (!seen.has(item.name)) { seen.add(item.name); results.push(item); } };
@@ -1028,6 +1113,66 @@ ipcMain.on('send-reply', async (_event, { text, image, images, files, session, c
   let sessionId = session?.id || '';
   const startedAsId = sessionId; // a New-chat draft id until Claude names the session
   const isNewChat = !!options.newSession;
+
+  // 2a. OpenCode: one HTTP call. The event stream in opencode-watcher.js does
+  // the live text / status / approvals, so there is no child process to track.
+  if (source === 'opencode') {
+    const projectCwd = (session?.cwd && fs.existsSync(session.cwd)) ? session.cwd : process.cwd();
+    const baseText = text || (imageList.length ? 'Please analyze the attached images.' : '');
+    if (!baseText) return;
+    // Images go as temp paths: the agent can open them with its own tools, and
+    // this works even when the chosen model is text-only.
+    const attachments = [];
+    for (const img of imageList) {
+      const m = img.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,(.+)$/);
+      if (!m) continue;
+      const ext = m[1] === 'jpeg' ? 'jpg' : m[1].replace(/[^a-z0-9]/gi, '') || 'png';
+      const f = path.join(os.tmpdir(), `ovly-image-${crypto.randomBytes(5).toString('hex')}.${ext}`);
+      try { fs.writeFileSync(f, Buffer.from(m[2], 'base64')); attachments.push(f); } catch (e) {}
+    }
+    const fullText = attachments.length
+      ? `${baseText}\n\n${attachments.map((f) => `[Attached image: ${f}]`).join('\n')}`
+      : baseText;
+
+    const existingId = session?.draft ? '' : (session?.sessionUuid ||
+      (typeof session?.id === 'string' && session.id.startsWith('opencode_')
+        ? OpencodeWatcher.apiId(session.id) : ''));
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('reply-status', {
+        sessionId: startedAsId,
+        status: 'running',
+        statusLabel: 'Running (Thinking...)',
+        message: '⚡ Sent to OpenCode! Thinking...',
+      });
+    }
+    try {
+      const realId = await opencode.sendPrompt({
+        id: existingId,
+        text: fullText,
+        cwd: projectCwd,
+        plan: !!options.plan,
+        model: options.model,
+      });
+      if (!existingId) {
+        const newId = 'opencode_' + realId;
+        sessionAliases.set(startedAsId, newId);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('reply-rekey', { oldId: startedAsId, newId, sessionUuid: realId });
+        }
+      }
+    } catch (err) {
+      console.error('[Main] OpenCode send failed:', err.message);
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('reply-status', {
+          sessionId: startedAsId,
+          status: 'idle',
+          statusLabel: 'Idle (Error)',
+          message: `⚠ OpenCode: ${err.message}`,
+        });
+      }
+    }
+    return;
+  }
 
   // 2. Direct execution for Claude Code sessions
   if (source === 'claude') {

@@ -45,6 +45,20 @@ class MultiAISessionWatcher extends EventEmitter {
     this.sessions = new Map();
     this.pollInterval = null;
     this.dismissedAlerts = new Set();
+    this.opencodeSource = null; // opencode-watcher.js, merged in like any other source
+  }
+
+  // OpenCode is event-driven, so it hands us finished session objects instead of
+  // files to parse. Merging them into this.sessions keeps every existing call
+  // site (setSessionRunning, dismiss, getAllSessions, the HUD) unchanged.
+  setOpencodeSource(source) {
+    this.opencodeSource = source;
+    if (!source) return;
+    source.dismissedAlerts = this.dismissedAlerts;
+    source.on('update', () => this.emitSync());
+    // The source raises alerts on live "needs you" transitions; main.js only
+    // listens to the watcher, so pass them through.
+    source.on('alert', (session) => this.emit('alert', session));
   }
 
   start() {
@@ -58,6 +72,7 @@ class MultiAISessionWatcher extends EventEmitter {
       clearInterval(this.pollInterval);
       this.pollInterval = null;
     }
+    if (this.opencodeSource) this.opencodeSource.stop();
   }
 
   dismiss(sessionId) {
@@ -65,6 +80,11 @@ class MultiAISessionWatcher extends EventEmitter {
     const session = this.sessions.get(sessionId);
     if (session) {
       session.unread = false;
+      // OpenCode (and anything else alert-keyed) needs the record id too, or the
+      // next build of the same session reads as unread again.
+      if (session.source === 'opencode' && session.lastRecordId) {
+        this.dismissedAlerts.add(sessionId + '_' + session.lastRecordId);
+      }
       this.emitSync();
     }
   }
@@ -241,6 +261,7 @@ class MultiAISessionWatcher extends EventEmitter {
     let changed = false;
     if (this.checkClaudeSessions()) changed = true;
     if (this.checkAntigravitySessions()) changed = true;
+    if (this.checkOpencodeSessions()) changed = true;
     if (this.expireStaleRunning()) changed = true;
 
     if (changed) {
@@ -248,6 +269,28 @@ class MultiAISessionWatcher extends EventEmitter {
     }
   }
 
+  // The OpenCode source already keeps finished session objects; this only copies
+  // them in and drops the ones it no longer reports. Alerts are raised by the
+  // source itself on live transitions, so a HUD restart doesn't re-chime old chats.
+  checkOpencodeSessions() {
+    const src = this.opencodeSource;
+    if (!src) return false;
+    let changed = false;
+    const live = new Set();
+    for (const s of src.sessions.values()) {
+      live.add(s.id);
+      const prev = this.sessions.get(s.id);
+      if (prev !== s) changed = true;
+      this.sessions.set(s.id, s);
+    }
+    for (const [id, s] of this.sessions) {
+      if (s.source === 'opencode' && !live.has(id)) {
+        this.sessions.delete(id);
+        changed = true;
+      }
+    }
+    return changed;
+  }
   // -------------------------------------------------------------
   // Claude Code Multi-Session Scanner
   // -------------------------------------------------------------

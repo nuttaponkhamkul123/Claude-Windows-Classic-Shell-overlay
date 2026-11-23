@@ -98,6 +98,48 @@ test('discard goes back to HEAD for every kind of change, then undo puts it all 
   assert.ok((await fm.gitUndoDiscard(repo, d.backup)).error);   // and cannot be replayed
 });
 
+test('discard keeps staged content that has no worktree copy', async () => {
+  // stage a new file, then delete it from the worktree: `git diff HEAD` alone cannot see it
+  put('index-only.txt', 'staged body\n');
+  g('add', 'index-only.txt');
+  fs.rmSync(path.join(repo, 'index-only.txt'));
+  const d = await fm.gitDiscard(repo, ['index-only.txt']);
+  assert.equal(d.ok, true, JSON.stringify(d));
+  assert.ok(!exists('index-only.txt'));
+  assert.ok(fs.existsSync(path.join(home, '.ovly-claude', 'discarded', d.backup, 'changes.patch')));
+  const u = await fm.gitUndoDiscard(repo, d.backup);
+  assert.equal(u.ok, true, JSON.stringify(u));
+  assert.equal(read('index-only.txt'), 'staged body\n');
+
+  // same for a staged edit of a tracked file whose worktree copy was deleted
+  put('a.txt', 'one\nstaged edit\n');
+  g('add', 'a.txt');
+  fs.rmSync(path.join(repo, 'a.txt'));
+  const d2 = await fm.gitDiscard(repo, ['a.txt']);
+  assert.equal(d2.ok, true, JSON.stringify(d2));
+  const u2 = await fm.gitUndoDiscard(repo, d2.backup);
+  assert.equal(u2.ok, true, JSON.stringify(u2));
+  assert.equal(read('a.txt'), 'one\nstaged edit\n');
+});
+
+test('undo refuses to overwrite a recreated file and keeps the backup', async () => {
+  put('conflict.txt', 'first version\n');
+  const d = await fm.gitDiscard(repo, ['conflict.txt']);
+  assert.equal(d.ok, true, JSON.stringify(d));
+  put('conflict.txt', 'recreated\n');
+  const u = await fm.gitUndoDiscard(repo, d.backup);
+  assert.ok(u.error, JSON.stringify(u));
+  assert.deepEqual(u.blocked, ['conflict.txt']);
+  assert.equal(read('conflict.txt'), 'recreated\n'); // the newer file is untouched
+  const backupDir = path.join(home, '.ovly-claude', 'discarded', d.backup);
+  assert.ok(fs.existsSync(backupDir)); // and the backup is still there
+  fs.rmSync(path.join(repo, 'conflict.txt'));
+  const u2 = await fm.gitUndoDiscard(repo, d.backup);
+  assert.equal(u2.ok, true, JSON.stringify(u2));
+  assert.equal(read('conflict.txt'), 'first version\n');
+  assert.ok(!fs.existsSync(backupDir));
+});
+
 test('with many untracked files only the first ones are counted, the rest still open', async () => {
   const dir = path.join(root, 'many');
   fs.mkdirSync(dir);

@@ -48,10 +48,23 @@ body.style-pip #listView .session-row.wk-active,
 body.style-pip #listView .session-row.wk-active:hover { background: rgba(255, 159, 28, 0.12) !important; border-left-color: var(--pip) !important; border-right-color: var(--pip) !important; }
 body.style-pip #listView .session-row.wk-active .row-title { color: var(--pip); }
 body.style-pip #listView .session-row.state-attention { background: rgba(255, 159, 28, 0.08); }
-/* the status dot becomes a small square: dim = idle, solid = working, bright = needs you */
-body.style-pip .row-orb { border-radius: 0; background: var(--pip-faint); }
-body.style-pip .state-running .row-orb { background: var(--pip); }
-body.style-pip .state-attention .row-orb { background: #ffd28a; box-shadow: 0 0 5px var(--pip) !important; }
+/* the status dot becomes a small square: dim = idle, solid = working, bright = needs you.
+   The Shelter skin paints .row-orb at 8% amber with !important (it is only a frame around the robot
+   picture there); the Work layout hides the ::after mark, so the square itself is the mark here and
+   has to carry full colour — hence the !important on every state. */
+body.style-pip .row-orb { border-radius: 0; background: var(--pip-faint) !important; }
+/* a running chat pulses like the loading square in the status bar above the input: the very same
+   pip-pulse animation (8px square, hard step blink at 1s), so both indicators beat together. The
+   Work layout's slow blue glow is wrong here, so it is replaced. */
+body.style-pip .state-running .row-orb {
+  background: var(--pip) !important;
+  animation: pip-pulse 1s steps(2, jump-none) infinite !important;
+  box-shadow: none !important;
+}
+body.style-pip .state-attention .row-orb { background: #ffd28a !important; box-shadow: 0 0 5px var(--pip) !important; }
+@media (prefers-reduced-motion: reduce) {
+  body.style-pip .state-running .row-orb { animation: none !important; opacity: 1; }
+}
 body.style-pip .run-pic { border-radius: 0; background: var(--pip); }
 body.style-pip #listView .workspace-header { background: none; border: 0; border-bottom: 1px solid var(--pip-faint); padding: 10px 12px 3px; }
 

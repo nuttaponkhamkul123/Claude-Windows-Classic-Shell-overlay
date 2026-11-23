@@ -10,7 +10,7 @@
   if (!api?.handoffNote || !row) return;
   const LONG_CHAT = 150000; // same line as the cost chip's warning
 
-  const usable = (s) => !!s && (s.source === 'claude' || s.source === 'antigravity') && !s.draft;
+  const usable = (s) => !!s && ['claude', 'antigravity', 'opencode'].includes(s.source) && !s.draft;
 
   const btn = el('button', 'handoff-btn', 'Hand off ↗');
   btn.hidden = true;

@@ -18,7 +18,7 @@ const RISKY_HEADS = new Set([
   'electron', 'deno', 'bun', 'ruby', 'perl', 'php', 'java', 'wscript', 'cscript', 'mshta', 'rundll32', 'regsvr32',
   // PowerShell: delete / kill / run / download / reconfigure (and their short aliases)
   'remove-item', 'ri', 'remove-itemproperty', 'clear-content', 'clear-disk', 'format-volume', 'stop-process', 'spps', 'start-process', 'saps',
-  'invoke-command', 'icm', 'invoke-item', 'ii', 'invoke-restmethod', 'irm', 'start-job', 'start-bitstransfer', 'add-type',
+  'invoke-command', 'icm', 'invoke-item', 'ii', 'invoke-restmethod', 'irm', 'iwr', 'start-job', 'start-bitstransfer', 'add-type',
   'set-executionpolicy', 'new-service', 'set-service', 'stop-service', 'restart-computer', 'stop-computer',
   // wrappers that run whatever follows them (timeout is unwrapped instead, see effective())
   'xargs', 'env', 'nohup', 'start', 'time', 'watch', 'nice', 'command', 'builtin', 'parallel', 'runas',
@@ -108,19 +108,31 @@ function splitShell(command) {
 const headOf = (part) => (part.trim().split(/\s+/)[0] || '').replace(/^["']|["']$/g, '').toLowerCase();
 // "./node_modules/electron/dist/electron.exe" -> "electron"
 const baseName = (head) => head.split(/[\\/]/).pop().replace(/\.(exe|cmd|bat|ps1)$/i, '').toLowerCase();
+// A quoted word is still the same command: `git "push"` is a push.
+const unquote = (w) => String(w || '').trim().replace(/^(["'])([\s\S]*)\1$/, '$2').toLowerCase();
 
-// "timeout 60 npm test" only adds a time limit → judge "npm test"
+// Strip leading VAR=value assignments, including quoted values that contain spaces
+// (`FOO="a b" rm -rf x` is an `rm`, not a command called `b"`).
+const ENV_ASSIGN = /^[A-Za-z_]\w*=(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|(?:\\.|[^\s"'])*)\s+/;
+function stripEnvAssignments(part) {
+  let s = String(part || '').trim();
+  while (ENV_ASSIGN.test(s)) s = s.replace(ENV_ASSIGN, '').trim();
+  return s;
+}
+
+// "timeout 60 npm test" / "time npm test" only add a time limit → judge "npm test"
 function effective(part) {
   const words = String(part || '').trim().split(/\s+/);
-  if (baseName(words[0] || '') !== 'timeout') return String(part || '').trim();
+  const head = baseName(words[0] || '');
+  const original = String(part || '').trim();
+  if (head !== 'timeout' && head !== 'time') return original;
   let i = 1;
   while (i < words.length && words[i].startsWith('-')) {
-    if (/^(-s|--signal|-k|--kill-after)$/.test(words[i])) i++;   // option with a value
+    if (head === 'timeout' && /^(-s|--signal|-k|--kill-after)$/.test(words[i])) i++; // option with a value
     i++;
   }
-  i++; // the duration
-  const inner = words.slice(i).join(' ');
-  return inner || String(part || '').trim();
+  if (head === 'timeout') i++; // timeout needs a duration; "time" goes straight to the command
+  return words.slice(i).join(' ') || original;
 }
 
 // "npm test --silent" -> "npm test";  "ls -la" -> "ls";  null = never offer a rule
@@ -199,19 +211,33 @@ function analyse(command, folder, ruleMatches) {
 // ---- "Always allow all commands in this folder" ------------------------------------------------
 // That rule is meant to stop the constant prompts for normal work (build, test, edit, git status…),
 // not to let Claude delete things or fetch and run code unasked. These still ask, whatever the rule says.
+// Derive this from RISKY_HEADS so a command we refuse to offer a rule for can never be
+// silently authorised by the blanket rule. Only the everyday runners below are exempt.
+const TRUST_ALLOWED_HEADS = new Set(['cd', 'pushd', 'popd', 'node', 'python', 'python3', 'py']);
 const TRUST_STILL_ASKS = new Set([
-  // delete / wipe / power
-  'rm', 'rmdir', 'del', 'erase', 'rd', 'remove-item', 'ri', 'remove-itemproperty', 'clear-content', 'clear-disk', 'format', 'format-volume', 'dd', 'mkfs',
-  'shutdown', 'reboot', 'restart-computer', 'stop-computer',
-  // kill / privileges / system settings
-  'kill', 'pkill', 'killall', 'taskkill', 'stop-process', 'spps', 'sudo', 'su', 'runas', 'chmod', 'chown', 'reg', 'netsh', 'set-executionpolicy',
-  'new-service', 'set-service', 'stop-service',
-  // download, or run what was downloaded
-  'curl', 'wget', 'iex', 'invoke-expression', 'invoke-webrequest', 'iwr', 'invoke-restmethod', 'irm', 'start-bitstransfer',
-  // run something else (so the real command is hidden)
-  'eval', 'exec', 'source', '.', 'xargs', 'invoke-command', 'icm', 'start-process', 'saps', 'start-job', 'add-type',
-]);
-const PIPE_INTO_INTERPRETER = /\|\s*(?:sudo\s+)?(?:ba|z|da|k)?sh\b|\|\s*(?:pwsh|powershell|iex|cmd|node|python3?|py|ruby|perl|php)\b/i;
+  ...RISKY_HEADS,
+  'restart-service', 'diskpart', 'bcdedit', 'schtasks', 'psexec',
+].filter((h) => !TRUST_ALLOWED_HEADS.has(h)));
+// Code after a pipe can be an interpreter even when it is path-qualified
+// ("/bin/bash", "C:\\Windows\\...\\powershell.exe") or wrapped in sudo/env.
+const PIPE_RUNNERS = new Set(['node', 'python', 'python3', 'py']);
+const PIPE_PASSTHROUGH = new Set(['sudo', 'env', 'nice', 'nohup', 'command', 'builtin']);
+function pipeHead(segment) {
+  let words = stripEnvAssignments(segment.trim()).split(/\s+/).filter(Boolean);
+  while (words.length && PIPE_PASSTHROUGH.has(words[0].toLowerCase())) {
+    words = words.slice(1);
+    while (words.length && (/^[A-Za-z_]\w*=/.test(words[0]) || /^-[A-Za-z]/.test(words[0]))) words = words.slice(1);
+  }
+  return baseName(headOf(words[0] || ''));
+}
+function pipesIntoInterpreter(command) {
+  const segments = String(command || '').split('|');
+  for (let i = 1; i < segments.length; i++) {
+    const head = pipeHead(segments[i]);
+    if (TRUST_STILL_ASKS.has(head) || PIPE_RUNNERS.has(head)) return true;
+  }
+  return false;
+}
 
 /**
  * Should a blanket folder rule allow this shell command without asking?
@@ -224,20 +250,29 @@ function trustedFolderAllows(command) {
   const s = String(command || '');
   if (!s.trim()) return false;
   if (/`|\$\(|<\(|>\(/.test(s)) return false;           // a command hidden inside another one
-  if (PIPE_INTO_INTERPRETER.test(s)) return false;       // "… | sh", "… | node"
+  if (pipesIntoInterpreter(s)) return false;             // "… | sh", "… | /bin/bash", "… | node"
   for (const raw of s.split(/\r?\n|;|&&|\|\||\||&/)) {
-    let part = raw.trim().replace(/^[\s({]+/, '');
-    while (/^[A-Za-z_]\w*=\S*\s+/.test(part)) part = part.replace(/^[A-Za-z_]\w*=\S*\s+/, ''); // FOO=1 rm x
+    const part = stripEnvAssignments(raw.trim().replace(/^[\s({]+/, '')); // FOO="a b" rm x
     if (!part) continue;
-    const words = effective(part).split(/\s+/);
-    const head = baseName(words[0].replace(/^["']|["']$/g, ''));
+    const words = effective(part).split(/\s+/).filter(Boolean);
+    const head = baseName(unquote(words[0] || ''));
     if (TRUST_STILL_ASKS.has(head)) return false;
     if (head === 'git') {
-      // look at every word, not just the first non-flag one: "git -c x=y push" hides the subcommand behind a value
-      const w = new Set(words.slice(1).map((x) => x.toLowerCase()));
-      if (w.has('push') || w.has('clean')) return false;
-      if (w.has('reset') && /--hard\b/.test(part)) return false;
+      // Look at every word, not just the first non-flag one: "git -c x=y push" hides the
+      // subcommand behind a value, and quotes around it ("git \"push\"") must not hide it either.
+      const subs = [];
+      for (let i = 1; i < words.length; i++) {
+        const w = unquote(words[i]);
+        if (w === '-c' || w === '-C' || w === '--config-env') { i++; continue; } // skip the option's value
+        if (/^(-c|--config-env)=/.test(w)) continue;
+        subs.push(w);
+      }
+      if (subs.includes('push') || subs.includes('clean') || subs.includes('checkout') ||
+          subs.includes('rebase') || subs.includes('rm') || subs.includes('config')) return false;
+      if (subs.includes('reset') && /--hard\b/.test(part)) return false;
     }
+    // Package runners execute arbitrary code; they get no per-command rule either.
+    if (/^(npm|pnpm|yarn|bun)$/.test(head) && words.slice(1).some((w) => EXEC_SUBCOMMANDS.has(unquote(w)))) return false;
     if (head === 'find' && /\s-(exec|execdir|ok|okdir|delete)\b/.test(' ' + part)) return false;
   }
   return true;

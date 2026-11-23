@@ -81,13 +81,13 @@ function checkRules(state, cwd, toolName, input) {
   };
 }
 
-function answerPermission(state, id, decision) {
+function answerPermission(state, id, decision, choice) {
   const p = state.pendingPermissions.get(id);
   if (!p) return;
   state.pendingPermissions.delete(id);
   clearTimeout(p.timer);
   if (typeof p.onDecision === 'function') {
-    try { p.onDecision(decision); } catch (err) {}
+    try { p.onDecision(decision, choice); } catch (err) {}
     return;
   }
   try {
@@ -200,7 +200,7 @@ function register(r, ctx, state) {
     const note = typeof message === 'string' && message.trim() ? message.trim().slice(0, 4000) : 'The user denied this in the HUD.';
     answerPermission(state, id, choice === 'deny'
       ? { behavior: 'deny', message: note }
-      : { behavior: 'allow' });
+      : { behavior: 'allow' }, choice);
   });
 
   r.handle('rules-list', () => state.approvalRules);

@@ -71,7 +71,7 @@ function getReplyOptions(session) {
 // Options to send with this reply; /clear only applies once
 function takeReplyOptions(session) {
   if (!session) return {};
-  if (session.source !== 'claude' && session.source !== 'antigravity') return {};
+  if (session.source !== 'claude' && session.source !== 'antigravity' && session.source !== 'opencode') return {};
   const opts = getReplyOptions(session);
   const out = { model: opts.model, effort: opts.effort, newSession: !!opts.newSession, plan: !!opts.plan };
   // Plan first: the planning message always uses the plan model, and the
@@ -89,7 +89,7 @@ function takeReplyOptions(session) {
 function renderReplyOptions() {
   if (!replyOptionsEl) return;
   const s = currentActiveSession;
-  const opts = s && (s.source === 'claude' || s.source === 'antigravity') ? getReplyOptions(s) : {};
+  const opts = s && (s.source === 'claude' || s.source === 'antigravity' || s.source === 'opencode') ? getReplyOptions(s) : {};
   replyOptionsEl.innerHTML = '';
   const chips = [];
   if (opts.oneShotModel) chips.push({ key: 'oneShotModel', label: `This message: ${opts.oneShotModel}` });
@@ -132,9 +132,10 @@ function addSystemNote(text) {
 // `folder` (optional) = another workspace picked in "New chat ▾"; without an
 // open conversation, pass from = null and both `as` and `folder`.
 function startNewChat(from, as, folder) {
-  if (!from && folder && (as === 'claude' || as === 'antigravity')) from = { source: as, cwd: folder };
-  if (!from || !['claude', 'antigravity'].includes(from.source)) return;
-  const source = as === 'claude' || as === 'antigravity' ? as : from.source;
+  const SOURCES = ['claude', 'antigravity', 'opencode'];
+  if (!from && folder && SOURCES.includes(as)) from = { source: as, cwd: folder };
+  if (!from || !SOURCES.includes(from.source)) return;
+  const source = SOURCES.includes(as) ? as : from.source;
   const cwd = folder || from.cwd;
   const sameFolder = !folder || folder === from.cwd;
   const project = sameFolder && from.project ? from.project
@@ -218,9 +219,9 @@ function runHudCommand(input) {
   if (name === 'mcp') { openMcpPanel(); return true; }
   if (name === 'handoff') { if (window.openHandoff) window.openHandoff(); else addSystemNote('Handoff is not available.'); return true; }
 
-  if (!s || (s.source !== 'claude' && s.source !== 'antigravity')) {
+  if (!s || (s.source !== 'claude' && s.source !== 'antigravity' && s.source !== 'opencode')) {
     if (['model', 'effort', 'clear'].includes(name)) {
-      addSystemNote(`/${name} only works for Claude Code and Antigravity sessions.`);
+      addSystemNote(`/${name} only works for Claude Code, Antigravity and OpenCode sessions.`);
       return true;
     }
     return false;
@@ -274,13 +275,37 @@ async function loadSlashCommands(cwd, forceOrSource = false, maybeSource = undef
   const source = typeof forceOrSource === 'string'
     ? forceOrSource
     : (maybeSource !== undefined ? maybeSource : currentActiveSession?.source);
-  const src = source === 'antigravity' ? 'antigravity' : 'claude';
+  const src = ['antigravity', 'opencode'].includes(source) ? source : 'claude';
   const key = `${src}:${cwd || ''}`;
   if (!force && slashCache.has(key)) return slashCache.get(key);
   let list = [];
   try { list = (await window.electronAPI.listSlashCommands(cwd, src)) || []; } catch (e) {}
   slashCache.set(key, list);
   return list;
+}
+
+let ocSlashModelOptions = null;
+let ocSlashModelKey = '';
+
+async function getOcSlashModelOptions(cwd) {
+  const key = cwd || '';
+  if (ocSlashModelOptions && ocSlashModelKey === key) return ocSlashModelOptions;
+  let list = [];
+  try { list = (await window.electronAPI.listModels?.(cwd, 'opencode')) || []; } catch (e) {}
+  if (!list.length) {
+    // Claude's names (opus, sonnet…) mean nothing to OpenCode, so don't offer them
+    addSystemNote('Could not get OpenCode’s models — its background service is not answering. Try `opencode service start` in a terminal, then open Model again.');
+    return [{ value: 'default', description: 'Use the session’s model' }];
+  }
+  ocSlashModelKey = key;
+  ocSlashModelOptions = [
+    { value: 'default', description: 'Use the session’s model' },
+    ...list.map((m) => ({
+      value: `${m.providerID}/${m.modelID}`,
+      description: m.name || m.modelID || m.id,
+    })),
+  ];
+  return ocSlashModelOptions;
 }
 
 async function getAgySlashModelOptions() {
@@ -318,17 +343,20 @@ async function updateSlashMenu() {
   if (!currentActiveSession) return hideSlashMenu();
   const isClaude = currentActiveSession.source === 'claude';
   const isAgy = currentActiveSession.source === 'antigravity';
+  const isOc = currentActiveSession.source === 'opencode';
 
   // Level 2: "/effort " or "/model " → nested options of that command
   const sub = replyTextarea.value.match(/^\/(\S+)\s+(\S*)$/);
-  if (sub && (isClaude || isAgy)) {
+  if (sub && (isClaude || isAgy || isOc)) {
     const parent = BUILTIN_COMMANDS.find((c) => c.name === sub[1].toLowerCase() && c.options);
     if (parent) {
       const q2 = sub[2].toLowerCase();
       if (slashParent !== parent) slashIndex = 0;
       slashParent = parent;
       const current = parent.current(currentActiveSession, getReplyOptions(currentActiveSession));
-      const optsList = (isAgy && parent.name === 'model') ? await getAgySlashModelOptions() : parent.options;
+      const optsList = (isAgy && parent.name === 'model') ? await getAgySlashModelOptions()
+        : (isOc && parent.name === 'model') ? await getOcSlashModelOptions(currentActiveSession.cwd)
+          : parent.options;
       slashItems = optsList
         .filter((o) => o.value.toLowerCase().includes(q2) || (o.description || '').toLowerCase().includes(q2))
         .map((o) => ({ ...o, isOption: true, selected: o.value === current }));
@@ -345,7 +373,7 @@ async function updateSlashMenu() {
   const m = replyTextarea.value.match(/^\/(\S*)$/);
   if (!m) return hideSlashMenu();
   const q = m[1].toLowerCase();
-  const custom = (isClaude || isAgy) ? await loadSlashCommands(currentActiveSession.cwd, currentActiveSession.source) : [];
+  const custom = (isClaude || isAgy || isOc) ? await loadSlashCommands(currentActiveSession.cwd, currentActiveSession.source) : [];
   // Still the same query after the await?
   if (!replyTextarea.value.match(/^\/(\S*)$/)) return hideSlashMenu();
 
@@ -385,7 +413,8 @@ function renderSlashMenu() {
     desc.textContent = c.description || '';
     const tag = document.createElement('span');
     tag.className = `slash-tag tag-${c.kind}`;
-    tag.textContent = c.kind === 'hud' ? 'HUD' : c.kind === 'claude' ? 'Claude' : c.kind === 'antigravity' ? 'Antigravity' : c.kind;
+    tag.textContent = c.kind === 'hud' ? 'HUD' : c.kind === 'claude' ? 'Claude'
+      : c.kind === 'antigravity' ? 'Antigravity' : c.scope === 'opencode' ? 'OpenCode' : c.kind;
     item.append(nameEl, argsEl, desc, tag);
     item.addEventListener('mousedown', (e) => { e.preventDefault(); pickSlash(i); });
     slashMenu.appendChild(item);
@@ -456,7 +485,7 @@ function pickSlash(i) {
 
   replyTextarea.value = `/${c.name} `;
   replyTextarea.focus();
-  if (c.options && (currentActiveSession?.source === 'claude' || currentActiveSession?.source === 'antigravity')) {
+  if (c.options && ['claude', 'antigravity', 'opencode'].includes(currentActiveSession?.source)) {
     slashIndex = 0;
     updateSlashMenu(); // open the nested options
   } else {
