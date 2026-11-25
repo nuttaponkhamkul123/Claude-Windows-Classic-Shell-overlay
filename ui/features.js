@@ -112,6 +112,64 @@
       bubble.appendChild(copy);
     }
     if (msg.edits && msg.edits.length) renderEdits(bubble, msg.edits);
+    if (msg.steps && msg.steps.length) renderSteps(bubble, msg.steps);
+  };
+
+  // The steps the reply took (from the activity bar), kept under the reply once it finishes.
+  // Folded by default; click the header to see them. Uses the edit-list look so every theme covers it.
+  function renderSteps(bubble, steps) {
+    bubble.querySelector('.step-list')?.remove();
+    if (!steps || !steps.length) return;
+    const list = el('div', 'edit-list step-list');
+    const head = el('div', 'edit-head step-head');
+    const title = el('span', 'edit-title');
+    const setTitle = (open) => { title.textContent = `✓ ${steps.length} step${steps.length > 1 ? 's' : ''} ${open ? '▴' : '▾'}`; };
+    setTitle(false);
+    head.title = 'Show the steps this reply took';
+    head.style.cursor = 'pointer';
+    head.appendChild(title);
+    list.appendChild(head);
+    const rows = [];
+    for (const st of steps) {
+      const row = el('div', 'edit-row step-row');
+      row.style.display = 'none';
+      row.title = st.target ? `${st.verb} ${st.target}` : st.verb;
+      const t = new Date(st.at);
+      row.append(el('span', 'edit-name', `${st.icon} ${st.verb}`), el('span', 'edit-dir', st.target || ''),
+        el('span', 'edit-stats', `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`));
+      rows.push(row);
+      list.appendChild(row);
+    }
+    head.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = rows[0].style.display === 'none';
+      for (const r of rows) r.style.display = open ? '' : 'none';
+      list.classList.toggle('open', open);
+      setTitle(open);
+    });
+    const edits = bubble.querySelector('.edit-list:not(.step-list)');
+    if (edits) bubble.insertBefore(list, edits); else bubble.appendChild(list);
+  }
+
+  // The activity bar went away (reply finished): put its steps under the reply.
+  // The reply may arrive a moment later, so wait for it up to 8 s (like the edited files).
+  let pendingSteps = null; // { sessionId, steps, at }
+  function attachPendingSteps() {
+    if (!pendingSteps) return;
+    const p = pendingSteps;
+    if (!currentActiveSession || currentActiveSession.id !== p.sessionId || Date.now() - p.at > 8000) { pendingSteps = null; return; }
+    const bubble = replyAfterLastUser();
+    if (!bubble) return;
+    renderSteps(bubble, p.steps);
+    const h = (sessionChatHistory.get(p.sessionId) || []).find((m) => m.el === bubble);
+    if (h) h.steps = p.steps;
+    pendingSteps = null;
+  }
+  setInterval(attachPendingSteps, 500);
+  window.onActivityFinished = (sessionId, steps) => {
+    if (!steps || !steps.length) return;
+    pendingSteps = { sessionId, steps: steps.map(({ icon, verb, target, at }) => ({ icon, verb, target, at })), at: Date.now() };
+    attachPendingSteps();
   };
 
   // The agent's newest reply to your latest message (nothing newer than your own message)

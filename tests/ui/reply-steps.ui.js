@@ -1,0 +1,49 @@
+// Activity bar steps: clicking anywhere on the bar opens the finished-steps list,
+// and when the reply finishes the steps stay under the reply (folded, click to open).
+require('./logpatch');
+const { app, BrowserWindow } = require('electron');
+const path = require('path');
+app.disableHardwareAcceleration(); app.setPath('userData', require('os').tmpdir() + '/ovly-ui-test-replysteps');
+let pass = 0, fail = 0;
+const check = (n, ok, i = '') => { (ok ? pass++ : fail++); console.log(`${ok ? 'PASS' : 'FAIL'}  ${n}${i ? ' — ' + i : ''}`); };
+process.on('unhandledRejection', (e) => { console.log('FAIL  unexpected error —', e && e.message); app.exit(1); });
+const style = process.argv[2]; // e.g. Work, Pip-Boy, Classic: also saves a screenshot
+app.whenReady().then(async () => {
+  const w = new BrowserWindow({ width: 700, height: 800, show: false, frame: false, useContentSize: true, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: false, sandbox: false, backgroundThrottling: false, offscreen: true } });
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const js = (c) => w.webContents.executeJavaScript(c).catch((e) => 'ERR ' + e.message);
+  w.loadFile(path.join(__dirname, '../../ui/index.html')); await new Promise((r) => w.webContents.once('did-finish-load', r)); await wait(2200);
+
+  const sess = { id: 'claude:steps-1', sessionUuid: 'steps-1', source: 'claude', project: 'p', cwd: 'C:/p', status: 'running', state: 'running', subagents: [], mtime: Date.now(), runningSince: Date.now(), activity: { kind: 'tool', tool: 'Read', input: { file_path: 'C:/p/a.js' }, since: Date.now() } };
+  await js(`window.__S = ${JSON.stringify(sess)}; window.__cbs.onSessionsSync([window.__S]); showDetailView(window.__S); sessionChatHistory.get(window.__S.id).fromDisk = true; renderActivity(window.__S); 1`);
+  await wait(300);
+  const step = async (act) => { await js(`window.__S.activity = ${JSON.stringify({ ...act, since: Date.now() })}; renderActivity(window.__S); 1`); await wait(150); };
+  await step({ kind: 'tool', tool: 'Edit', input: { file_path: 'C:/p/b.js' } });
+  await step({ kind: 'tool', tool: 'Bash', input: { command: 'npm test' } });
+  check('the bar counts finished steps', /2 done/.test(await js(`document.querySelector('#activityRow .act-stack')?.textContent || ''`)));
+  check('the bar shows a hand cursor', (await js(`getComputedStyle(document.getElementById('activityRow')).cursor`)) === 'pointer');
+
+  await js(`document.getElementById('activityVerb').click(); 1`); await wait(200);
+  check('clicking the bar opens the steps list', (await js(`document.querySelectorAll('#activityRow .act-step').length`)) === 2);
+  await js(`document.getElementById('activityRow').click(); 1`); await wait(200);
+  check('clicking it again closes the list', (await js(`getComputedStyle(document.querySelector('#activityRow .act-progress')).display`)) === 'none');
+
+  // the reply finishes
+  await js(`window.__S.status = 'idle'; window.__S.state = 'idle'; window.__S.activity = null; renderActivity(window.__S);
+    const m = { role: 'assistant', text: 'All done.', time: 'Just now', source: 'claude' }; sessionChatHistory.get(window.__S.id).push(m); m.el = appendBubble(m); 1`);
+  await wait(2500);
+  check('the bar goes away', (await js(`document.getElementById('activityRow').style.display`)) === 'none');
+  const last = `[...document.querySelectorAll('#chatStream .chat-bubble.assistant')].pop()`;
+  check('the steps stay under the reply', /3 steps/.test(await js(`${last}.querySelector('.step-list .edit-title')?.textContent || ''`)));
+  check('folded at first', (await js(`[...${last}.querySelectorAll('.step-row')].every((r) => r.style.display === 'none')`)) === true);
+  await js(`${last}.querySelector('.step-head').click(); 1`); await wait(150);
+  const rows = await js(`[...${last}.querySelectorAll('.step-row')].filter((r) => r.style.display !== 'none').map((r) => r.textContent)`);
+  check('click opens them, oldest first', Array.isArray(rows) && rows.length === 3 && /a\.js/.test(rows[0]) && /npm test/.test(rows[2]), JSON.stringify(rows));
+  check('kept with the message (survives a redraw)', (await js(`showDetailView(window.__S); !!${last}.querySelector('.step-list')`)) === true);
+  if (style) {
+    await js(`[...document.querySelectorAll('.style-pills .theme-pill')].find(x => /^${style}/.test(x.textContent))?.click(); showDetailView(window.__S); ${last}.querySelector('.step-head').click(); 1`); await wait(800);
+    const img = await w.webContents.capturePage(); require('fs').writeFileSync(path.join(require('os').tmpdir(), `ovly-replysteps-${style}.png`), img.toPNG()); }
+
+  console.log(`\n${pass} passed, ${fail} failed`);
+  app.exit(fail ? 1 : 0);
+});

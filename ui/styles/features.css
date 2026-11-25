@@ -774,6 +774,9 @@ body.theme-vista .ctx-sep, body:not(.theme-aero) .ctx-sep { background: #4a5060;
   border-radius: 5px; position: relative; overflow: visible; /* tall hats may poke out the top */
 }
 #activityRow .activity-verb { font-size: 12px; }
+#activityRow.has-steps { cursor: pointer; } /* click the bar = show finished steps */
+.step-list .step-row { cursor: default; }
+.step-list .edit-stats { opacity: .7; font-family: Consolas, monospace; white-space: nowrap; flex-shrink: 0; }
 #activityRow .act-progress { order: 10; flex-basis: 100%; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 
 

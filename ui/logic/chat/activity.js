@@ -177,9 +177,15 @@ function renderActivityProgress(row, s, act, verb, target) {
       if (currentActiveSession) renderActivity(currentActiveSession);
     });
     row.appendChild(pill);
+    // a click anywhere on the bar does the same (not on its other buttons, helpers or the open list)
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('button, a, .team-mate, .act-progress') || pill.style.display === 'none') return;
+      pill.click();
+    });
   }
   const n = tr.steps.length;
   pill.style.display = n ? '' : 'none';
+  row.classList.toggle('has-steps', n > 0);
   pill.classList.toggle('open', activityTrailOpen);
   pill.title = activityTrailOpen ? 'Hide finished steps' : 'Show finished steps';
   pill.textContent = '';
@@ -406,7 +412,12 @@ function renderActivity(s) {
         if (still) return;
         avatarJumpBack(row);
         row.style.display = 'none';
-        if (cur) { activityFirstSeen.delete(cur.id); activityTrail.delete(cur.id); }
+        if (cur) {
+          // keep the finished steps under the reply (features.js)
+          const tr = activityTrail.get(cur.id);
+          if (tr && typeof window.onActivityFinished === 'function') window.onActivityFinished(cur.id, tr.cur && tr.cur.real ? [...tr.steps, tr.cur] : tr.steps);
+          activityFirstSeen.delete(cur.id); activityTrail.delete(cur.id);
+        }
         activityTrailOpen = false;
         if (activityTimer) { clearInterval(activityTimer); activityTimer = null; }
       }, 1500);
