@@ -1,0 +1,75 @@
+/* Settings → Appearance → Style: one picture card per style (app.js builds them).
+   Scoped to #settingsPanel so the per-style .theme-pill rules don't restyle the cards. */
+#settingsPanel .style-pills.style-cards {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
+  margin: 4px 0 10px; padding: 0 2px;
+}
+#settingsPanel .style-pills .style-card {
+  position: relative; display: flex; flex-direction: column; gap: 6px; align-items: stretch;
+  height: auto; min-height: 0; padding: 6px 6px 8px; margin: 0; text-align: left; cursor: pointer;
+  font: inherit; color: inherit; text-transform: none; letter-spacing: normal;
+  background: rgba(127, 140, 160, 0.08); border: 1px solid rgba(127, 140, 160, 0.35); border-radius: 9px;
+  box-shadow: none; transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+#settingsPanel .style-pills .style-card:hover { transform: translateY(-1px); border-color: var(--sc-accent, #4c8dff); background: rgba(127, 140, 160, 0.14); }
+#settingsPanel .style-pills .style-card:focus-visible { outline: 2px solid var(--sc-accent, #4c8dff); outline-offset: 2px; }
+#settingsPanel .style-pills .style-card.active {
+  border-color: var(--sc-accent, #4c8dff); background: rgba(76, 141, 255, 0.10);
+  box-shadow: 0 0 0 2px var(--sc-accent, #4c8dff), 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+.style-card .sc-text { display: flex; flex-direction: column; gap: 1px; padding: 0 2px; }
+.style-card .sc-name { font-weight: 700; font-size: 12.5px; }
+.style-card .sc-desc { font-size: 10.5px; opacity: .68; line-height: 1.3; }
+.style-card .sc-check {
+  position: absolute; top: 10px; right: 10px; width: 18px; height: 18px; border-radius: 50%;
+  display: none; align-items: center; justify-content: center;
+  background: var(--sc-accent, #4c8dff); color: #fff; font: 700 11px/1 "Segoe UI", sans-serif; box-shadow: 0 1px 4px rgba(0,0,0,.4);
+}
+.style-card.active .sc-check { display: flex; }
+
+/* ---- the little previews (pure CSS) ---- */
+.sc-prev { position: relative; display: block; height: 62px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(0, 0, 0, 0.35); }
+.sc-prev i { position: absolute; display: block; }
+
+/* Shelter: vault rooms cut into rock, warm light, little robots */
+.sc-prev.sc-shelter { background: radial-gradient(circle at 30% 20%, #4a3a2c 0, #2a2018 60%, #1a130e 100%); }
+.sc-shelter .r1, .sc-shelter .r2 { left: 10%; width: 80%; height: 34%; border: 2px solid #6b5640; border-radius: 3px;
+  background: linear-gradient(180deg, #f3c26b 0%, #b8843f 100%); box-shadow: inset 0 -6px 0 rgba(0,0,0,.25); }
+.sc-shelter .r1 { top: 10%; }
+.sc-shelter .r2 { top: 56%; background: linear-gradient(180deg, #9fd0e8 0%, #5d8fa8 100%); }
+.sc-shelter .b1, .sc-shelter .b2, .sc-shelter .b3 { width: 6px; height: 9px; border-radius: 2px 2px 1px 1px; background: #e9edf2; box-shadow: 0 0 0 1px #33404d; }
+.sc-shelter .b1 { left: 24%; top: 22%; } .sc-shelter .b2 { left: 58%; top: 22%; } .sc-shelter .b3 { left: 40%; top: 68%; }
+
+/* Pip-Boy: green CRT text with scanlines */
+.sc-prev.sc-pip { background: radial-gradient(ellipse at center, #0f2a12 0%, #050c06 100%); }
+.sc-pip::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(180deg, rgba(0,0,0,.35) 0 1px, transparent 1px 3px); }
+.sc-pip .l1, .sc-pip .l2, .sc-pip .l3, .sc-pip .l4 { left: 10%; height: 4px; background: #39ff6a; box-shadow: 0 0 6px #39ff6a; opacity: .9; }
+.sc-pip .l1 { top: 14%; width: 38%; } .sc-pip .l2 { top: 34%; width: 72%; opacity: .6; } .sc-pip .l3 { top: 50%; width: 58%; opacity: .6; } .sc-pip .l4 { top: 72%; width: 30%; }
+.sc-pip .box { right: 9%; top: 14%; width: 22%; height: 46%; border: 2px solid #39ff6a; box-shadow: 0 0 6px #39ff6a; opacity: .85; }
+
+/* Classic: a Windows 7 window on the blue desktop */
+.sc-prev.sc-classic { background: linear-gradient(160deg, #3f8fd8 0%, #1c5ca8 55%, #12407a 100%); }
+.sc-classic .win { left: 12%; top: 12%; width: 76%; height: 64%; border-radius: 4px; background: #fff;
+  border: 1px solid rgba(255,255,255,.7); box-shadow: 0 3px 8px rgba(0,0,0,.35); overflow: hidden; }
+.sc-classic .bar { left: 12%; top: 12%; width: 76%; height: 18%; border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, rgba(220,236,252,.95) 0%, rgba(160,200,238,.95) 100%); }
+.sc-classic .x { right: 14%; top: 15%; width: 10%; height: 11%; border-radius: 2px; background: linear-gradient(180deg, #e9816d, #c3412a); }
+.sc-classic .t1, .sc-classic .t2 { left: 18%; height: 4px; border-radius: 2px; background: #c8d6e6; }
+.sc-classic .t1 { top: 42%; width: 50%; } .sc-classic .t2 { top: 54%; width: 36%; }
+.sc-classic .task { left: 0; right: 0; bottom: 0; height: 14%; background: linear-gradient(180deg, rgba(30,50,80,.85), rgba(10,20,40,.95)); }
+
+/* Work: dark sidebar + chat */
+.sc-prev.sc-work { background: #1b1d22; }
+.sc-work .side { left: 0; top: 0; bottom: 0; width: 30%; background: #15171b; border-right: 1px solid #2a2d34; }
+.sc-work .s1, .sc-work .s2, .sc-work .s3 { left: 5%; width: 20%; height: 4px; border-radius: 2px; background: #3a3f49; }
+.sc-work .s1 { top: 14%; background: #4c8dff; } .sc-work .s2 { top: 30%; } .sc-work .s3 { top: 46%; }
+.sc-work .m1 { right: 8%; top: 14%; width: 38%; height: 16%; border-radius: 6px; background: #4c8dff; }
+.sc-work .m2 { left: 36%; top: 40%; width: 46%; height: 18%; border-radius: 6px; background: #2a2e36; }
+.sc-work .in { left: 36%; right: 6%; bottom: 10%; height: 14%; border-radius: 5px; border: 1px solid #3a3f49; background: #15171b; }
+
+/* accent per style the dialog is drawn in */
+body.style-shelter #settingsPanel .style-cards { --sc-accent: var(--sh-amber, #f0b445); }
+body.style-pip #settingsPanel .style-cards { --sc-accent: var(--pip, #39ff6a); }
+body.style-shelter #settingsPanel .style-pills .style-card { border-radius: 2px; }
+body.style-shelter .style-card .sc-check { color: #1a1200; }
+@media (prefers-reduced-motion: reduce) { #settingsPanel .style-pills .style-card:hover { transform: none; } }

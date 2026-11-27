@@ -946,14 +946,38 @@ if (resizeGrip) {
     const styleRow = document.createElement('div');
     styleRow.className = 'set-row set-style-row';
     styleRow.innerHTML = '<span class="set-ico">🏗</span><span class="set-label">Style</span>';
+    // one picture card per style: a small CSS preview, its name and what it looks like (styles/style-picker.css)
     const stylePills = document.createElement('div');
-    stylePills.className = 'theme-pills style-pills';
-    const STYLES = [['shelter', 'Shelter'], ['pip', 'Pip-Boy'], ['classic', 'Classic (Windows)'], ['work', 'Work']];
-    const markStyle = () => styleBtns.forEach((x, i) => x.classList.toggle('active', STYLES[i][0] === uiStyle));
-    const styleBtns = STYLES.map(([key, label]) => {
+    stylePills.className = 'theme-pills style-pills style-cards';
+    stylePills.setAttribute('role', 'radiogroup');
+    stylePills.setAttribute('aria-label', 'Style');
+    const STYLES = [
+      ['shelter', 'Shelter', 'Vault rooms with little robots', ['r1', 'r2', 'b1', 'b2', 'b3']],
+      ['pip', 'Pip-Boy', 'Green terminal screen', ['l1', 'l2', 'l3', 'l4', 'box']],
+      ['classic', 'Classic (Windows)', 'Windows 7, XP or Vista', ['win', 'bar', 'x', 't1', 't2', 'task']],
+      ['work', 'Work', 'Clean sidebar and chat', ['side', 's1', 's2', 's3', 'm1', 'm2', 'in']],
+    ];
+    const markStyle = () => styleBtns.forEach((x, i) => {
+      const on = STYLES[i][0] === uiStyle;
+      x.classList.toggle('active', on);
+      x.setAttribute('aria-checked', String(on));
+    });
+    const styleBtns = STYLES.map(([key, label, desc, parts]) => {
       const b = document.createElement('button');
-      b.className = 'theme-pill';
-      b.textContent = label;
+      b.className = 'theme-pill style-card';
+      b.dataset.style = key;
+      b.setAttribute('role', 'radio');
+      b.title = `${label} — ${desc}`;
+      // the name comes first in the text, so "find the card whose text starts with Work" still works
+      const text = document.createElement('span');
+      text.className = 'sc-text';
+      text.append(el('b', 'sc-name', label), el('span', 'sc-desc', desc));
+      const prev = document.createElement('span');
+      prev.className = `sc-prev sc-${key}`;
+      prev.setAttribute('aria-hidden', 'true');
+      for (const p of parts) prev.appendChild(el('i', p));
+      b.append(text, el('span', 'sc-check', '✓'));
+      b.prepend(prev);
       b.addEventListener('click', () => {
         if ((key === 'work' || key === 'pip') && document.body.classList.contains('vault-focus')) window.closeVaultFocus?.(false);
         uiStyle = key;
