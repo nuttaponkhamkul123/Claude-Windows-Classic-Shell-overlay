@@ -98,6 +98,16 @@ function createWindow() {
     event.preventDefault();
     if (url) features.openFile(url);
   });
+  // HTML preview frames (sandboxed iframes in the chat): they may move between local .html pages;
+  // anything else (web links, other file types) is opened the normal way, never inside the HUD.
+  mainWindow.webContents.on('will-frame-navigate', (details) => {
+    if (details.isMainFrame) return;
+    const url = String(details.url || '');
+    if (/^ovly-preview:\/\//i.test(url) && /\.html?$/i.test(url.replace(/[?#].*$/, ''))) return;
+    if (/^about:blank/i.test(url)) return;
+    details.preventDefault();
+    if (url) features.openFile(url);
+  });
 
   mainWindow.on('resize', () => {
     if (!mainWindow || dockState.docked || boundsAnim) return; // don't remember mini/animation sizes
@@ -194,10 +204,13 @@ const appCtx = {
   },
 };
 
+features.registerPreviewScheme(); // HTML previews in the chat (must be before 'ready')
 app.whenReady().then(() => {
+  features.servePreviewScheme();
   createWindow();
   createTray();
   startPermissionServer();
+  chatTree.listen();
 
   watcher = new MultiAISessionWatcher();
   const profiler = require('./main/profiler').create({ getMainWin: () => mainWindow, getWatcher: () => watcher });
@@ -520,6 +533,23 @@ function buildClaudeExtraArgs(sessionId, options = {}) {
         },
       },
     };
+    // Chat Tree tools (mcp/tree.js → main/chat-tree.js): start / message child chats, report to the parent.
+    // Off with the setting chatTreeTools = false.
+    // Opt-in: only chats in a tree, or opened while Tree mode is on (chatTree.wantsTools) — other chats
+    // don't carry these tool descriptions (and their tokens) at all.
+    if (chatTree.getPort() && features.getSetting('chatTreeTools', true) !== false && chatTree.wantsTools(sessionId)) {
+      mcpConfig.mcpServers.ovly_tree = {
+        type: 'stdio',
+        command: process.execPath,
+        args: [path.join(__dirname, 'mcp', 'tree.js')],
+        env: {
+          ELECTRON_RUN_AS_NODE: '1',
+          HUD_TREE_URL: `http://127.0.0.1:${chatTree.getPort()}/tree`,
+          HUD_PERM_TOKEN: PERM_TOKEN,
+          HUD_SESSION_ID: sessionId || '',
+        },
+      };
+    }
     // --mcp-config ADDS to the user's own MCP servers (no --strict-mcp-config)
     args.push('--mcp-config', tmp('mcp', mcpConfig));
     args.push('--permission-prompt-tool', 'mcp__ovly_hud__approve');
@@ -1070,6 +1100,285 @@ function resolveAttachedFiles(files) {
   return out;
 }
 
+// Run one Claude turn (claude -p, stream-json) for a chat: the HUD's normal replies and the Chat Tree
+// (main/chat-tree.js) both use it. Resolves when the process ends with
+//   { sessionId, startedAsId, text, edits, cost, code, error, stopped }
+// options: plan, model, effort, newSession, forkFrom (uuid → --resume … --fork-session), appendSystemPrompt,
+//          quiet (no "Sent to Claude!" / "✓ Claude replied!" line in the reply box — for runs you didn't start)
+const runHooks = new (require('events'))(); // 'start' (id, startedAsId) · 'rekey' (oldId, newId) · 'end' (result)
+// Chat Tree: parent chats start / command child chats; results flow back up (main/chat-tree.js, ui/logic/chat/tree.js)
+const chatTree = require('./main/chat-tree').createChatTree({
+  runClaudeTurn, runHooks, aliases: sessionAliases, token: PERM_TOKEN,
+  getWin: () => mainWindow, getWatcher: () => watcher,
+  stopReply: (id) => features.stopReply(id), getSetting: (k, d) => features.getSetting(k, d),
+  // the top chat's name: its first message
+  titleFor: (id) => {
+    const h = features.readSessionHistory(id) || [];
+    const first = h.find((m) => m.role === 'user' && String(m.text || '').trim());
+    return first ? String(first.text).replace(/\s+/g, ' ').trim() : '';
+  },
+});
+chatTree.register(ipcMain);
+function runClaudeTurn({ text, imageList = [], session, options = {} }) {
+  return new Promise((resolveRun) => {
+    let sessionId = session?.id || '';
+    const startedAsId = sessionId; // a New-chat draft id until Claude names the session
+    const isNewChat = !!(options.newSession || options.forkFrom);
+    const quiet = !!options.quiet;
+    const finishState = { get: () => ({ text: '', edits: [], cost: 0, stopped: false }) };
+    let finished = false;
+    const finish = ({ code, error }) => {
+      if (finished) return;
+      finished = true;
+      const r = { sessionId, startedAsId, code, error: error || '', ...finishState.get() };
+      runHooks.emit('end', r);
+      resolveRun(r);
+    };
+    const claudeBin = findClaudeBinary();
+    const sessionUuid = isNewChat ? '' : (session?.sessionUuid || sessionId.replace(/^claude_/, ''));
+    const projectCwd = (session?.cwd && fs.existsSync(session.cwd)) ? session.cwd : process.cwd();
+
+    if (watcher && sessionId) {
+      watcher.setSessionRunning(sessionId, 'Running (Thinking...)', text || 'Analyzing attached image...');
+    }
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('reply-status', {
+        sessionId,
+        status: 'running',
+        statusLabel: 'Running (Thinking...)',
+        message: quiet ? '' : '⚡ Sent to Claude! Thinking...'
+      });
+    }
+
+    const content = [];
+    for (const img of imageList) {
+      const match = img.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+      if (!match) continue;
+      content.push({
+        type: 'image',
+        source: { type: 'base64', media_type: match[1], data: match[2] }
+      });
+    }
+    content.push({
+      type: 'text',
+      text: text || (imageList.length > 1 ? 'Please analyze the attached images.' : 'Please analyze the attached image.')
+    });
+
+    const args = [
+      '-p',
+      '--output-format', 'stream-json',
+      '--verbose',
+      '--input-format', 'stream-json',
+      '--permission-mode', options.plan ? 'plan' : 'acceptEdits',
+      // `claude -p` cannot ask interactive questions: the question tool just waits a few
+      // seconds, then answers itself with "The user did not answer" and Claude carries on
+      // alone. So switch it off here — Claude asks in plain text and stops instead,
+      // which the HUD shows as "needs input" (+ Yes / No buttons).
+      '--disallowedTools', 'AskUserQuestion',
+      '--append-system-prompt',
+      'You are replying inside a small chat window, not a terminal: interactive question tools are not available. ' +
+      'When you need the user to decide something, ask it in plain text at the end of your reply (for a yes/no ' +
+      'question, make it the very last sentence), list any options briefly, and then stop and wait for the answer. ' +
+      'Never carry on assuming an answer to a question you just asked.'
+    ];
+
+    // options.newSession (from /clear) starts a fresh conversation in the same folder;
+    // options.forkFrom (Chat Tree "full" child) = a NEW session that starts with a copy of that chat
+    if (options.forkFrom) {
+      args.push('--resume', options.forkFrom, '--fork-session');
+    } else if (sessionUuid && !sessionUuid.startsWith('test_') && !options.newSession) {
+      args.push('--resume', sessionUuid);
+    }
+    if (options.appendSystemPrompt) args.push('--append-system-prompt', options.appendSystemPrompt);
+
+    // Tool approvals in the HUD + /model, /effort overrides
+    const extra = buildClaudeExtraArgs(sessionId, options);
+    args.push(...extra.args);
+    const cleanupTemp = () => extra.tempFiles.forEach((f) => fs.unlink(f, () => {}));
+
+    try {
+      const cleanEnv = { ...process.env };
+      delete cleanEnv.ELECTRON_RUN_AS_NODE;
+
+      const child = spawn(claudeBin, args, {
+        cwd: projectCwd,
+        env: cleanEnv,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        windowsHide: true
+      });
+
+      features.trackChild(sessionId, child);
+      finishState.get = () => ({ text: accumulatedText, edits: runEdits, cost: runCost, stopped: features.wasStopped(sessionId) });
+      const runEdits = []; // files this reply edited (shown under the reply)
+      let stdoutBuf = '';
+      let accumulatedText = '';
+      let currentStatusLabel = 'Running (Thinking...)';
+      let errorText = '';
+      let stderrText = '';
+      let runCost = 0;
+      runHooks.emit('start', sessionId, startedAsId);
+
+      child.stdout.on('data', (chunk) => {
+        stdoutBuf += chunk.toString('utf-8');
+        const lines = stdoutBuf.split('\n');
+        stdoutBuf = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const obj = JSON.parse(line);
+            // New chat: the first event carries the new session's id → tell the
+            // HUD so the open conversation becomes that session.
+            if (isNewChat && sessionId === startedAsId && obj.session_id) {
+              const newId = 'claude_' + obj.session_id;
+              sessionAliases.set(startedAsId, newId);
+              sessionId = newId;
+              features.aliasChild(startedAsId, newId);
+              runHooks.emit('rekey', startedAsId, newId);
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('reply-rekey', { oldId: startedAsId, newId, sessionUuid: obj.session_id });
+              }
+            }
+            if (obj.type === 'result' && typeof obj.total_cost_usd === 'number') runCost = obj.total_cost_usd;
+            if (obj.type === 'result' && obj.is_error) {
+              errorText = String(obj.result || (obj.errors || []).join('\n') || obj.subtype || 'error');
+            } else if (obj.type === 'assistant' && (obj.error || obj.message?.model === '<synthetic>')) {
+              const t = (obj.message?.content || []).find((b) => b.type === 'text')?.text;
+              if (t) errorText = t;
+            }
+            if (obj.type === 'system' && obj.subtype === 'thinking_tokens') {
+              currentStatusLabel = 'Running (Thinking...)';
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('reply-stream', {
+                  sessionId,
+                  status: 'running',
+                  statusLabel: currentStatusLabel,
+                  text: accumulatedText, // '' = nothing written yet (the HUD shows an activity line)
+                  activity: { kind: 'thinking' }
+                });
+              }
+            } else if (obj.type === 'assistant' && obj.message?.content) {
+              const blocks = Array.isArray(obj.message.content) ? obj.message.content : [];
+              let streamActivity = { kind: 'writing' };
+              for (const b of blocks) {
+                if (b.type === 'text' && b.text) {
+                  accumulatedText = b.text;
+                  currentStatusLabel = 'Running (Generating...)';
+                  streamActivity = { kind: 'writing' };
+                } else if (b.type === 'tool_use') {
+                  const ed = features.editFromToolUse(b);
+                  if (ed) features.mergeEdit(runEdits, ed);
+                  currentStatusLabel = `Running: ${b.name || 'Tool'}`;
+                  streamActivity = { kind: 'tool', tool: b.name || 'Tool', input: b.input || {} };
+                  if (watcher && sessionId) {
+                    watcher.setSessionRunning(sessionId, currentStatusLabel);
+                  }
+                }
+              }
+
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('reply-stream', {
+                  sessionId,
+                  status: 'running',
+                  statusLabel: currentStatusLabel,
+                  text: accumulatedText,
+                  activity: streamActivity
+                });
+              }
+            }
+          } catch (e) {}
+        }
+
+        if (watcher) watcher.check();
+      });
+
+      child.stderr.on('data', (chunk) => {
+        const s = chunk.toString('utf-8');
+        stderrText = (stderrText + s).slice(-4000);
+        console.error('[Claude STDERR]', s);
+      });
+
+      // Process gone (finished, crashed, or never started) → drop the "running"
+      // hold so the session can't stay on "thinking" forever.
+      const endRun = (code, err) => {
+        // Stopped or crashed mid-turn: the log never gets an end marker, so it would
+        // read as "running" for 10 min. markTurnEnded keeps it idle until the log changes.
+        const cut = features.wasStopped(sessionId) || code !== 0;
+        const end = (id) => (cut ? watcher.markTurnEnded(id, features.wasStopped(sessionId) ? 'Idle (Stopped)' : 'Idle (Error)') : watcher.cancelRunning(id));
+        if (watcher && sessionId) end(sessionId);
+        if (watcher && startedAsId && startedAsId !== sessionId) end(startedAsId);
+        if (code === 0 && !errorText) return '';
+        const first = (errorText || stderrText || (err && err.message) || '').split(/\r?\n/).find((l) => l.trim()) || '';
+        return first.trim().slice(0, 300);
+      };
+
+      child.on('error', (err) => {
+        cleanupTemp();
+        const why = endRun(-1, err);
+        finish({ code: -1, error: why || 'Could not start Claude' });
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('reply-status', {
+            sessionId, status: 'idle', statusLabel: 'Idle (Error)', text: accumulatedText,
+            message: quiet ? '' : '⚠ ' + (why || 'Could not start Claude')
+          });
+        }
+      });
+      child.on('close', (code) => {
+        cleanupTemp();
+        const why = endRun(code);
+        finish({ code, error: why });
+        // Any approval prompts from this run can no longer be answered
+        for (const [pid, p] of permState.pendingPermissions) {
+          if (p.sessionId === sessionId || p.sessionId === startedAsId) {
+            answerPermission(pid, { behavior: 'deny', message: 'Claude process ended.' });
+            if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('permission-expired', { id: pid });
+            appCtx.mirror('permission-expired', { id: pid });
+          }
+        }
+        if (watcher) watcher.check();
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('reply-status', {
+            sessionId,
+            status: 'idle',
+            statusLabel: 'Idle (Ready)',
+            text: accumulatedText,
+            edits: runEdits,
+            code,
+            message: quiet ? '' : features.wasStopped(sessionId) ? '■ Stopped'
+              : why ? `⚠ ${why}`
+              : code === 0 ? '✓ Claude replied!' : `Claude exited (${code})`
+          });
+        }
+      });
+
+      const userPayload = JSON.stringify({
+        type: 'user',
+        session_id: sessionUuid || '',
+        message: {
+          role: 'user',
+          content
+        },
+        parent_tool_use_id: null
+      }) + '\n';
+
+      child.stdin.write(userPayload);
+      child.stdin.end();
+    } catch (err) {
+      console.error('[Main] Failed to spawn Claude:', err);
+      finish({ code: -1, error: err.message });
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('reply-status', {
+          sessionId,
+          status: 'idle',
+          statusLabel: 'Idle',
+          message: '⚠ Error: ' + err.message
+        });
+      }
+    }
+  });
+}
+
 ipcMain.on('send-reply', async (_event, { text, image, images, files, session, copyOnly, options = {} }) => {
   const imageList = (Array.isArray(images) && images.length ? images : (image ? [image] : []))
     .filter((d) => typeof d === 'string' && d.startsWith('data:image/'));
@@ -1174,238 +1483,9 @@ ipcMain.on('send-reply', async (_event, { text, image, images, files, session, c
     return;
   }
 
-  // 2. Direct execution for Claude Code sessions
+  // 2. Direct execution for Claude Code sessions (runClaudeTurn, above)
   if (source === 'claude') {
-    const claudeBin = findClaudeBinary();
-    const sessionUuid = isNewChat ? '' : (session?.sessionUuid || sessionId.replace(/^claude_/, ''));
-    const projectCwd = (session?.cwd && fs.existsSync(session.cwd)) ? session.cwd : process.cwd();
-
-    if (watcher && sessionId) {
-      watcher.setSessionRunning(sessionId, 'Running (Thinking...)', text || 'Analyzing attached image...');
-    }
-
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('reply-status', {
-        sessionId,
-        status: 'running',
-        statusLabel: 'Running (Thinking...)',
-        message: '⚡ Sent to Claude! Thinking...'
-      });
-    }
-
-    const content = [];
-    for (const img of imageList) {
-      const match = img.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
-      if (!match) continue;
-      content.push({
-        type: 'image',
-        source: { type: 'base64', media_type: match[1], data: match[2] }
-      });
-    }
-    content.push({
-      type: 'text',
-      text: text || (imageList.length > 1 ? 'Please analyze the attached images.' : 'Please analyze the attached image.')
-    });
-
-    const args = [
-      '-p',
-      '--output-format', 'stream-json',
-      '--verbose',
-      '--input-format', 'stream-json',
-      '--permission-mode', options.plan ? 'plan' : 'acceptEdits',
-      // `claude -p` cannot ask interactive questions: the question tool just waits a few
-      // seconds, then answers itself with "The user did not answer" and Claude carries on
-      // alone. So switch it off here — Claude asks in plain text and stops instead,
-      // which the HUD shows as "needs input" (+ Yes / No buttons).
-      '--disallowedTools', 'AskUserQuestion',
-      '--append-system-prompt',
-      'You are replying inside a small chat window, not a terminal: interactive question tools are not available. ' +
-      'When you need the user to decide something, ask it in plain text at the end of your reply (for a yes/no ' +
-      'question, make it the very last sentence), list any options briefly, and then stop and wait for the answer. ' +
-      'Never carry on assuming an answer to a question you just asked.'
-    ];
-
-    // options.newSession (from /clear) starts a fresh conversation in the same folder
-    if (sessionUuid && !sessionUuid.startsWith('test_') && !options.newSession) {
-      args.push('--resume', sessionUuid);
-    }
-
-    // Tool approvals in the HUD + /model, /effort overrides
-    const extra = buildClaudeExtraArgs(sessionId, options);
-    args.push(...extra.args);
-    const cleanupTemp = () => extra.tempFiles.forEach((f) => fs.unlink(f, () => {}));
-
-    try {
-      const cleanEnv = { ...process.env };
-      delete cleanEnv.ELECTRON_RUN_AS_NODE;
-
-      const child = spawn(claudeBin, args, {
-        cwd: projectCwd,
-        env: cleanEnv,
-        stdio: ['pipe', 'pipe', 'pipe'],
-        windowsHide: true
-      });
-
-      features.trackChild(sessionId, child);
-      const runEdits = []; // files this reply edited (shown under the reply)
-      let stdoutBuf = '';
-      let accumulatedText = '';
-      let currentStatusLabel = 'Running (Thinking...)';
-      let errorText = '';
-      let stderrText = '';
-
-      child.stdout.on('data', (chunk) => {
-        stdoutBuf += chunk.toString('utf-8');
-        const lines = stdoutBuf.split('\n');
-        stdoutBuf = lines.pop() || '';
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const obj = JSON.parse(line);
-            // New chat: the first event carries the new session's id → tell the
-            // HUD so the open conversation becomes that session.
-            if (isNewChat && sessionId === startedAsId && obj.session_id) {
-              const newId = 'claude_' + obj.session_id;
-              sessionAliases.set(startedAsId, newId);
-              sessionId = newId;
-              features.aliasChild(startedAsId, newId);
-              if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('reply-rekey', { oldId: startedAsId, newId, sessionUuid: obj.session_id });
-              }
-            }
-            if (obj.type === 'result' && obj.is_error) {
-              errorText = String(obj.result || (obj.errors || []).join('\n') || obj.subtype || 'error');
-            } else if (obj.type === 'assistant' && (obj.error || obj.message?.model === '<synthetic>')) {
-              const t = (obj.message?.content || []).find((b) => b.type === 'text')?.text;
-              if (t) errorText = t;
-            }
-            if (obj.type === 'system' && obj.subtype === 'thinking_tokens') {
-              currentStatusLabel = 'Running (Thinking...)';
-              if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('reply-stream', {
-                  sessionId,
-                  status: 'running',
-                  statusLabel: currentStatusLabel,
-                  text: accumulatedText, // '' = nothing written yet (the HUD shows an activity line)
-                  activity: { kind: 'thinking' }
-                });
-              }
-            } else if (obj.type === 'assistant' && obj.message?.content) {
-              const blocks = Array.isArray(obj.message.content) ? obj.message.content : [];
-              let streamActivity = { kind: 'writing' };
-              for (const b of blocks) {
-                if (b.type === 'text' && b.text) {
-                  accumulatedText = b.text;
-                  currentStatusLabel = 'Running (Generating...)';
-                  streamActivity = { kind: 'writing' };
-                } else if (b.type === 'tool_use') {
-                  const ed = features.editFromToolUse(b);
-                  if (ed) features.mergeEdit(runEdits, ed);
-                  currentStatusLabel = `Running: ${b.name || 'Tool'}`;
-                  streamActivity = { kind: 'tool', tool: b.name || 'Tool', input: b.input || {} };
-                  if (watcher && sessionId) {
-                    watcher.setSessionRunning(sessionId, currentStatusLabel);
-                  }
-                }
-              }
-
-              if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('reply-stream', {
-                  sessionId,
-                  status: 'running',
-                  statusLabel: currentStatusLabel,
-                  text: accumulatedText,
-                  activity: streamActivity
-                });
-              }
-            }
-          } catch (e) {}
-        }
-
-        if (watcher) watcher.check();
-      });
-
-      child.stderr.on('data', (chunk) => {
-        const s = chunk.toString('utf-8');
-        stderrText = (stderrText + s).slice(-4000);
-        console.error('[Claude STDERR]', s);
-      });
-
-      // Process gone (finished, crashed, or never started) → drop the "running"
-      // hold so the session can't stay on "thinking" forever.
-      const endRun = (code, err) => {
-        // Stopped or crashed mid-turn: the log never gets an end marker, so it would
-        // read as "running" for 10 min. markTurnEnded keeps it idle until the log changes.
-        const cut = features.wasStopped(sessionId) || code !== 0;
-        const end = (id) => (cut ? watcher.markTurnEnded(id, features.wasStopped(sessionId) ? 'Idle (Stopped)' : 'Idle (Error)') : watcher.cancelRunning(id));
-        if (watcher && sessionId) end(sessionId);
-        if (watcher && startedAsId && startedAsId !== sessionId) end(startedAsId);
-        if (code === 0 && !errorText) return '';
-        const first = (errorText || stderrText || (err && err.message) || '').split(/\r?\n/).find((l) => l.trim()) || '';
-        return first.trim().slice(0, 300);
-      };
-
-      child.on('error', (err) => {
-        cleanupTemp();
-        const why = endRun(-1, err);
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('reply-status', {
-            sessionId, status: 'idle', statusLabel: 'Idle (Error)', text: accumulatedText,
-            message: '⚠ ' + (why || 'Could not start Claude')
-          });
-        }
-      });
-      child.on('close', (code) => {
-        cleanupTemp();
-        const why = endRun(code);
-        // Any approval prompts from this run can no longer be answered
-        for (const [pid, p] of permState.pendingPermissions) {
-          if (p.sessionId === sessionId || p.sessionId === startedAsId) {
-            answerPermission(pid, { behavior: 'deny', message: 'Claude process ended.' });
-            if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('permission-expired', { id: pid });
-            appCtx.mirror('permission-expired', { id: pid });
-          }
-        }
-        if (watcher) watcher.check();
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('reply-status', {
-            sessionId,
-            status: 'idle',
-            statusLabel: 'Idle (Ready)',
-            text: accumulatedText,
-            edits: runEdits,
-            code,
-            message: features.wasStopped(sessionId) ? '■ Stopped'
-              : why ? `⚠ ${why}`
-              : code === 0 ? '✓ Claude replied!' : `Claude exited (${code})`
-          });
-        }
-      });
-
-      const userPayload = JSON.stringify({
-        type: 'user',
-        session_id: sessionUuid || '',
-        message: {
-          role: 'user',
-          content
-        },
-        parent_tool_use_id: null
-      }) + '\n';
-
-      child.stdin.write(userPayload);
-      child.stdin.end();
-    } catch (err) {
-      console.error('[Main] Failed to spawn Claude:', err);
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('reply-status', {
-          sessionId,
-          status: 'idle',
-          statusLabel: 'Idle',
-          message: '⚠ Error: ' + err.message
-        });
-      }
-    }
+    runClaudeTurn({ text, imageList, session, options });
     return;
   }
 

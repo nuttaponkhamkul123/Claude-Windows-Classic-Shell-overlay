@@ -27,6 +27,14 @@ const gitPush = rec('push', { ok: true, text: '' });
 const gitDiscard = rec('discard', (cwd, files) => ({ ok: true, backup: 'bk1', count: files.length }));
 const gitUndoDiscard = rec('undo', { ok: true, count: 1 });
 const gitDraftMessage = rec('draft', { message: 'Add things\n\n- one\n- two' });
+const htmlPreviewUrl = (p, cwd) => require('electron').ipcRenderer.invoke('html-preview-url', p, cwd); // the test's main side serves it (html-preview.ui.js)
+const treeGet = async (id) => (window.__treeFor ? window.__treeFor(id) : null);
+const treeLinks = async () => window.__links || [];
+const treeRemove = rec('treeRemove', (key) => ({ ok: true, sids: ['claude_c2'], keptBranches: [], text: 'Removed c2.' }));
+const treeMerge = rec('treeMerge', { ok: true, text: 'Merged c2 "Write tests".' });
+const treeLog = async () => ({ log: window.__treeLog || [] });
+const treeEnable = rec('treeEnable', true);
+const treeStartChild = rec('treeStart', { ok: true, short: 'c9' });
 const storeGetAll = async () => ({ gitPushAccount: 'acme-dev' });
 // handoff note: window.__hoMode = 'ok' (default) | 'err' | 'slow'
 const handoffNote = async (id) => {
@@ -36,7 +44,7 @@ const handoffNote = async (id) => {
   return mode === 'err' ? { error: 'Claude gave no answer' } : { note: '## Goal\nFix the login bug.\n\n## Next steps\n1. Add tests.' };
 };
 const api = new Proxy({ settings, listSlashCommands, gitInfo, getSessionHistory, rulesList, getSessionCosts, getUsage, getUsageToday, gitChanges, gitFileDiff,
-  gitCommit, gitPush, gitDiscard, gitUndoDiscard, gitDraftMessage, handoffNote, storeGetAll }, {
+  gitCommit, gitPush, gitDiscard, gitUndoDiscard, gitDraftMessage, handoffNote, storeGetAll, htmlPreviewUrl, treeGet, treeStartChild, treeLinks, treeRemove, treeMerge, treeLog, treeEnable }, {
   get(t, k) {
     if (k in t) return t[k];
     // like ipcRenderer.on: every listener is kept and called

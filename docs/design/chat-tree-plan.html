@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Chat Tree v2: parent chats command child chats (plan)</title>
+<!-- Plan for "Chat Tree": a chat (the parent) can start child chats, send them commands and get their
+     results back; the HUD draws it live as a tree with messages flying down (commands) and up (results).
+     Open in a browser or with ▶ Preview in the HUD. The demo at the top is playable. -->
+<style>
+  body { margin: 0; padding: 22px 26px 40px; background: #16191e; color: #e3e7ee; font: 13px/1.5 "Segoe UI", sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 2px; }
+  h2 { font-size: 15px; margin: 30px 0 10px; color: #9cc3f0; border-bottom: 1px solid #2c333e; padding-bottom: 4px; }
+  h3 { font-size: 13px; margin: 14px 0 4px; }
+  p { margin: 4px 0; }
+  .sub { opacity: .65; margin-bottom: 10px; }
+  .wrap { max-width: 1000px; }
+  code { font: 11.5px Consolas, monospace; background: #232831; padding: 0 4px; border-radius: 3px; color: #b9d4f5; }
+  pre { font: 11.5px/1.45 Consolas, monospace; background: #10141b; border: 1px solid #2c333e; border-radius: 6px; padding: 8px 10px; color: #cfe0f5; overflow: auto; margin: 6px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid #262c35; }
+  th { color: #8b96a6; font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; }
+  .phase { background: #1d2128; border: 1px solid #2c333e; border-radius: 8px; padding: 12px 14px; margin: 10px 0; }
+  .phase-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  .phase-head b { font-size: 14px; }
+  .size { font-size: 11px; padding: 0 7px; border-radius: 8px; background: #2a3342; color: #a9c7ee; }
+  .phase ul { margin: 4px 0 0; padding-left: 18px; }
+  .phase li { margin: 5px 0; }
+  .done-when { margin-top: 8px; font-size: 12px; color: #9fdcb1; }
+  .ok { color: #7fd99a; } .risk { color: #ffd98a; } .no { color: #ffb4b0; }
+  .cmd { color: #7fb4ff; font-weight: 600; } .res { color: #7fd99a; font-weight: 600; }
+  .flow { display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
+  .flow > div { flex: 1 1 280px; background: #1d2128; border: 1px solid #2c333e; border-radius: 8px; padding: 10px 12px; }
+
+  /* ================= live demo ================= */
+  .demo { border: 1px solid #39414e; border-radius: 10px; background: #0f131a; overflow: hidden; box-shadow: 0 8px 26px rgba(0,0,0,.45); }
+  .demo-bar { display: flex; gap: 8px; align-items: center; padding: 7px 10px; background: #1b2029; border-bottom: 1px solid #2c333e; font-size: 12px; }
+  .demo-bar .sp { flex: 1; }
+  .dbtn { padding: 2px 10px; border-radius: 5px; border: 1px solid #36404e; background: #232a35; color: #dbe6f5; cursor: pointer; font: 12px "Segoe UI"; }
+  .dbtn:hover { background: #2c3644; }
+  .dbtn.on { background: #2f5e8f; border-color: #3f78b4; color: #fff; }
+  .clock { font: 11px Consolas, monospace; opacity: .6; min-width: 52px; text-align: right; }
+  .demo-body { display: flex; }
+  .stage-wrap { flex: 1; overflow-x: auto; }
+  .stage { position: relative; width: 720px; height: 430px;
+    background-image: radial-gradient(#1d2430 1px, transparent 1px); background-size: 18px 18px; }
+  .stage svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+
+  .wire { fill: none; stroke: #364151; stroke-width: 2; transition: stroke-dashoffset .7s ease, stroke .3s; }
+  .wire.cmd { stroke: #4f8fe0; filter: drop-shadow(0 0 4px #4f8fe0); }
+  .wire.res { stroke: #4fc27a; filter: drop-shadow(0 0 4px #4fc27a); }
+  .pk circle { stroke: #fff; stroke-width: 1.5; }
+  .pk.cmd circle { fill: #4f8fe0; filter: drop-shadow(0 0 6px #4f8fe0); }
+  .pk.res circle { fill: #4fc27a; filter: drop-shadow(0 0 6px #4fc27a); }
+  .pk text { font: 600 10px "Segoe UI"; fill: #e8f0fb; paint-order: stroke; stroke: #0f131a; stroke-width: 3px; }
+
+  .nd { position: absolute; width: 186px; margin-left: -93px; margin-top: -32px; padding: 6px 9px 6px;
+    border-radius: 8px; background: #1b2230; border: 1px solid #2f3846; box-sizing: border-box;
+    opacity: 0; transform: scale(.85); transition: opacity .35s, transform .35s, border-color .3s, box-shadow .3s; }
+  .nd.show { opacity: 1; transform: none; }
+  .nd-top { display: flex; align-items: center; gap: 6px; }
+  .nd-top b { flex: 1; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #5b6575; flex: none; }
+  .nd-st { font-size: 11px; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .nd-meta { display: flex; gap: 6px; font-size: 10px; opacity: .5; margin-top: 1px; }
+  .inbox { display: none; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: #4fc27a; color: #06210f; font: 700 10px/16px "Segoe UI"; text-align: center; }
+  .inbox.on { display: inline-block; animation: pop .45s ease; }
+  @keyframes pop { 0% { transform: scale(.4); } 60% { transform: scale(1.35); } 100% { transform: scale(1); } }
+  .nd.root { border-left: 3px solid #5aa0e6; }
+  .nd.s-think .dot { background: #5aa0e6; animation: pulse 1s infinite; }
+  .nd.s-run { border-color: #a97f2c; }
+  .nd.s-run .dot { background: #f0b445; animation: pulse .7s infinite; }
+  .nd.s-wait { border-color: #6b4f97; }
+  .nd.s-wait .dot { background: #b48cf0; }
+  .nd.s-done { border-color: #2f7a4b; }
+  .nd.s-done .dot { background: #4fc27a; }
+  .nd.flash { box-shadow: 0 0 0 3px rgba(79,194,122,.55), 0 0 18px rgba(79,194,122,.5); }
+  .nd.flash-cmd { box-shadow: 0 0 0 3px rgba(79,143,224,.55), 0 0 18px rgba(79,143,224,.5); }
+  @keyframes pulse { 50% { opacity: .3; } }
+  .you { position: absolute; left: 360px; top: 6px; transform: translateX(-50%); font-size: 11px; opacity: .6; }
+
+  .side { width: 270px; border-left: 1px solid #2c333e; background: #121720; display: flex; flex-direction: column; }
+  .side h4 { margin: 0; padding: 7px 10px 5px; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #8b96a6; }
+  .chat-hd { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border-bottom: 1px solid #2c333e; font-size: 12px; }
+  .chat-hd b { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chat-hd .follow { font-size: 10.5px; padding: 0 7px; border-radius: 9px; border: 1px solid #36404e; background: #232a35; color: #9fb0c6; cursor: pointer; }
+  .chat-hd .follow.on { background: #1f3e2b; border-color: #2f7a4b; color: #a6e8bb; }
+  .chat { height: 196px; overflow: auto; padding: 6px 10px; display: flex; flex-direction: column; gap: 5px; }
+  .cm { font-size: 11.5px; padding: 4px 7px; border-radius: 6px; background: #1b2230; border-left: 3px solid #3a4352; animation: cmIn .3s ease; }
+  .cm .w { display: block; font-size: 10px; opacity: .65; }
+  .cm.you { background: #22324a; align-self: flex-end; max-width: 88%; border-left: none; border-right: 3px solid #5aa0e6; }
+  .cm.in-cmd, .cm.out-cmd { border-left-color: #4f8fe0; }
+  .cm.in-res, .cm.out-res { border-left-color: #4fc27a; }
+  .cm.in-ask, .cm.out-ask { border-left-color: #f0b445; }
+  @keyframes cmIn { from { opacity: 0; } }
+  .toast { display: none; align-items: center; gap: 6px; margin: 4px 10px 0; padding: 4px 7px; font-size: 11px; border-radius: 5px; background: #1f3e2b; color: #a6e8bb; }
+  .toast.on { display: flex; animation: cmIn .3s ease; }
+  .toast.warn { background: #4f3c12; color: #ffd98a; }
+  .toast span { flex: 1; }
+  .toast button { font: 10.5px "Segoe UI"; padding: 0 6px; border-radius: 4px; border: 1px solid currentColor; background: none; color: inherit; cursor: pointer; white-space: nowrap; }
+  .chat-in { display: flex; gap: 5px; padding: 6px 10px; border-bottom: 1px solid #2c333e; }
+  .chat-in input { flex: 1; min-width: 0; background: #0e1218; color: #e3e7ee; border: 1px solid #2f3846; border-radius: 5px; padding: 3px 6px; font: 11.5px "Segoe UI"; }
+  .nd { cursor: pointer; }
+  .nd.focus { outline: 2px solid #dfe7f3; outline-offset: 2px; }
+  .nd.focus::after { content: "💬"; position: absolute; right: -9px; top: -11px; font-size: 13px; }
+  .pk.ask circle { fill: #f0b445; filter: drop-shadow(0 0 6px #f0b445); }
+  .wire.ask { stroke: #f0b445; filter: drop-shadow(0 0 4px #f0b445); }
+  .log { flex: 1; overflow: auto; margin: 0 10px 8px; font: 11px/1.5 Consolas, monospace; max-height: 92px; }
+  .log div { padding: 1px 0; border-bottom: 1px solid #1c222c; }
+  .log .t { opacity: .45; margin-right: 6px; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; padding: 6px 10px; font-size: 11px; border-top: 1px solid #2c333e; background: #141922; opacity: .85; }
+  .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Chat Tree v2: parent chats command child chats</h1>
+<div class="sub">Plan for ovly-claude · 2026-11-27 · redesign of v1 (sub chats) · status: built (engine, tools, Tree mode) · 2026-11-27</div>
+
+<h2>1. The idea</h2>
+<p>Any chat can be a <b>parent</b>. It can start <b>child chats</b>, send each one a <span class="cmd">▼ command</span>, and get a <span class="res">▲ result</span> back when the child finishes.
+A child can have children of its own, so big jobs split into a tree. You give the top chat one goal, it hands out the parts, and the answers flow back up.</p>
+<p>The HUD draws this live: every command is a blue light travelling <b>down</b> a wire, every result a green light travelling <b>up</b>, and each chat shows what it is doing right now.
+Children are <b>real chats</b>, not Claude sub-agents: each has its own model, you can open any of them, read it, reply to it, approve its tools, or stop it.</p>
+
+<h2>2. Live demo (press ▶ Play)</h2>
+<div class="demo">
+  <div class="demo-bar">
+    <b>Chat Tree</b><span style="opacity:.55">· Ship the login fix</span>
+    <span class="sp"></span>
+    <button class="dbtn" id="bPlay">▶ Play</button>
+    <button class="dbtn" id="bReplay">⟲ Replay</button>
+    <button class="dbtn" data-sp="0.5">0.5×</button><button class="dbtn on" data-sp="1">1×</button><button class="dbtn" data-sp="2">2×</button>
+    <span class="clock" id="clock">0.0 s</span>
+  </div>
+  <div class="demo-body">
+    <div class="stage-wrap"><div class="stage" id="stage"><svg id="svg"></svg><div class="you">▼ You: “Fix the login redirect loop, with tests and docs”</div></div></div>
+    <div class="side">
+      <div class="chat-hd">💬 <b id="chatName">Main</b><button class="follow on" id="bFollow" title="When the chat you are in talks to its parent, switch to the parent">⇡ Follow up</button></div>
+      <div class="chat" id="chat"></div>
+      <div class="toast" id="toast"><span></span><button>↩ Back</button></div>
+      <div class="chat-in"><input id="chatIn" placeholder="Message Main…"><button class="dbtn" id="chatSend">Send</button></div>
+      <h4>Tree log</h4>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+  <div class="legend">
+    <span><i style="background:#5aa0e6"></i>thinking</span><span><i style="background:#f0b445"></i>working</span>
+    <span><i style="background:#b48cf0"></i>waiting for its children</span><span><i style="background:#4fc27a"></i>done</span>
+    <span class="cmd">● ▼ command (parent → child)</span><span class="res">● ▲ result (child → parent)</span><span style="color:#f0b445;font-weight:600">● ▲ question (child asks parent)</span><span>💬 = the chat you are in (click any node)</span>
+    <span><span class="inbox on" style="animation:none">2</span> results waiting in the parent's inbox</span>
+  </div>
+</div>
+<p style="font-size:12px;opacity:.7;margin-top:6px">The demo is scripted (no Claude involved), but the chat panel works: click any node to chat with it, type a message and press Send. Watch at ~10 s: you are chatting with <i>Investigate</i>, it sends its result up, and the chat switches to <i>Main</i> by itself. In the HUD the same view is driven by real events.</p>
+
+<h2>3. How it works</h2>
+<div class="flow">
+  <div><h3 style="margin-top:0"><span class="cmd">▼</span> Parent → child (command)</h3>
+    <p>The parent chat gets HUD tools (an MCP server, like the existing <code>ovly_hud</code> approval server the HUD already passes with <code>--mcp-config</code>):</p>
+    <pre>child_start  { title, task, model?, context?: "brief"|"full", readOnly? }  → child id
+child_send   { child, task }        → "sent"
+child_status {}                     → every child: state, last step, cost
+child_stop   { child }</pre>
+    <p>The HUD starts the child with <code>claude -p</code>: <b>brief</b> = a fresh chat that only sees the task (cheap), <b>full</b> = <code>--resume &lt;parent&gt; --fork-session</code> (knows the whole parent chat).</p>
+  </div>
+  <div><h3 style="margin-top:0"><span class="res">▲</span> Child → parent (result or question)</h3>
+    <p>Every child gets two extra tools:</p>
+    <pre>report_to_parent { result, files?, openQuestions? }   ← done, here is my result
+ask_parent       { question }                         ← I need a decision to go on</pre>
+    <p><code>ask_parent</code> ends the child's turn (state: <i>waiting for an answer</i>). The parent answers with <code>child_send</code>, which wakes the child up. If the top chat can't answer, it asks <b>you</b> (normal “needs input”).</p>
+    <p>If the child ends its turn without calling it, the HUD uses the child's last reply as the result. The result goes into the parent's <b>inbox</b>:</p>
+    <ul style="margin:4px 0;padding-left:18px">
+      <li>parent idle → the HUD sends it in as a new message right away (several results that arrive together go as one message);</li>
+      <li>parent busy → it waits in the existing message queue and goes in when the parent's turn ends.</li>
+    </ul>
+  </div>
+</div>
+
+<h3>What each side sees</h3>
+<pre><b style="color:#7fb4ff">The child's first message</b>
+[Task from parent chat "Ship the login fix"]
+Find why /login redirects forever. Report the cause and the file + line.
+When you are done, call report_to_parent with a short result (answer, files changed, open questions).
+
+<b style="color:#7fd99a">What arrives in the parent</b>
+[Result from child #1 "Investigate the redirect loop" · Sonnet · 6 steps · $0.03]
+Cause: authGuard calls navigate('/login') before the session check resolves (auth/guard.ts:42).
+Files changed: none.  Open questions: none.</pre>
+
+<h3>Chatting on a node</h3>
+<p>In Tree mode the side panel is a <b>chat with the node you clicked</b> (💬 on the node): its messages, plus an input box. Commands, results and questions show in it as coloured lines (blue ▼, green ▲, amber ▲?). You can talk to any level; your message is marked as from you, and the child's next result still goes to its parent.</p>
+<table>
+  <tr><th>When</th><th>The chat panel…</th></tr>
+  <tr><td>You click a node</td><td>switches to that node's chat.</td></tr>
+  <tr><td>The node you are chatting with <b>talks up</b> to its parent (result or question)</td><td><b>follows to the parent</b> when the message lands there, so you see it arrive and what the parent does with it. A bar says <i>“↑ Investigate sent its result to Main — switched here”</i> with <b>↩ Back to Investigate</b>. Goes up one level at a time; if the parent then reports up too, it follows again.</td></tr>
+  <tr><td>…but you are typing (input not empty)</td><td>does <b>not</b> switch; an amber bar offers <b>Go to Main</b> instead. Your draft is kept.</td></tr>
+  <tr><td>A parent sends a command <b>down</b></td><td>stays where you are (only the blue light moves). Following down would jump around too much with several children.</td></tr>
+  <tr><td><b>⇡ Follow up</b> turned off (📌 Stay here)</td><td>never switches by itself; the bar still tells you what happened.</td></tr>
+</table>
+
+<h3>You stay in control</h3>
+<ul>
+  <li>The parent's tool calls go through the HUD approval card like any tool: <i>“Main wants to start 3 child chats (Sonnet, Sonnet, Haiku)”</i> → <b>Allow / Allow for this tree / Deny</b>.</li>
+  <li>Click any node to chat with it in the side panel (double-click opens it in the full chat view). <b>⏸ Pause tree</b> holds new commands; <b>■ Stop tree</b> stops every running child.</li>
+  <li>You can also be the parent yourself: <b>↳ Send to child</b> on any node starts a child from you (this is v1's “sub chat”).</li>
+</ul>
+
+<h2>4. Look and motion (what the HUD draws)</h2>
+<table>
+  <tr><th>Thing</th><th>Look</th><th>When</th></tr>
+  <tr><td>Node</td><td>Card with a status dot, title, current step (“Reading auth/guard.ts”), model, cost. Appears by scaling in; its wire draws itself from the parent.</td><td>Child started</td></tr>
+  <tr><td>Status dot</td><td>blue pulse = thinking · amber fast pulse = working (running tools) · purple = waiting for its own children · green = done · red = failed · grey dashed card = queued (too many running)</td><td>From the existing session status updates</td></tr>
+  <tr><td><span class="cmd">▼ Command</span></td><td>Blue light with a “▼ command” label runs down the wire (~0.9 s); the wire glows blue; the child flashes blue on arrival. The message shows in the side panel.</td><td>Parent calls <code>child_start</code> / <code>child_send</code>, or you send to a child</td></tr>
+  <tr><td><span class="res">▲ Result</span></td><td>Green light with “▲ result” runs up; wire glows green; parent flashes green and its inbox badge counts up (bounce).</td><td>Child reports / finishes</td></tr>
+  <tr><td><span style="color:#f0b445;font-weight:600">▲ Question</span></td><td>Amber light with “▲ question” runs up; the child's dot turns purple (“waiting for an answer from Main”).</td><td>Child calls <code>ask_parent</code></td></tr>
+  <tr><td>💬 Chat focus</td><td>White ring + 💬 on the node you are chatting with; moves to the parent when that node talks up (see “Chatting on a node”).</td><td>Click / follow</td></tr>
+  <tr><td>Inbox badge</td><td>Green number on the parent = results not yet read by it; clears when they go in as a message.</td><td>Results waiting</td></tr>
+  <tr><td>Tree log</td><td>Time-stamped lines: who sent what to whom. Click a line → that message in the side panel.</td><td>Always</td></tr>
+  <tr><td>Replay</td><td>A finished tree can be replayed from its log at 0.5× / 1× / 2× (the demo above is that player).</td><td>After the run</td></tr>
+</table>
+<p style="font-size:12px;opacity:.75">Drawn with plain DOM + SVG (as in the demo), not Mermaid: it must update live and be clickable. Respects “reduce motion” (lights jump instead of travel). Colours follow the HUD themes (Classic, Work, Pip-Boy green-on-black).</p>
+
+<h2>5. Guard rails</h2>
+<table>
+  <tr><th>Risk</th><th>Rule</th></tr>
+  <tr><td>Runaway trees</td><td>Max depth 3 · max 5 children per chat · max 4 running at once (others wait as “queued”) · a <b>tree budget</b> (default $2, set in Settings → Chat) — over it, new commands are refused and the top chat is told why.</td></tr>
+  <tr><td>Loops</td><td>A child can only <i>report</i> up; it cannot command its parent or siblings. Results from a stopped child are dropped.</td></tr>
+  <tr><td>Two chats editing the same files</td><td><code>readOnly: true</code> children run in plan mode (look, don't edit) — the default for “investigate” tasks. Writers: one at a time per folder, or (later) each in its own git worktree.</td></tr>
+  <tr><td>Cost</td><td>“brief” children are cheap (no parent history). “full” re-sends the parent chat once — shown on the approval card (“≈ 120k tokens”).</td></tr>
+  <tr><td>Long waits</td><td>Inbox delivery means the parent is not running (or paying) while children work; no tool-call timeouts.</td></tr>
+  <tr><td>Links lost</td><td>The tree is the HUD's own JSON (<code>~/.ovly-claude/trees/</code>); if it's gone, the children are still normal chats.</td></tr>
+</table>
+
+<h2>6. Agents</h2>
+<table>
+  <tr><th>Agent</th><th>As parent</th><th>As child</th></tr>
+  <tr><td>Claude</td><td class="ok">Yes (MCP tools via <code>--mcp-config</code>)</td><td class="ok">Yes (brief or full)</td></tr>
+  <tr><td>OpenCode</td><td class="risk">Later (needs the tools registered in its config)</td><td class="ok">Yes via its service (brief; full if its fork API fits)</td></tr>
+  <tr><td>Antigravity</td><td class="no">No</td><td class="risk">Brief only, result = its last reply</td></tr>
+</table>
+
+<h2>7. Phases</h2>
+<div class="phase">
+  <div class="phase-head"><b>Phase 1 — Parent/child engine (no new view)</b><span class="size">M · 2–3 days</span></div>
+  <ul>
+    <li><code>main/chat-tree.js</code>: tree store, spawn children (brief / full), limits, inbox + delivery through the existing queue.</li>
+    <li><code>mcp/tree.js</code>: <code>child_start / child_send / child_status / child_stop</code> for parents, <code>report_to_parent / ask_parent</code> for children; talks to the HUD over the same token-protected local endpoint as the approval server.</li>
+    <li>Session list: children indented under their parent with ↳.</li>
+  </ul>
+  <div class="done-when">Done when: “split this into 3 child chats” makes Claude start 3 children, each reports, and the parent gets one message with all 3 results.</div>
+</div>
+<div class="phase">
+  <div class="phase-head"><b>Phase 2 — Tree view with live motion</b><span class="size">M · 2–3 days</span></div>
+  <ul>
+    <li><b>Tree</b> mode toggle in the chat toolbar (on = the chat area shows the tree, off = the normal chat; remembered). Nodes, wires, status dots, inbox badges, side panel, log — driven by real events.</li>
+    <li>Command / result lights, flashes, wire glow; reduce-motion fallback; themes.</li>
+    <li>Side-panel chat with the clicked node; follow-up switching (with the typing guard, ↩ Back, ⇡ Follow up / 📌 Stay here); double-click → full chat; <b>↳ Send to child</b> from any node.</li>
+  </ul>
+  <div class="done-when">Done when: the real run from phase 1 looks like the demo above.</div>
+</div>
+<div class="phase">
+  <div class="phase-head"><b>Phase 3 — Control</b><span class="size">S · 1–2 days</span></div>
+  <ul>
+    <li>Approval card wording for tree tools, “Allow for this tree”, tree budget ($2 default, amber at 80%), Pause / Stop tree, queued state.</li>
+    <li>Replay a finished tree from its log.</li>
+  </ul>
+</div>
+<div class="phase">
+  <div class="phase-head"><b>Phase 4 — Optional</b><span class="size">M</span></div>
+  <ul>
+    <li>Worktree per writing child, then merge. · Children talking to siblings through the parent. · Export a tree as one Markdown report. · OpenCode as parent.</li>
+  </ul>
+</div>
+
+<h2>8. Decisions (2026-11-27)</h2>
+<table>
+  <tr><th>Question</th><th>Decision</th></tr>
+  <tr><td>Default child context</td><td class="ok"><b>Brief</b>: a child only sees its task. The parent can still ask for <code>context: "full"</code> on a single child; the approval card then shows the extra cost.</td></tr>
+  <tr><td>Result delivery</td><td class="ok"><b>Automatic</b>: results go into the parent as soon as it is free (batched if several arrive together). No “Deliver” button.</td></tr>
+  <tr><td>Where the tree shows</td><td class="ok"><b>A toggleable mode</b>: a <b>Tree</b> button in the chat toolbar switches the chat area between the normal chat and the tree (remembered, like Cards). The tree runs the same either way; turning the mode off only hides the drawing.</td></tr>
+  <tr><td>Budget per tree</td><td class="ok"><b>Yes</b>: default <b>$2.00</b> per tree, changeable in Settings → Chat. At 80% the top chat's node turns amber; at 100% new commands are refused and the top chat is told why. Children already running finish their turn.</td></tr>
+</table>
+</div>
+
+<script>
+(() => {
+  // ---------- scripted demo: what the HUD would draw for a real run ----------
+  const N = {
+    root: { x: 360, y: 70,  title: 'Main · Ship the login fix', model: 'Opus', role: 'top chat' },
+    c1:   { x: 115, y: 215, parent: 'root', title: 'Investigate the redirect loop', model: 'Sonnet', role: 'child · read-only' },
+    c2:   { x: 360, y: 215, parent: 'root', title: 'Write tests for the guard', model: 'Sonnet', role: 'child' },
+    c3:   { x: 605, y: 215, parent: 'root', title: 'Update the README', model: 'Haiku', role: 'child' },
+    g2:   { x: 115, y: 360, parent: 'c1', title: 'Check the server logs', model: 'Haiku', role: 'grandchild · read-only' },
+    g1:   { x: 360, y: 360, parent: 'c2', title: 'Run the e2e suite', model: 'Haiku', role: 'grandchild' },
+  };
+  const H = 32; // half node height
+  const stage = document.getElementById('stage'), svg = document.getElementById('svg');
+  const logBox = document.getElementById('log'), clockEl = document.getElementById('clock');
+  const NS = 'http://www.w3.org/2000/svg';
+  const short = (id) => (id === 'root' ? 'Main' : N[id].title);
+
+  let clock = 0, playing = false, speed = 1, last = 0, evIdx = 0, packets = [];
+
+  function build() {
+    stage.querySelectorAll('.nd').forEach((n) => n.remove());
+    svg.innerHTML = '';
+    for (const [id, n] of Object.entries(N)) {
+      const d = document.createElement('div');
+      d.className = 'nd' + (id === 'root' ? ' root' : '');
+      d.style.left = n.x + 'px'; d.style.top = n.y + 'px';
+      d.innerHTML = `<div class="nd-top"><span class="dot"></span><b></b><span class="inbox"></span></div><div class="nd-st">idle</div><div class="nd-meta"><span>${n.model}</span><span>·</span><span>${n.role}</span></div>`;
+      d.querySelector('b').textContent = n.title;
+      stage.appendChild(d);
+      n.el = d; n.inbox = 0;
+      d.addEventListener('click', () => setFocus(id));
+      if (n.parent) {
+        const p = N[n.parent];
+        const y1 = p.y + H, y2 = n.y - H;
+        const path = document.createElementNS(NS, 'path');
+        path.setAttribute('d', `M ${p.x} ${y1} C ${p.x} ${y1 + 45}, ${n.x} ${y2 - 45}, ${n.x} ${y2}`);
+        path.setAttribute('class', 'wire');
+        svg.appendChild(path);
+        const L = path.getTotalLength();
+        path.style.strokeDasharray = L; path.style.strokeDashoffset = L;
+        n.wire = path; n.len = L;
+      }
+    }
+  }
+  const node = (id) => N[id];
+  function show(id) { const n = node(id); n.el.classList.add('show'); if (n.wire) requestAnimationFrame(() => { n.wire.style.strokeDashoffset = 0; }); }
+  function state(id, s, text) {
+    const el = node(id).el;
+    el.classList.remove('s-think', 's-run', 's-wait', 's-done');
+    if (s) el.classList.add('s-' + s);
+    if (text != null) el.querySelector('.nd-st').textContent = text;
+  }
+  function flash(id, kind) { const el = node(id).el, c = kind === 'cmd' ? 'flash-cmd' : 'flash'; el.classList.add(c); setTimeout(() => el.classList.remove(c), 600); }
+  function inbox(id, n) {
+    const nd = node(id); nd.inbox = n;
+    const b = nd.el.querySelector('.inbox');
+    b.textContent = n; b.classList.remove('on'); void b.offsetWidth; if (n) b.classList.add('on');
+  }
+  function log(text) {
+    const d = document.createElement('div');
+    d.innerHTML = `<span class="t">${clock.toFixed(1).padStart(4, ' ')}s</span>`;
+    d.appendChild(document.createTextNode(text));
+    logBox.prepend(d);
+  }
+  // ---------- the chat panel: one transcript per node; 💬 = the node you are chatting with ----------
+  const chatBox = document.getElementById('chat'), chatName = document.getElementById('chatName');
+  const chatIn = document.getElementById('chatIn'), toastEl = document.getElementById('toast'), bFollow = document.getElementById('bFollow');
+  let focusId = 'root', follow = true, backTo = null;
+  function line(c) {
+    const d = document.createElement('div');
+    d.className = 'cm ' + c.cls;
+    const w = document.createElement('span'); w.className = 'w'; w.textContent = c.who;
+    d.append(w, document.createTextNode(c.text));
+    return d;
+  }
+  function renderChat() {
+    chatName.textContent = N[focusId].title;
+    chatIn.placeholder = 'Message ' + short(focusId) + '…';
+    chatBox.innerHTML = '';
+    for (const c of N[focusId].chat) chatBox.appendChild(line(c));
+    chatBox.scrollTop = chatBox.scrollHeight;
+    for (const [id, n] of Object.entries(N)) n.el.classList.toggle('focus', id === focusId);
+  }
+  function say(id, who, cls, text) {
+    const c = { who, cls, text };
+    N[id].chat.push(c);
+    if (id === focusId) { chatBox.appendChild(line(c)); chatBox.scrollTop = chatBox.scrollHeight; }
+  }
+  function toast(text, kind, back) {
+    toastEl.className = 'toast on' + (kind ? ' ' + kind : '');
+    toastEl.querySelector('span').textContent = text;
+    const btn = toastEl.querySelector('button');
+    btn.style.display = back ? '' : 'none';
+    if (back) { btn.textContent = kind === 'warn' ? 'Go there' : '↩ Back'; btn.title = (kind === 'warn' ? 'Go to ' : 'Back to ') + N[back].title; }
+    backTo = back || null;
+  }
+  toastEl.querySelector('button').onclick = () => { if (backTo) setFocus(backTo); };
+  function setFocus(id, note) {
+    focusId = id; renderChat();
+    if (note) toast(note.text, note.kind, note.back); else toastEl.className = 'toast';
+  }
+  // THE RULE: the chat you are in talks UP to its parent (result or question) → the panel follows to the parent.
+  // Not while you are typing: then a banner offers to go instead. "📌 Stay here" turns following off.
+  function followUp(from, to, what) {
+    if (!follow || focusId !== from) return;
+    if (chatIn.value.trim()) { toast(`${short(from)} ${what} ${short(to)}`, 'warn', to); return; }
+    setFocus(to, { text: `↑ ${short(from)} ${what} ${short(to)} — switched here`, back: from });
+    flash(to, 'res');
+  }
+  bFollow.onclick = () => { follow = !follow; bFollow.classList.toggle('on', follow); bFollow.textContent = follow ? '⇡ Follow up' : '📌 Stay here'; };
+  function userSend() {
+    const t = chatIn.value.trim(); if (!t) return;
+    chatIn.value = '';
+    const id = focusId;
+    say(id, 'You', 'you', t);
+    log(`You → ${short(id)}`);
+    flash(id, 'cmd');
+    setTimeout(() => say(id, short(id), 'me', '(demo) Got it — I will take that into account.'), 700);
+  }
+  document.getElementById('chatSend').onclick = userSend;
+  chatIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') userSend(); });
+
+  const LABEL = { cmd: '▼ command', res: '▲ result', ask: '▲ question' };
+  // a light travelling along the child's wire: down for commands, up for results / questions
+  function packet(child, kind, onArrive) {
+    const n = node(child);
+    const g = document.createElementNS(NS, 'g');
+    g.setAttribute('class', 'pk ' + kind);
+    g.innerHTML = `<circle r="7"></circle><text x="11" y="4">${LABEL[kind]}</text>`;
+    svg.appendChild(g);
+    n.wire.classList.add(kind);
+    packets.push({ n, g, kind, t0: clock, dur: 0.9, onArrive });
+  }
+  function send(from, to, text) {
+    log(`▼ ${short(from)} → ${short(to)}`);
+    say(from, '▼ to ' + short(to), 'out-cmd', text);
+    packet(to, 'cmd', () => { flash(to, 'cmd'); say(to, '▼ from ' + short(from), 'in-cmd', text); });
+  }
+  function reply(from, to, text) {
+    state(from, 'done', 'Done · result sent up');
+    log(`▲ ${short(from)} → ${short(to)}`);
+    say(from, '▲ result to ' + short(to), 'out-res', text);
+    packet(from, 'res', () => {
+      flash(to, 'res'); inbox(to, node(to).inbox + 1);
+      say(to, '▲ result from ' + short(from), 'in-res', text);
+      followUp(from, to, 'sent its result to');
+    });
+  }
+  function ask(from, to, text) {
+    state(from, 'wait', 'Waiting for an answer from ' + short(to));
+    log(`? ${short(from)} → ${short(to)}`);
+    say(from, '▲ question to ' + short(to), 'out-ask', text);
+    packet(from, 'ask', () => {
+      flash(to, 'res');
+      say(to, '▲ question from ' + short(from), 'in-ask', text);
+      followUp(from, to, 'is asking');
+    });
+  }
+
+  // ---------- the script (seconds at 1×) ----------
+  const EV = [
+    [0.2, () => { show('root'); state('root', 'think', 'Reading your request…'); say('root', 'You', 'you', 'Fix the login redirect loop, with tests and docs.'); log('You → Main'); }],
+    [1.4, () => { state('root', 'think', 'Splitting into 3 child chats'); say('root', 'Main', 'me', 'I will split this into 3 child chats: investigate, tests, docs.'); log('Main: child_start ×3 (Allow for this tree)'); show('c1'); show('c2'); show('c3'); }],
+    [2.0, () => send('root', 'c1', 'Find why /login redirects forever. Look only, do not edit. Report the cause and the file + line.')],
+    [2.25, () => send('root', 'c2', 'Write unit tests for authGuard covering: logged out, logged in, expired session.')],
+    [2.5, () => { send('root', 'c3', 'Add a "Login flow" section to README.md (3–5 lines).'); state('root', 'wait', 'Waiting for 3 children'); }],
+    [2.9, () => state('c1', 'run', 'Reading auth/guard.ts')],
+    [3.15, () => state('c2', 'run', 'Reading auth/guard.ts')],
+    [3.3, () => { setFocus('c1', { text: 'You clicked “Investigate the redirect loop” — now chatting with it' }); state('c3', 'run', 'Editing README.md'); }],
+    [3.8, () => { say('c1', 'You', 'you', 'Also check /logout — it loops too.'); log('You → Investigate the redirect loop'); flash('c1', 'cmd'); }],
+    [4.3, () => { say('c1', 'Investigate', 'me', 'OK, I will include /logout. I need the server logs — starting a child.'); state('c1', 'run', 'Starting a child for the logs'); show('g2'); }],
+    [4.6, () => send('c1', 'g2', 'Search logs/server.log for 302 responses on /login and /logout and give me the pattern.')],
+    [4.8, () => { state('c2', 'run', 'Wants an e2e check — starting a child'); show('g1'); }],
+    [5.0, () => send('c2', 'g1', 'Run npm run e2e -- login and report pass/fail with the failing step.')],
+    [5.3, () => ask('c2', 'root', 'Should the tests mock the session service, or use the real one?')],
+    [5.6, () => { state('c1', 'wait', 'Waiting for 1 child'); state('g2', 'run', 'Searching logs/server.log'); }],
+    [5.8, () => reply('c3', 'root', 'Added "Login flow" to README.md (+5 lines). No open questions.')],
+    [6.1, () => { state('root', 'think', 'Answering a question from Write tests'); state('g1', 'run', 'npm run e2e -- login'); }],
+    [6.5, () => { send('root', 'c2', 'Mock it: use test/helpers/session.ts (fakeSession).'); state('root', 'wait', 'Waiting for 3 children'); }],
+    [7.2, () => reply('g2', 'c1', '302 on /login and /logout repeats every ~40 ms right after a session refresh — the redirect fires before the cookie is set.')],
+    [7.4, () => state('c2', 'run', 'Writing guard.test.ts (mocked session)')],
+    [8.2, () => { state('c1', 'think', 'Matching the logs with guard.ts'); inbox('c1', 0); }],
+    [8.4, () => reply('g1', 'c2', 'e2e: 1 failing — "redirects to /home after login" (loop detected).')],
+    [9.4, () => { state('c2', 'run', 'Tests: 3 written, 1 fails as expected'); inbox('c2', 0); }],
+    [9.5, () => reply('c1', 'root', 'Cause: authGuard calls navigate() before the session check resolves (auth/guard.ts:42) — same for /logout (guard.ts:58). Logs confirm the refresh race.')],
+    [10.4, () => reply('c2', 'root', 'Added auth/guard.test.ts (3 tests, mocked session). 1 fails until the fix lands; e2e shows the same loop.')],
+    [11.5, () => { inbox('root', 0); state('root', 'run', 'Results in · fixing guard.ts:42 and :58'); log('Main: results delivered as one message'); }],
+    [12.9, () => state('root', 'run', 'Re-running the tests')],
+    [14.1, () => { state('root', 'done', 'Done · fix + 3 tests + README'); log('Main: done — all tests pass'); say('root', 'Main', 'me', 'Fixed both loops (guard waits for the session), 3 new tests pass, README updated. Total $0.23 across 6 chats.'); }],
+  ];
+
+  function reset() {
+    clock = 0; evIdx = 0; packets = []; logBox.innerHTML = ''; chatIn.value = '';
+    build();
+    for (const n of Object.values(N)) n.chat = [];
+    setFocus('root');
+  }
+  const ease = (t) => (t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function frame(now) {
+    const dt = last ? Math.min(0.1, (now - last) / 1000) : 0;
+    last = now;
+    if (playing) {
+      clock += dt * speed;
+      while (evIdx < EV.length && EV[evIdx][0] <= clock) EV[evIdx++][1]();
+      if (evIdx >= EV.length && !packets.length) { playing = false; bPlay.textContent = '▶ Play'; }
+    }
+    packets = packets.filter((p) => {
+      let f = Math.min(1, (clock - p.t0) / p.dur);
+      if (reduce) f = f < 1 ? 0 : 1;
+      const at = p.kind === 'cmd' ? ease(f) : 1 - ease(f);
+      const pt = p.n.wire.getPointAtLength(at * p.n.len);
+      p.g.setAttribute('transform', `translate(${pt.x},${pt.y})`);
+      if (f >= 1) { p.g.remove(); p.n.wire.classList.remove(p.kind); p.onArrive && p.onArrive(); return false; }
+      return true;
+    });
+    clockEl.textContent = clock.toFixed(1) + ' s';
+    requestAnimationFrame(frame);
+  }
+
+  const bPlay = document.getElementById('bPlay');
+  bPlay.onclick = () => {
+    if (evIdx >= EV.length && !packets.length) reset();
+    playing = !playing; bPlay.textContent = playing ? '⏸ Pause' : '▶ Play';
+  };
+  document.getElementById('bReplay').onclick = () => { reset(); playing = true; bPlay.textContent = '⏸ Pause'; };
+  document.querySelectorAll('[data-sp]').forEach((b) => b.onclick = () => {
+    speed = +b.dataset.sp;
+    document.querySelectorAll('[data-sp]').forEach((x) => x.classList.toggle('on', x === b));
+  });
+
+  reset();
+  requestAnimationFrame(frame);
+  setTimeout(() => { playing = true; bPlay.textContent = '⏸ Pause'; }, 600); // starts by itself
+})();
+</script>
+</body>
+</html>

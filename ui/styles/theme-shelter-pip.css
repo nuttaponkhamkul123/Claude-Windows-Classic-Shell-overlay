@@ -743,6 +743,11 @@ body.style-shelter .sk-overlay .sk-dialog > .sk-head .sk-x:hover { background: v
 /* body and footer of dialogs */
 body.style-shelter .sk-overlay .sk-dialog > :not(.sk-head) { flex: none; }
 body.style-shelter .sk-overlay .sk-dialog .settings-dialog-body { flex: 1 1 auto; overflow: auto; }
+/* Settings tabs: amber keys, the open one filled */
+body.style-shelter .settings-tabs { border-bottom-color: var(--pip-dim); gap: 4px; }
+body.style-shelter .settings-tab { font-family: var(--pip-font); font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--pip-dim); border-radius: 0; }
+body.style-shelter .settings-tab:hover { color: var(--pip); background: rgba(255, 159, 28, 0.08); }
+body.style-shelter .settings-tab.active { color: var(--pip-ink); background: var(--pip); border-color: var(--pip); box-shadow: none; text-shadow: none; }
 body.style-shelter .sk-overlay .sk-dialog .settings-footer {
   position: fixed; left: 26px; right: 26px; bottom: 10px; background: none !important; border: 0 !important; padding: 0; display: flex; justify-content: center; gap: 10px;
 }

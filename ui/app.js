@@ -335,6 +335,7 @@ function renderUserTextPlain(box, text) {
 function attachCodeCopyHandlers(container) {
   window.renderDiagrams?.(container); // ```mermaid blocks → diagrams (logic/chat/diagrams.js)
   window.highlightCode?.(container);  // syntax colours (logic/chat/highlight.js)
+  window.decorateHtmlLinks?.(container); // ▶ Preview next to .html files (logic/chat/html-preview.js)
   container.querySelectorAll('pre').forEach((pre) => {
     if (pre.dataset.copyBound) return;
     pre.dataset.copyBound = '1';
@@ -1096,22 +1097,44 @@ function buildSettingsDialogLayout() {
   }
 
   const appearance = makeSection('Appearance', [
-    settingsPanel.querySelector('.set-style-row'), settingsPanel.querySelector('.style-pills'), byId('btnTheme'), themePills,
+    settingsPanel.querySelector('.set-style-row'), settingsPanel.querySelector('.style-pills'), byId('btnTheme'), themePills, byId('btnCrt'),
   ]);
-  const behavior = makeSection('Behavior', [byId('btnSound'), byId('btnNudge'), byId('btnSleep'), byId('btnWindows'), byId('btnPin'), byId('btnNotify'), byId('btnShowAg')]);
-  const tools = makeSection('Tools & Data', [
-    byId('btnDigest'), digestBox, byId('btnExport'), byId('btnCreateShortcut'), byId('btnRules'), byId('btnInstallSkill'),
+  const behavior = makeSection('Behavior', [byId('btnSound'), byId('btnNudge'), byId('btnSleep'), byId('btnWindows'), byId('btnPin'), byId('btnNotify'), byId('btnShowAg'), byId('btnMiniBar')]);
+  const chat = makeSection('Chat', [byId('btnCards'), byId('btnPinFollow')]);
+  const tools = makeSection('Tools', [
+    byId('btnDigest'), digestBox, byId('btnExport'), byId('btnCreateShortcut'), byId('btnRules'), byId('btnInstallSkill'), byId('btnPerf'),
   ]);
 
-  // Keep any extra rows added later by other scripts
-  const placed = new Set([appearance, behavior, tools]);
-  const extras = [...settingsPanel.children].filter((el) => !placed.has(el) && !el.classList.contains('set-sep'));
+  // Keep any extra rows added by other scripts (anything not placed above is still in the panel)
+  const sections = [appearance, behavior, chat, tools].filter(Boolean);
+  const extras = [...settingsPanel.children].filter((el) => !el.classList.contains('set-sep'));
+  if (extras.length) { const extraSec = makeSection('Other', extras); if (extraSec) sections.push(extraSec); }
   settingsPanel.innerHTML = '';
-  for (const s of [appearance, behavior, tools]) if (s) settingsPanel.appendChild(s);
-  if (extras.length) {
-    const extraSec = makeSection('Other', extras);
-    if (extraSec) settingsPanel.appendChild(extraSec);
-  }
+
+  // One section at a time, picked from a tab strip (the last tab you used opens next time)
+  const strip = document.createElement('div');
+  strip.className = 'settings-tabs';
+  strip.setAttribute('role', 'tablist');
+  const show = (i) => {
+    sections.forEach((s, j) => { s.style.display = j === i ? '' : 'none'; });
+    [...strip.children].forEach((t, j) => { t.classList.toggle('active', j === i); t.setAttribute('aria-selected', String(j === i)); });
+    try { localStorage.setItem('ovly.settingsTab', sections[i].dataset.tab); } catch (e) {}
+  };
+  sections.forEach((s, i) => {
+    s.classList.add('settings-tabbed');
+    s.dataset.tab = s.querySelector('.settings-sec-title').textContent;
+    const t = document.createElement('button');
+    t.className = 'settings-tab';
+    t.setAttribute('role', 'tab');
+    t.textContent = s.dataset.tab;
+    t.addEventListener('click', () => show(i));
+    strip.appendChild(t);
+  });
+  settingsPanel.parentElement.insertBefore(strip, settingsPanel);
+  for (const s of sections) settingsPanel.appendChild(s);
+  let saved = '';
+  try { saved = localStorage.getItem('ovly.settingsTab') || ''; } catch (e) {}
+  show(Math.max(0, sections.findIndex((s) => s.dataset.tab === saved)));
 }
 
 function openSettingsDialog(btn) {

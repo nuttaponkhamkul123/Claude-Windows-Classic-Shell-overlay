@@ -345,7 +345,16 @@
     open.title = 'Open in VS Code';
     open.disabled = f.kind === 'deleted';
     open.addEventListener('click', () => api.openFile?.(state.top + '\\' + f.path.replace(/\//g, '\\')));
-    bar.append(p, open);
+    bar.append(p);
+    if (f.kind !== 'deleted' && window.htmlPreview?.isHtml(f.path)) { // the page replaces the diff below the header
+      const prev = mk('button', 'gd-btn hp-open', 'Preview');
+      prev.title = 'Show this page here (click again for the diff)';
+      prev.addEventListener('click', () => window.htmlPreview.toggle(prev, state.top + '\\' + f.path.replace(/\//g, '\\'),
+        (box) => { if (box.classList.contains('hp-box')) view.classList.add('hp-on'); view.append(box); },
+        () => view.classList.remove('hp-on')));
+      bar.append(prev);
+    }
+    bar.append(open);
     return bar;
   }
   async function select(rel) {
@@ -356,6 +365,7 @@
     const seq = ++loadSeq;
     rows = []; clearPick();
     view.innerHTML = '';
+    view.classList.remove('hp-on');
     view.append(diffHeader(f), mk('div', 'gd-note', 'Loading…'));
     const d = await api.gitFileDiff(state.cwd, rel);
     if (seq !== loadSeq) return; // another file was picked meanwhile

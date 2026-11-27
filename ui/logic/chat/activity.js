@@ -165,6 +165,8 @@ function renderActivityProgress(row, s, act, verb, target) {
     if (tr.cur && tr.cur.real) tr.steps = [...tr.steps, tr.cur].slice(-30);
     tr.sig = sig;
     tr.cur = { icon: activityIcon(act), verb, target, at: Date.now(), real: act.kind === 'tool' || act.kind === 'compacting' };
+    const cmd = act.kind === 'tool' && /^(Bash|PowerShell|run_command)$/.test(act.tool || '') && (act.input?.command || act.input?.CommandLine);
+    if (cmd) { tr.cur.cmd = String(cmd); tr.cur.lang = /PowerShell/.test(act.tool) ? 'powershell' : 'bash'; }
   }
 
   let pill = row.querySelector('.act-stack');
@@ -207,22 +209,32 @@ function renderActivityProgress(row, s, act, verb, target) {
   renderActivityTeam(row, s);
 
   const trail = box.querySelector('.act-trail');
-  trail.textContent = '';
   box.style.display = n && activityTrailOpen ? '' : 'none';
-  if (n && activityTrailOpen) {
-    for (const st of [...tr.steps].reverse()) {
-      const r = document.createElement('div');
-      r.className = 'act-step';
-      const ic = document.createElement('span'); ic.className = 'act-step-ico'; ic.textContent = st.icon;
-      const v = document.createElement('span'); v.className = 'act-step-verb'; v.textContent = st.verb;
-      const t = document.createElement('span'); t.className = 'act-step-target'; t.textContent = st.target || '';
-      const when = document.createElement('span'); when.className = 'act-step-time'; when.textContent = fmtElapsed(Date.now() - st.at) + ' ago';
-      r.title = st.target ? `${st.verb} ${st.target}` : st.verb;
-      r.append(ic, v, t, when);
-      trail.appendChild(r);
+  if (!(n && activityTrailOpen)) { trail.textContent = ''; trail.dataset.sig = ''; return; }
+  // only rebuilt when a step is added (so an open command can be read, scrolled and selected)
+  const listSig = `${s.id}|${n}|${tr.steps[n - 1].at}`;
+  if (trail.dataset.sig === listSig) {
+    trail.querySelectorAll('.act-step-time').forEach((el) => { el.textContent = fmtElapsed(Date.now() - Number(el.dataset.at)) + ' ago'; });
+    return;
+  }
+  trail.dataset.sig = listSig;
+  trail.textContent = '';
+  for (const st of [...tr.steps].reverse()) {
+    const r = document.createElement('div');
+    r.className = 'act-step';
+    const ic = document.createElement('span'); ic.className = 'act-step-ico'; ic.textContent = st.icon;
+    const v = document.createElement('span'); v.className = 'act-step-verb'; v.textContent = st.verb;
+    const t = document.createElement('span'); t.className = 'act-step-target'; t.textContent = st.target || '';
+    const when = document.createElement('span'); when.className = 'act-step-time'; when.dataset.at = st.at; when.textContent = fmtElapsed(Date.now() - st.at) + ' ago';
+    r.title = st.target ? `${st.verb} ${st.target}` : st.verb;
+    r.append(ic, v, t, when);
+    trail.appendChild(r);
+    if (st.cmd && typeof window.addCommandToggle === 'function') {
+      trail.appendChild(window.addCommandToggle(r, st, activityCmdOpen.has(st.at), (open) => { if (open) activityCmdOpen.add(st.at); else activityCmdOpen.delete(st.at); }));
     }
   }
 }
+var activityCmdOpen = new Set(); // step times whose full command is shown in the bar's list
 
 // Team stage: helper agents work next to the lead robot, each acting out its own step.
 // New helpers pop out of a smoke puff as a page flies down the line to them; finished
@@ -418,7 +430,7 @@ function renderActivity(s) {
           if (tr && typeof window.onActivityFinished === 'function') window.onActivityFinished(cur.id, tr.cur && tr.cur.real ? [...tr.steps, tr.cur] : tr.steps);
           activityFirstSeen.delete(cur.id); activityTrail.delete(cur.id);
         }
-        activityTrailOpen = false;
+        activityTrailOpen = false; activityCmdOpen.clear();
         if (activityTimer) { clearInterval(activityTimer); activityTimer = null; }
       }, 1500);
     }

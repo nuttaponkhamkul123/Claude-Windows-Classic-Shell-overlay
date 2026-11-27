@@ -83,8 +83,13 @@
         const r = await api.openFile?.(ed.path);
         if (r === 'missing') replyStatusMsg.textContent = '⚠ File no longer exists';
       });
-      row.append(name, dir, stats, open);
       const diff = el('div', 'edit-diff');
+      if (window.htmlPreview?.isHtml(ed.path)) {
+        const prev = el('button', 'edit-open hp-open', 'Preview');
+        prev.title = 'Show this page here';
+        prev.addEventListener('click', (e) => { e.stopPropagation(); window.htmlPreview.toggle(prev, ed.path, (box) => diff.after(box)); });
+        row.append(name, dir, stats, prev, open);
+      } else row.append(name, dir, stats, open);
       diff.style.display = 'none';
       row.addEventListener('click', () => {
         const opening = diff.style.display === 'none';
@@ -128,22 +133,22 @@
     head.title = 'Show the steps this reply took';
     head.style.cursor = 'pointer';
     head.appendChild(title);
-    list.appendChild(head);
-    const rows = [];
+    const body = el('div', 'step-body');
+    body.style.display = 'none';
+    list.append(head, body);
     for (const st of steps) {
       const row = el('div', 'edit-row step-row');
-      row.style.display = 'none';
       row.title = st.target ? `${st.verb} ${st.target}` : st.verb;
       const t = new Date(st.at);
       row.append(el('span', 'edit-name', `${st.icon} ${st.verb}`), el('span', 'edit-dir', st.target || ''),
         el('span', 'edit-stats', `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`));
-      rows.push(row);
-      list.appendChild(row);
+      body.appendChild(row);
+      if (st.cmd && window.addCommandToggle) body.appendChild(window.addCommandToggle(row, st, false));
     }
     head.addEventListener('click', (e) => {
       e.stopPropagation();
-      const open = rows[0].style.display === 'none';
-      for (const r of rows) r.style.display = open ? '' : 'none';
+      const open = body.style.display === 'none';
+      body.style.display = open ? '' : 'none';
       list.classList.toggle('open', open);
       setTitle(open);
     });
@@ -168,7 +173,7 @@
   setInterval(attachPendingSteps, 500);
   window.onActivityFinished = (sessionId, steps) => {
     if (!steps || !steps.length) return;
-    pendingSteps = { sessionId, steps: steps.map(({ icon, verb, target, at }) => ({ icon, verb, target, at })), at: Date.now() };
+    pendingSteps = { sessionId, steps: steps.map(({ icon, verb, target, at, cmd, lang }) => ({ icon, verb, target, at, cmd, lang })), at: Date.now() };
     attachPendingSteps();
   };
 
@@ -646,6 +651,14 @@
     }
   };
 
+  // Hide chats in the list (the Chat Tree's ✕ Remove uses this); "Show hidden sessions" brings them back.
+  window.hideSessions = (ids) => {
+    const m = meta();
+    m.hidden = [...new Set([...(m.hidden || []), ...ids.filter(Boolean)])];
+    saveMeta(m);
+    renderSessionCards(true);
+  };
+
   window.sessionCostFor = (id) => costs[id]; // the Vault robots' hover card shows it too
 
   function matchesFilter(s) {
@@ -915,6 +928,10 @@
   window.isAntigravityEnabled = () => store.showAntigravity !== false;
   const rowCards = setRow('btnCards', '▤', 'Chat as cards');
   rowCards.title = 'Show each of your questions as a card; click a card to open its answer (also the Cards button in the chat toolbar)';
+  const rowPinFollow = setRow('btnPinFollow', '📌', '“You said:” bar follows scrolling');
+  rowPinFollow.title = 'On: the bar at the top of the chat shows the question for the answer you are reading.\nOff: it always shows your latest message.';
+  rowPinFollow.classList.toggle('active', window.pinFollowOn ? window.pinFollowOn() : true);
+  rowPinFollow.addEventListener('click', () => window.setPinFollow?.(!window.pinFollowOn?.()));
   const rowPerf = setRow('btnPerf', '⏱', 'Performance');
   rowPerf.querySelector('.set-check').remove();
   rowPerf.title = 'Memory, CPU and timers of every part of the app (Ctrl+Alt+P)';
@@ -931,7 +948,7 @@
   rowShortcut.querySelector('.set-check').remove();
   rowShortcut.title = 'Create an "AI Overlay HUD" shortcut on your Desktop';
   if (settingsPanelEl) {
-    (sep || restartRow)?.before(rowNotify, rowAg, rowCards, rowBar, rowPerf, rowDigest, digestBox, rowExport, rowShortcut);
+    (sep || restartRow)?.before(rowNotify, rowAg, rowCards, rowPinFollow, rowBar, rowPerf, rowDigest, digestBox, rowExport, rowShortcut);
   }
 
   ready.then(() => {

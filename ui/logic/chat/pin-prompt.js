@@ -1,5 +1,6 @@
-// Pinned prompt: when your latest message is pushed up out of view by the
-// agent's reply, a copy of it stays pinned at the top of the chat.
+// Pinned prompt (sticky section header): when your message is pushed up out of view by the
+// agent's reply, a copy of it stays pinned at the top of the chat. Scroll up into an older
+// answer and the bar shows the message that answer is for.
 // Click the pinned bar to jump back to the message.
 // Self-contained: only watches #chatStream, no other HUD code depends on it.
 (function () {
@@ -21,9 +22,27 @@
   let target = null; // the latest .chat-bubble.user element
   let raf = 0;
 
-  function latestUserBubble() {
+  // Settings › Chat: on (default) = the bar follows your scrolling; off = it always shows your latest message
+  const api = window.electronAPI;
+  let follow = !(api && api.settings && api.settings.pinFollowScroll === false);
+  window.pinFollowOn = () => follow;
+  window.setPinFollow = (v) => {
+    follow = !!v;
+    api?.storeSet?.('pinFollowScroll', follow);
+    document.getElementById('btnPinFollow')?.classList.toggle('active', follow);
+    schedule();
+  };
+  document.getElementById('btnPinFollow')?.classList.toggle('active', follow); // the Settings row (made earlier, in features.js)
+
+  // The message whose answer you are reading: your last message that has scrolled
+  // up past the top of the chat box (sticky section header). null = none has.
+  // (With "follow" off: only your latest message, once it has scrolled up.)
+  function currentUserBubble(top) {
     const all = chat.querySelectorAll('.chat-bubble.user');
-    return all.length ? all[all.length - 1] : null;
+    for (let i = all.length - 1; i >= (follow ? 0 : all.length - 1); i--) {
+      if (all[i].getBoundingClientRect().bottom < top + 4) return all[i];
+    }
+    return null;
   }
 
   function fillFrom(bubble) {
@@ -48,16 +67,13 @@
   function update() {
     raf = 0;
     const detailOpen = chat.offsetParent !== null; // hidden when the list view is shown
-    target = detailOpen ? latestUserBubble() : null;
+    const chatRect = chat.getBoundingClientRect();
+    target = detailOpen ? currentUserBubble(chatRect.top) : null;
     if (!target) { bar.style.display = 'none'; return; }
 
-    // Pinned once the message's bottom has scrolled above the visible top
-    const chatRect = chat.getBoundingClientRect();
-    const r = target.getBoundingClientRect();
-    const pushedOut = r.bottom < chatRect.top + 4;
-    if (!pushedOut) { bar.style.display = 'none'; return; }
-
     fillFrom(target);
+    const all = chat.querySelectorAll('.chat-bubble.user');
+    bar.title = target === all[all.length - 1] ? 'Your latest message — click to jump to it' : 'The message this answer is for — click to jump to it';
     // Overlay the top edge of the chat box (inside its border)
     const hostRect = host.getBoundingClientRect();
     bar.style.top = `${chatRect.top - hostRect.top + 1}px`;

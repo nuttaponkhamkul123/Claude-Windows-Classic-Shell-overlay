@@ -6,7 +6,7 @@
   <!-- Replies come from an AI (and from whatever it read): no inline scripts or handlers, nothing loaded
        from the internet, no plugins or frames. Second layer behind logic/chat/safe-markdown.js. -->
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'none'; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data: blob:; font-src 'self' file: data:; media-src 'self' file: data: blob:; connect-src 'self' file: data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
+        content="default-src 'none'; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data: blob:; font-src 'self' file: data:; media-src 'self' file: data: blob:; connect-src 'self' file: data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src ovly-preview:">
   <title>Multi-AI Session Overlay HUD</title>
   <link rel="stylesheet" href="styles/style.css" />
   <link rel="stylesheet" href="styles/theme-aero.css" />
@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="styles/steps.css" />
   <link rel="stylesheet" href="styles/notes.css" />
   <link rel="stylesheet" href="styles/chat-cards.css" />
+  <link rel="stylesheet" href="styles/chat-tree.css" />
   <link rel="stylesheet" href="styles/perf.css" />
   <link rel="stylesheet" href="styles/avatar-stage.css" />
   <link rel="stylesheet" href="styles/theme-pip.css" />
@@ -151,6 +152,7 @@
           <button id="tbNewChat" class="tb-btn" title="Start a new conversation in this or another folder (/clear)">New chat</button>
           <button id="tbSettings" class="tb-btn" title="Theme, chime, always on top">Settings</button>
           <button id="tbCards" class="tb-btn" title="Show each of your questions as a card; click a card to open its answer">Cards</button>
+          <button id="tbTree" class="tb-btn" title="Chat Tree: this chat and its child chats as a tree — click a node to chat with it">Tree</button>
           <button id="tbSteps" class="tb-btn" title="What Claude did in this chat, step by step">Steps</button>
           <button id="tbNotes" class="tb-btn tb-notes" title="Pinned notes (Claude pins them with the pin_note tool)">📌 Notes<span class="notes-badge"></span></button>
           <span class="tb-spacer"></span>
@@ -318,6 +320,7 @@
   <script src="lib/marked.min.js"></script>
   <script src="logic/chat/safe-markdown.js"></script>
   <script src="logic/chat/diagrams.js"></script>
+  <script src="logic/chat/html-preview.js"></script>
   <script src="lib/highlight.min.js"></script>
   <script src="logic/chat/highlight.js"></script>
   <script src="lib/sound.js"></script>
@@ -364,6 +367,8 @@
   <script src="logic/chat/handoff.js"></script>
   <script src="logic/chat/steps.js"></script>
   <script src="logic/chat/cards.js"></script>
+  <script src="logic/chat/tree.js"></script>
+  <script src="logic/chat/tree-list.js"></script>
   <script src="logic/system/perf.js"></script>
   <script src="logic/chat/notes-panel.js"></script>
   <script src="logic/chat/pip-screen.js"></script>

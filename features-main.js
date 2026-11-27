@@ -855,6 +855,70 @@ async function openFile(raw) {
   }
 }
 
+// HTML preview inside the HUD (ui/logic/chat/html-preview.js): a path from a reply, the edited-files list or the
+// Changes panel → the URL the preview frame loads. Relative paths are taken from the chat's folder.
+// Pages are served through a private scheme, ovly-preview://local/<absolute path>, because a sandboxed frame
+// cannot load file:// pages' CSS / images / scripts. The scheme only serves:
+//   - files inside a folder a preview was opened for (the chat's folder if the page is in it, else the page's folder)
+//   - web file types (pages, styles, scripts, images, fonts, media) — never .env, keys, logs or other data files.
+// So a previewed page (which may have been written by Claude) cannot read the rest of the disk.
+const HTML_EXT = /\.html?$/i;
+const PREVIEW_SCHEME = 'ovly-preview';
+const PREVIEW_TYPES = {
+  '.html': 'text/html', '.htm': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript',
+  '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif',
+  '.webp': 'image/webp', '.avif': 'image/avif', '.ico': 'image/x-icon', '.bmp': 'image/bmp',
+  '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.otf': 'font/otf',
+  '.mp4': 'video/mp4', '.webm': 'video/webm', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg',
+};
+const previewRoots = new Set(); // lower-cased folders (ending in a separator) previews may read from
+const inRoot = (p, root) => (p.toLowerCase() + path.sep).startsWith(root) || p.toLowerCase().startsWith(root);
+
+function htmlPreviewUrl(raw, cwd) {
+  let p = String(raw || '').trim().replace(/#L\d+.*$/i, '').replace(/:\d+(?::\d+)?$/, '');
+  if (!p) return { error: 'missing' };
+  if (/^file:\/\//i.test(p)) { try { p = require('url').fileURLToPath(p); } catch (_) { return { error: 'missing' }; } }
+  const base = cwd && path.isAbsolute(String(cwd)) ? path.resolve(String(cwd)) : '';
+  if (!path.isAbsolute(p)) {
+    if (!base) return { error: 'missing' };
+    p = path.resolve(base, p);
+  }
+  p = path.resolve(p);
+  if (!HTML_EXT.test(p)) return { error: 'not-html' };
+  try { if (!fs.statSync(p).isFile()) return { error: 'missing' }; } catch (_) { return { error: 'missing' }; }
+  const baseRoot = base ? base.toLowerCase() + path.sep : '';
+  previewRoots.add(baseRoot && inRoot(p, baseRoot) ? baseRoot : path.dirname(p).toLowerCase() + path.sep);
+  const url = `${PREVIEW_SCHEME}://local/` + p.split(path.sep).map((s, i) => (i === 0 && /^[a-zA-Z]:$/.test(s) ? s : encodeURIComponent(s))).join('/');
+  return { url, path: p };
+}
+
+// Call before app 'ready' (the scheme must be known when the first window starts).
+function registerPreviewScheme() {
+  const { protocol } = require('electron');
+  protocol.registerSchemesAsPrivileged([{ scheme: PREVIEW_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } }]);
+}
+// Call after app 'ready'.
+function servePreviewScheme() {
+  const { protocol } = require('electron');
+  const deny = (code) => new Response('', { status: code, headers: { 'access-control-allow-origin': '*' } });
+  protocol.handle(PREVIEW_SCHEME, async (req) => {
+    let p;
+    try {
+      const u = new URL(req.url);
+      if (u.host !== 'local') return deny(404);
+      p = decodeURIComponent(u.pathname).replace(/^\/+/, '');
+      if (process.platform !== 'win32') p = '/' + p;
+      p = path.resolve(p); // folds any ../ — checked against the roots below
+    } catch (_) { return deny(400); }
+    const type = PREVIEW_TYPES[path.extname(p).toLowerCase()];
+    if (!type || ![...previewRoots].some((r) => inRoot(p, r))) return deny(403);
+    try {
+      const body = await fs.promises.readFile(p);
+      return new Response(body, { headers: { 'content-type': type, 'access-control-allow-origin': '*', 'cache-control': 'no-store' } });
+    } catch (_) { return deny(404); }
+  });
+}
+
 // Open a folder or file in the Antigravity IDE. Starts its program directly (no shell, so the path is
 // never parsed as a command); if the IDE is already running it opens the folder/file in that window.
 function findAntigravityExe() {
@@ -957,6 +1021,7 @@ function register(c) {
   ipcMain.handle('get-steps', (_e, id) => stepsOfSession(id));
   ipcMain.handle('search-steps', (_e, q) => searchSteps(q).catch(() => []));
   ipcMain.handle('open-file', (_e, p) => openFile(p));
+  ipcMain.handle('html-preview-url', (_e, p, cwd) => htmlPreviewUrl(p, cwd));
   ipcMain.handle('open-in-antigravity', (_e, p, line) => openInAntigravity(p, line));
   ipcMain.handle('stop-reply', (_e, id) => stopReply(id));
   ipcMain.handle('voice-typing', () => startVoiceTyping());
@@ -1132,6 +1197,6 @@ function register(c) {
 
 module.exports = {
   register, onSync, readClaudeHistory, readAntigravityHistory, readSessionHistory, pathForSession,
-  getSetting, setSetting, trackChild, aliasChild, wasStopped, editFromToolUse, mergeEdit, openFile,
+  getSetting, setSetting, trackChild, aliasChild, wasStopped, stopReply, editFromToolUse, mergeEdit, openFile, htmlPreviewUrl, registerPreviewScheme, servePreviewScheme,
   gitChanges, gitFileDiff, gitCommit, gitPush, gitDiscard, gitUndoDiscard, gitDraftMessage, handoffNote, flushStore, searchSteps, listPastChats,
 };

@@ -111,6 +111,11 @@ function startPermissionServer(ctx, state) {
       // a New-chat run was started under a draft id; report the real session
       const sessionId = state.sessionAliases.get(payload.sessionId || '') || payload.sessionId || '';
 
+      // Chat Tree tools that only talk to the HUD (no files, no cost): never ask
+      if (/^mcp__ovly_tree__(report_to_parent|ask_parent|child_status)$/.test(toolName)) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ behavior: 'allow' }));
+      }
       const cwd = sessionCwd(ctx, sessionId);
       const check = checkRules(state, cwd, toolName, input);
       if (check.allowed) {

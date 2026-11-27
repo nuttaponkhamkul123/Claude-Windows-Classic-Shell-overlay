@@ -777,6 +777,33 @@ body.theme-vista .ctx-sep, body:not(.theme-aero) .ctx-sep { background: #4a5060;
 #activityRow.has-steps { cursor: pointer; } /* click the bar = show finished steps */
 .step-list .step-row { cursor: default; }
 .step-list .edit-stats { opacity: .7; font-family: Consolas, monospace; white-space: nowrap; flex-shrink: 0; }
+/* a step that ran a command: click it for the full command, formatted and coloured */
+.has-cmd { cursor: pointer !important; }
+.has-cmd .edit-dir, .has-cmd .act-step-target { font-family: Consolas, monospace; }
+.has-cmd::after { content: '▸'; opacity: .6; font-size: 10px; margin-left: 2px; }
+.has-cmd.open::after { content: '▾'; }
+.step-cmd-box { position: relative; margin: 2px 8px 6px; }
+.step-cmd {
+  margin: 0; padding: 7px 10px; max-height: 240px; overflow: auto;
+  background: #0d1117; color: #e6edf3; border: 1px solid #30363d; border-radius: 4px;
+  font: 11.5px/1.5 Consolas, 'Cascadia Mono', monospace; white-space: pre-wrap; word-break: break-word;
+  user-select: text; cursor: text;
+}
+.step-cmd code { font: inherit; background: none; padding: 0; color: inherit; }
+.step-cmd-copy {
+  position: absolute; top: 4px; right: 4px; padding: 1px 7px; font-size: 10.5px;
+  background: rgba(110,118,129,.25); color: #e6edf3; border: 1px solid #30363d; border-radius: 3px; cursor: pointer;
+  opacity: 0; transition: opacity .15s;
+}
+.step-cmd-box:hover .step-cmd-copy { opacity: 1; }
+/* light Classic / XP: light code box (colours from the chat's light code rules) */
+:is(body.theme-aero:not(.theme-vista), body.theme-xp):not(.style-work):not(.style-shelter) .step-cmd { background: #f6f8fa; color: #1f2328; border-color: #d0d7de; }
+:is(body.theme-aero:not(.theme-vista), body.theme-xp):not(.style-work):not(.style-shelter) .step-cmd-copy { background: #fff; color: #1f2328; border-color: #d0d7de; }
+/* Pip-Boy: one amber, keywords and strings brighter */
+body.style-shelter .step-cmd { background: rgba(0,0,0,.35); color: var(--pip); border-color: var(--pip-dim); font-family: var(--pip-font, Consolas), monospace; }
+body.style-shelter .step-cmd code, body.style-shelter .step-cmd .hljs span { color: var(--pip) !important; font-style: normal; }
+body.style-shelter .step-cmd :is(.hljs-keyword, .hljs-built_in, .hljs-string) { font-weight: 700; text-shadow: 0 0 4px var(--pip); }
+body.style-shelter .step-cmd-copy { background: var(--pip-ink, #000); color: var(--pip); border-color: var(--pip-dim); }
 #activityRow .act-progress { order: 10; flex-basis: 100%; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 
 
@@ -1873,18 +1900,18 @@ body.vault-builder .vault-window:hover .vw-frame { outline: 2px solid #38bdf8; o
 .hljs-addition { color: #aff5b4; background: rgba(46, 160, 67, 0.15); display: inline-block; width: 100%; }
 .hljs-deletion { color: #ffdcd7; background: rgba(248, 81, 73, 0.15); display: inline-block; width: 100%; }
 
-body.theme-aero:not(.theme-vista) .chat-bubble .hljs-keyword, body.theme-xp .chat-bubble .hljs-keyword,
-body.theme-aero:not(.theme-vista) .chat-bubble .hljs-literal, body.theme-xp .chat-bubble .hljs-literal { color: #cf222e; }
-body.theme-aero:not(.theme-vista) .chat-bubble .hljs-string, body.theme-xp .chat-bubble .hljs-string { color: #0a3069; }
-body.theme-aero:not(.theme-vista) .chat-bubble .hljs-title, body.theme-xp .chat-bubble .hljs-title { color: #8250df; }
-body.theme-aero:not(.theme-vista) .chat-bubble .hljs-title.class_, body.theme-xp .chat-bubble .hljs-title.class_,
-body.theme-aero:not(.theme-vista) .chat-bubble .hljs-type, body.theme-xp .chat-bubble .hljs-type { color: #953800; }
-body.theme-aero:not(.theme-vista) .chat-bubble :is(.hljs-number, .hljs-attr, .hljs-attribute, .hljs-variable, .hljs-built_in, .hljs-property),
-body.theme-xp .chat-bubble :is(.hljs-number, .hljs-attr, .hljs-attribute, .hljs-variable, .hljs-built_in, .hljs-property) { color: #0550ae; }
-body.theme-aero:not(.theme-vista) .chat-bubble .hljs-comment, body.theme-xp .chat-bubble .hljs-comment { color: #6e7781; }
-body.theme-aero:not(.theme-vista) .chat-bubble :is(.hljs-tag, .hljs-name), body.theme-xp .chat-bubble :is(.hljs-tag, .hljs-name) { color: #116329; }
-body.theme-aero:not(.theme-vista) .chat-bubble .hljs-addition, body.theme-xp .chat-bubble .hljs-addition { color: #116329; background: #dafbe1; }
-body.theme-aero:not(.theme-vista) .chat-bubble .hljs-deletion, body.theme-xp .chat-bubble .hljs-deletion { color: #82071e; background: #ffebe9; }
+body.theme-aero:not(.theme-vista) :is(.chat-bubble, .step-cmd) .hljs-keyword, body.theme-xp :is(.chat-bubble, .step-cmd) .hljs-keyword,
+body.theme-aero:not(.theme-vista) :is(.chat-bubble, .step-cmd) .hljs-literal, body.theme-xp :is(.chat-bubble, .step-cmd) .hljs-literal { color: #cf222e; }
+body.theme-aero:not(.theme-vista) :is(.chat-bubble, .step-cmd) .hljs-string, body.theme-xp :is(.chat-bubble, .step-cmd) .hljs-string { color: #0a3069; }
+body.theme-aero:not(.theme-vista) :is(.chat-bubble, .step-cmd) .hljs-title, body.theme-xp :is(.chat-bubble, .step-cmd) .hljs-title { color: #8250df; }
+body.theme-aero:not(.theme-vista) :is(.chat-bubble, .step-cmd) .hljs-title.class_, body.theme-xp :is(.chat-bubble, .step-cmd) .hljs-title.class_,
+body.theme-aero:not(.theme-vista) :is(.chat-bubble, .step-cmd) .hljs-type, body.theme-xp :is(.chat-bubble, .step-cmd) .hljs-type { color: #953800; }
+body.theme-aero:not(.theme-vista) :is(.chat-bubble, .step-cmd) :is(.hljs-number, .hljs-attr, .hljs-attribute, .hljs-variable, .hljs-built_in, .hljs-property),
+body.theme-xp :is(.chat-bubble, .step-cmd) :is(.hljs-number, .hljs-attr, .hljs-attribute, .hljs-variable, .hljs-built_in, .hljs-property) { color: #0550ae; }
+body.theme-aero:not(.theme-vista) :is(.chat-bubble, .step-cmd) .hljs-comment, body.theme-xp :is(.chat-bubble, .step-cmd) .hljs-comment { color: #6e7781; }
+body.theme-aero:not(.theme-vista) :is(.chat-bubble, .step-cmd) :is(.hljs-tag, .hljs-name), body.theme-xp :is(.chat-bubble, .step-cmd) :is(.hljs-tag, .hljs-name) { color: #116329; }
+body.theme-aero:not(.theme-vista) :is(.chat-bubble, .step-cmd) .hljs-addition, body.theme-xp :is(.chat-bubble, .step-cmd) .hljs-addition { color: #116329; background: #dafbe1; }
+body.theme-aero:not(.theme-vista) :is(.chat-bubble, .step-cmd) .hljs-deletion, body.theme-xp :is(.chat-bubble, .step-cmd) .hljs-deletion { color: #82071e; background: #ffebe9; }
 /* the coloured pieces are <span>s, and the app's base styles give every span the UI
    font — code must keep the font of the code block it sits in */
 code.hljs span, .gd-code span { font-family: inherit !important; font-size: inherit; }
@@ -2039,3 +2066,39 @@ body.vault-layout-edit .vault-room.sel, body.vault-layout-edit .vault-annex.sel 
 .chat-bubble .bubble-content :is(th, td)[align="center"] { text-align: center; }
 .chat-bubble .bubble-content :is(th, td)[align="right"] { text-align: right; font-variant-numeric: tabular-nums; }
 .chat-bubble .bubble-content table :is(code, a) { word-break: normal; }
+
+/* ---------- HTML preview inside the HUD (logic/chat/html-preview.js) ---------- */
+.hp-chip {
+  margin: 0 0 0 5px; padding: 0 6px; height: 17px; vertical-align: 1px;
+  font: 600 10.5px/15px "Segoe UI", sans-serif; cursor: pointer;
+  color: #7fb4ff; background: rgba(90, 150, 255, 0.12);
+  border: 1px solid rgba(90, 150, 255, 0.45); border-radius: 9px;
+}
+.hp-chip:hover, .hp-chip.on { color: #fff; background: rgba(90, 150, 255, 0.55); }
+.hp-open.on { border-color: #3c7fb1; }
+.hp-box {
+  display: flex; flex-direction: column; margin: 6px 0;
+  border: 1px solid rgba(128, 140, 160, 0.45); border-radius: 6px; overflow: hidden;
+  background: #1b1f27;
+}
+.hp-bar { display: flex; align-items: center; gap: 6px; padding: 3px 6px; font: 11px "Segoe UI", sans-serif; color: #cfd6e2; }
+.hp-tag { font-size: 9.5px; font-weight: 700; letter-spacing: .06em; padding: 0 5px; border-radius: 3px; background: #2f5e8f; color: #fff; }
+.hp-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.hp-btn {
+  width: 20px; height: 18px; padding: 0; font-size: 12px; line-height: 16px; cursor: pointer;
+  color: #cfd6e2; background: transparent; border: 1px solid transparent; border-radius: 3px;
+}
+.hp-btn:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
+.hp-frame { display: block; width: 100%; height: 320px; border: 0; background: #fff; }
+.hp-box.tall .hp-frame { height: 70vh; }
+.hp-err { margin: 4px 0; font-size: 11.5px; color: #e8a23a; }
+/* Changes panel: the page takes the place of the diff */
+.gd-view.hp-on > :not(.gd-viewhead):not(.hp-box) { display: none; }
+.gd-view > .hp-box { margin: 8px; }
+.gd-view > .hp-box .hp-frame { height: calc(100vh - 190px); min-height: 240px; }
+/* Pip-Boy / Shelter */
+body.style-shelter .hp-box { border-radius: 0; border-color: var(--pip-dim); background: #000; }
+body.style-shelter :is(.hp-bar, .hp-btn) { color: var(--pip); }
+body.style-shelter .hp-tag { background: var(--pip); color: var(--pip-ink); border-radius: 0; }
+body.style-shelter .hp-chip { color: var(--pip); background: none; border-color: var(--pip-dim); border-radius: 0; }
+body.style-shelter .hp-chip:hover, body.style-shelter .hp-chip.on { background: var(--pip); color: var(--pip-ink); }
